@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
     Pressable,
@@ -8,7 +9,6 @@ import {
 
 import AppLogo from "@/components/ui/AppLogo";
 import { Colors } from "@/constants/colors";
-import { LinearGradient } from "expo-linear-gradient";
 
 interface NavBarProps {
   onNotificationPress?: () => void;
@@ -21,16 +21,15 @@ export default function NavBar({
 }: NavBarProps) {
   return (
     <View style={navBarStyles.wrapper}>
-        
-    <LinearGradient
-    colors={[
-      Colors.gradient.navBarStart,
-      Colors.gradient.navBarEnd,
-    ]}
-    start={{ x: -200, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={navBarStyles.container}
-    >
+      <LinearGradient
+        colors={[
+          Colors.gradient.navBarStart,
+          Colors.gradient.navBarEnd,
+        ]}
+        start={{ x: -200, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={navBarStyles.container}
+      >
         {/* AdlaWatt Logo */}
         <View style={navBarStyles.logoContainer}>
           <AppLogo
@@ -50,8 +49,8 @@ export default function NavBar({
           >
             <Ionicons
               name="notifications-outline"
-              size={27}
-              color={Colors.light.text}
+              size={navBarDimensions.notificationIconSize}
+              color={Colors.light.surface}
             />
 
             <View style={navBarStyles.notificationDot} />
@@ -66,17 +65,15 @@ export default function NavBar({
           >
             <Ionicons
               name="menu-outline"
-              size={31}
-              color={Colors.light.text}
+              size={navBarDimensions.menuIconSize}
+              color={Colors.light.surface}
             />
           </Pressable>
-    
-      </View>
+        </View>
       </LinearGradient>
 
       {/* Orange accent line */}
       <View style={navBarStyles.accentLine} />
-      
     </View>
   );
 }
@@ -108,8 +105,6 @@ const navBarStyles = StyleSheet.create({
   wrapper: {
     width: "100%",
 
-    backgroundColor: Colors.light.surface,
-
     zIndex: 100,
 
     elevation: 8,
@@ -139,16 +134,21 @@ const navBarStyles = StyleSheet.create({
   },
 
   logoContainer: {
-  width: navBarDimensions.logoWidth,
-  height: navBarDimensions.logoHeight,
-  alignItems: "flex-start",
-  justifyContent: "center",
+    width: navBarDimensions.logoWidth,
+    height: navBarDimensions.logoHeight,
 
-  transform: [
-    { translateX: navBarDimensions.logoOffsetX },
-    { translateY: navBarDimensions.logoOffsetY },
-  ],
-},
+    alignItems: "flex-start",
+    justifyContent: "center",
+
+    transform: [
+      {
+        translateX: navBarDimensions.logoOffsetX,
+      },
+      {
+        translateY: navBarDimensions.logoOffsetY,
+      },
+    ],
+  },
 
   actions: {
     flexDirection: "row",

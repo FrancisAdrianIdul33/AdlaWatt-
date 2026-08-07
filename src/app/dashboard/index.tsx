@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -10,12 +10,20 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+import Sidebar from "@/components/layout/Sidebar";
 
 export default function DashboardScreen() {
+
+    const [sidebarVisible, setSidebarVisible] = useState(false);
   return (
+
+    
     <ScreenContainer2>
+        
       {/* Fixed Navbar */}
-      <NavBar />
+    <NavBar
+  onMenuPress={() => setSidebarVisible(true)}
+/>
 
       {/* Scrollable Dashboard Content */}
       <ScrollView
@@ -232,6 +240,11 @@ export default function DashboardScreen() {
 
         <Copyright />
       </ScrollView>
+
+      <Sidebar
+  visible={sidebarVisible}
+  onClose={() => setSidebarVisible(false)}
+/>
     </ScreenContainer2>
   );
 }
