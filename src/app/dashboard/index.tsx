@@ -611,10 +611,21 @@ recommendation: {
   },
 
   viewAll: {
-    color: Colors.light.secondary,
+  color: "#FFFFFF",
+  fontWeight: "700",
 
-    fontWeight: "700",
-  },
+  backgroundColor: Colors.light.primary,
+
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+
+  borderRadius: 15,
+
+  fontSize: 12,
+
+  marginTop: -10,
+  marginRight: 2,
+},
 
   activityList: {
     width: "100%",
