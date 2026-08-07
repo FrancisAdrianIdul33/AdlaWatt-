@@ -8,7 +8,7 @@ export default function SplashScreen() {
       // TODO:
       // Replace with AuthContext later
       router.replace("/auth/login");
-    }, 2000);
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -20,8 +20,6 @@ export default function SplashScreen() {
         style={styles.logo}
         resizeMode="contain"
       />
-
-      <Text style={styles.title}>AdlaWatt</Text>
 
       <Text style={styles.subtitle}>
         Smart Off-Grid Solar Energy Monitoring System
@@ -46,15 +44,9 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 180,
-    height: 180,
-    marginBottom: 30,
-  },
-
-  title: {
-    fontSize: 34,
-    fontWeight: "700",
-    color: "#2E7D32",
+    width: 400,
+    height: 200,
+    marginBottom: 10,
   },
 
   subtitle: {

@@ -1,16 +1,14 @@
 import {
-  Tabs,
   TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
   TabListProps,
+  Tabs,
+  TabSlot,
+  TabTrigger,
+  TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { SymbolView } from 'expo-symbols';
 import React from 'react';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 
-import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -19,14 +17,36 @@ import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 export default function AppTabs() {
   return (
     <Tabs>
-      <TabSlot style={{ height: '100%' }} />
+      <TabSlot style={{ height: "100%" }} />
+
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
+          <TabTrigger name="dashboard" href="/dashboard" asChild>
+            <TabButton>Dashboard</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
+
+          <TabTrigger name="appliances" href="/dashboard/appliances" asChild>
+            <TabButton>Appliances</TabButton>
+          </TabTrigger>
+
+          <TabTrigger name="components" href="/dashboard/components" asChild>
+            <TabButton>Components</TabButton>
+          </TabTrigger>
+
+          <TabTrigger name="activity-logs" href="/dashboard/activity-logs" asChild>
+            <TabButton>Activity Logs</TabButton>
+          </TabTrigger>
+
+          <TabTrigger name="about-us" href="/dashboard/about-us" asChild>
+            <TabButton>About Us</TabButton>
+          </TabTrigger>
+
+          <TabTrigger name="settings" href="/dashboard/settings" asChild>
+            <TabButton>Settings</TabButton>
+          </TabTrigger>
+
+          <TabTrigger name="notifications" href="/dashboard/notifications" asChild>
+            <TabButton>🔔</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
@@ -61,16 +81,7 @@ export function CustomTabList(props: TabListProps) {
 
         {props.children}
 
-        <ExternalLink href="https://docs.expo.dev" asChild>
-          <Pressable style={styles.externalPressable}>
-            <ThemedText type="link">Docs</ThemedText>
-            <SymbolView
-              tintColor={colors.text}
-              name={{ ios: 'arrow.up.right.square', web: 'link' }}
-              size={12}
-            />
-          </Pressable>
-        </ExternalLink>
+        
       </ThemedView>
     </View>
   );
