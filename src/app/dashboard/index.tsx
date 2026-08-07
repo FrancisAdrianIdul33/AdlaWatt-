@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+    Pressable,
     ScrollView,
     StyleSheet,
     View,
@@ -8,31 +9,81 @@ import {
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
+import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
-import Sidebar from "@/components/layout/Sidebar";
 
 export default function DashboardScreen() {
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
-    const [sidebarVisible, setSidebarVisible] = useState(false);
+  const dashboardData = {
+    batteryLevel: 50,
+    batteryStatus: "Discharging",
+    timeRemaining: "4h 12m",
+
+    solarInput: "46W",
+    solarStatus: "Moderate",
+
+    currentLoad: "170W",
+
+    deviceStatus: "Online",
+
+    batteryTemperature: "20.0°C",
+
+    recommendedAppliance: "Electric Fan",
+
+    activities: [
+      {
+        title: "Battery started discharging",
+        time: "10:42 AM",
+      },
+      {
+        title: "Solar input detected",
+        time: "10:35 AM",
+      },
+      {
+        title: "Electric Fan connected",
+        time: "10:28 AM",
+      },
+      {
+        title: "System connected",
+        time: "10:15 AM",
+      },
+    ],
+  };
+
   return (
-
-    
     <ScreenContainer2>
-        
       {/* Fixed Navbar */}
-    <NavBar
-  onMenuPress={() => setSidebarVisible(true)}
-/>
+      <NavBar
+        onMenuPress={() => setSidebarVisible(true)}
+      />
 
-      {/* Scrollable Dashboard Content */}
+      {/* Dashboard */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Dashboard Header */}
+        <View style={styles.header}>
+          <AppText
+            variant="heading"
+            style={styles.headerTitle}
+          >
+            Dashboard
+          </AppText>
+
+          <AppText
+            variant="caption"
+            style={styles.headerSubtitle}
+          >
+            Monitor your AdlaWatt system in real time.
+          </AppText>
+        </View>
+
         {/* Appliance Recommendation */}
-        <View style={styles.sectionCard}>
+        <View style={styles.section}>
           <AppText
             variant="body"
             style={styles.sectionTitle}
@@ -40,18 +91,33 @@ export default function DashboardScreen() {
             Appliance Recommendation
           </AppText>
 
-          <View style={styles.recommendationContent}>
-            <AppText
-              variant="caption"
-              style={styles.secondaryText}
-            >
-              Recommended appliances will appear here.
-            </AppText>
+          <View style={styles.recommendation}>
+            <View style={styles.recommendationIcon}>
+              <AppText style={styles.bolt}>
+                ⚡
+              </AppText>
+            </View>
+
+            <View style={styles.recommendationInfo}>
+              <AppText
+                variant="body"
+                style={styles.recommendationTitle}
+              >
+                {dashboardData.recommendedAppliance}
+              </AppText>
+
+              <AppText
+                variant="caption"
+                style={styles.secondaryText}
+              >
+                Recommended based on available power.
+              </AppText>
+            </View>
           </View>
         </View>
 
         {/* Real-Time Monitoring */}
-        <View style={styles.sectionCard}>
+        <View style={styles.section}>
           <AppText
             variant="body"
             style={styles.sectionTitle}
@@ -60,13 +126,13 @@ export default function DashboardScreen() {
           </AppText>
 
           {/* Battery */}
-          <View style={styles.batteryContainer}>
+          <View style={styles.batterySection}>
             <View style={styles.batteryCircle}>
               <AppText
                 variant="heading"
                 style={styles.batteryPercentage}
               >
-                50%
+                {dashboardData.batteryLevel}%
               </AppText>
 
               <AppText
@@ -81,7 +147,7 @@ export default function DashboardScreen() {
                   variant="caption"
                   style={styles.batteryStatusText}
                 >
-                  Discharging
+                  {dashboardData.batteryStatus}
                 </AppText>
               </View>
             </View>
@@ -90,12 +156,13 @@ export default function DashboardScreen() {
               variant="caption"
               style={styles.remainingText}
             >
-              Time Remaining: 0h 4m 12secs
+              Time Remaining: {dashboardData.timeRemaining}
             </AppText>
           </View>
 
           {/* Monitoring Values */}
           <View style={styles.monitorGrid}>
+            {/* Solar Input */}
             <View style={styles.monitorCard}>
               <AppText
                 variant="caption"
@@ -108,7 +175,7 @@ export default function DashboardScreen() {
                 variant="heading"
                 style={styles.monitorValue}
               >
-                46W
+                {dashboardData.solarInput}
               </AppText>
 
               <View style={styles.statusBadge}>
@@ -116,11 +183,12 @@ export default function DashboardScreen() {
                   variant="caption"
                   style={styles.statusBadgeText}
                 >
-                  Moderate
+                  {dashboardData.solarStatus}
                 </AppText>
               </View>
             </View>
 
+            {/* Load */}
             <View style={styles.monitorCard}>
               <AppText
                 variant="caption"
@@ -133,10 +201,11 @@ export default function DashboardScreen() {
                 variant="heading"
                 style={styles.monitorValue}
               >
-                170W
+                {dashboardData.currentLoad}
               </AppText>
             </View>
 
+            {/* Device */}
             <View style={styles.monitorCard}>
               <AppText
                 variant="caption"
@@ -147,12 +216,13 @@ export default function DashboardScreen() {
 
               <AppText
                 variant="heading"
-                style={styles.monitorValue}
+                style={styles.onlineValue}
               >
-                Online
+                {dashboardData.deviceStatus}
               </AppText>
             </View>
 
+            {/* Battery Temperature */}
             <View style={styles.monitorCard}>
               <AppText
                 variant="caption"
@@ -165,109 +235,101 @@ export default function DashboardScreen() {
                 variant="heading"
                 style={styles.monitorValue}
               >
-                20.0°C
+                {dashboardData.batteryTemperature}
               </AppText>
             </View>
           </View>
         </View>
 
-        {/* Activity Log */}
-        <View style={styles.activitySection}>
-          <AppText
-            variant="body"
-            style={styles.sectionTitle}
-          >
-            Activity Log
-          </AppText>
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <View style={styles.activityHeader}>
+            <AppText
+              variant="body"
+              style={styles.sectionTitle}
+            >
+              Recent Activity
+            </AppText>
+
+            <Pressable>
+              <AppText
+                variant="caption"
+                style={styles.viewAll}
+              >
+                View All
+              </AppText>
+            </Pressable>
+          </View>
 
           <View style={styles.activityList}>
-            {[
-              "Activity 1",
-              "Activity 2",
-              "Activity 3",
-              "Activity 4",
-            ].map((activity, index) => (
-              <View
-                key={`${activity}-${index}`}
-                style={styles.activityItem}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.activityText}
+            {dashboardData.activities.map(
+              (activity, index) => (
+                <View
+                  key={`${activity.title}-${index}`}
+                  style={styles.activityItem}
                 >
-                  {activity}
-                </AppText>
-              </View>
-            ))}
+                  <View style={styles.activityDot} />
+
+                  <View style={styles.activityInfo}>
+                    <AppText
+                      variant="caption"
+                      style={styles.activityTitle}
+                    >
+                      {activity.title}
+                    </AppText>
+
+                    <AppText
+                      variant="caption"
+                      style={styles.activityTime}
+                    >
+                      {activity.time}
+                    </AppText>
+                  </View>
+                </View>
+              ),
+            )}
           </View>
-        </View>
-
-        {/* Temporary extra content to test scrolling */}
-        <View style={styles.testSection}>
-          <AppText
-            variant="body"
-            style={styles.sectionTitle}
-          >
-            Dashboard Preview
-          </AppText>
-
-          <AppText
-            variant="caption"
-            style={styles.secondaryText}
-          >
-            This section is temporary and is only here to
-            test dashboard scrolling. The NavBar should
-            remain visible while this content moves.
-          </AppText>
-        </View>
-
-        <View style={styles.testSection}>
-          <AppText
-            variant="body"
-            style={styles.sectionTitle}
-          >
-            More Dashboard Content
-          </AppText>
-
-          <AppText
-            variant="caption"
-            style={styles.secondaryText}
-          >
-            Additional monitoring components will be
-            added here later.
-          </AppText>
         </View>
 
         <Copyright />
       </ScrollView>
 
+      {/* Sidebar */}
       <Sidebar
-  visible={sidebarVisible}
-  onClose={() => setSidebarVisible(false)}
-/>
+        visible={sidebarVisible}
+        onClose={() => setSidebarVisible(false)}
+      />
     </ScreenContainer2>
   );
 }
 
 const dashboardDimensions = {
-  horizontalPadding: 14,
+  horizontalPadding: 16,
 
-  sectionSpacing: 14,
+  sectionSpacing: 18,
 
-  cardRadius: 14,
+  borderWidth: 3,
 
-  sectionPadding: 14,
+  cardRadius: 16,
+
+  innerRadius: 12,
+
+  batteryCircleSize: 128,
 
   monitorGap: 10,
 
-  monitorCardHeight: 72,
+  monitorHeight: 86,
 
-  activityItemHeight: 48,
+  recommendationHeight: 76,
 
-  batteryCircleSize: 112,
+  activityHeight: 62,
 };
 
 const styles = StyleSheet.create({
+  /* =========================
+     MAIN DASHBOARD
+  ========================= */
+
   scrollView: {
     flex: 1,
 
@@ -278,106 +340,189 @@ const styles = StyleSheet.create({
     paddingHorizontal:
       dashboardDimensions.horizontalPadding,
 
-    paddingTop: dashboardDimensions.sectionSpacing,
+    paddingTop: 20,
 
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
 
-  sectionCard: {
+  /* =========================
+     HEADER
+  ========================= */
+
+  header: {
+    marginBottom: 20,
+  },
+
+  headerTitle: {
+    color: "#000000",
+
+    fontSize: 27,
+
+    fontWeight: "700",
+  },
+
+  headerSubtitle: {
+    color: Colors.light.textSecondary,
+
+    marginTop: 4,
+
+    fontWeight: "400",
+  },
+
+  /* =========================
+     SECTIONS
+  ========================= */
+
+  section: {
     width: "100%",
-
-    backgroundColor: Colors.light.background,
-
-    borderRadius: dashboardDimensions.cardRadius,
-
-    padding: dashboardDimensions.sectionPadding,
 
     marginBottom:
       dashboardDimensions.sectionSpacing,
   },
 
   sectionTitle: {
-    color: Colors.light.text,
+    color: "#000000",
 
-    fontWeight: "600",
+    fontWeight: "700",
 
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
-  recommendationContent: {
-    minHeight: 42,
+  /* =========================
+     APPLIANCE RECOMMENDATION
+  ========================= */
 
-    borderRadius: 10,
+recommendation: {
+  minHeight: dashboardDimensions.recommendationHeight,
+  width: "100%",
 
-    backgroundColor: Colors.light.surface,
+  borderWidth: dashboardDimensions.borderWidth,
+  borderColor: Colors.light.primary,
+  borderRadius: dashboardDimensions.cardRadius,
+
+  backgroundColor: Colors.glass.white,
+
+  paddingHorizontal: 14,
+
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+  recommendationIcon: {
+    width: 46,
+
+    height: 46,
+
+    borderRadius: 23,
 
     alignItems: "center",
+
     justifyContent: "center",
 
-    paddingHorizontal: 12,
+    backgroundColor: Colors.light.primary,
+
+    marginRight: 12,
+  },
+
+  bolt: {
+    fontSize: 22,
+
+    color: "#FFFFFF",
+  },
+
+  recommendationInfo: {
+    flex: 1,
+  },
+
+  recommendationTitle: {
+    color: "#000000",
+
+    fontWeight: "700",
+
+    marginBottom: 3,
   },
 
   secondaryText: {
     color: Colors.light.textSecondary,
 
-    lineHeight: 20,
+    lineHeight: 19,
+
+    fontWeight: "400",
   },
 
-  batteryContainer: {
+  /* =========================
+     BATTERY
+  ========================= */
+
+  batterySection: {
     alignItems: "center",
 
-    marginBottom: 14,
+    marginBottom: 18,
   },
 
-  batteryCircle: {
-    width: dashboardDimensions.batteryCircleSize,
-    height: dashboardDimensions.batteryCircleSize,
+ batteryCircle: {
+  width: dashboardDimensions.batteryCircleSize,
+  height: dashboardDimensions.batteryCircleSize,
 
-    borderWidth: 5,
+  borderWidth: dashboardDimensions.borderWidth,
+  borderColor: Colors.light.primary,
 
-    borderColor: Colors.light.text,
+  borderRadius:
+    dashboardDimensions.batteryCircleSize / 2,
 
-    borderRadius:
-      dashboardDimensions.batteryCircleSize / 2,
+  backgroundColor: Colors.glass.white,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  alignItems: "center",
+  justifyContent: "center",
+},
 
   batteryPercentage: {
-    color: Colors.light.text,
+    color: "#000000",
+
+    fontSize: 28,
 
     fontWeight: "700",
-
-    fontSize: 26,
   },
 
   batteryLabel: {
-    color: Colors.light.text,
+    color: "#000000",
 
     marginTop: -2,
+
+    fontWeight: "400",
   },
 
   batteryStatus: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 9,
 
-    borderRadius: 6,
+    paddingVertical: 3,
 
-    backgroundColor: Colors.light.text,
+    borderRadius: 8,
+
+    backgroundColor: Colors.light.primary,
+
+    marginTop: 4,
   },
 
   batteryStatusText: {
-    color: Colors.light.surface,
+    color: "#FFFFFF",
 
     fontSize: 8,
+
+    fontWeight: "600",
   },
 
   remainingText: {
     color: Colors.light.textSecondary,
 
-    marginTop: 8,
+    marginTop: 9,
+
+    fontWeight: "400",
   },
+
+  /* =========================
+     MONITORING
+  ========================= */
 
   monitorGrid: {
     flexDirection: "row",
@@ -388,31 +533,45 @@ const styles = StyleSheet.create({
   },
 
   monitorCard: {
-    width: "48%",
+  width: "48%",
+  minHeight: dashboardDimensions.monitorHeight,
 
-    minHeight:
-      dashboardDimensions.monitorCardHeight,
+  borderWidth: dashboardDimensions.borderWidth,
+  borderColor: Colors.light.secondary,
+  borderRadius: dashboardDimensions.innerRadius,
 
-    backgroundColor: Colors.light.surface,
+  backgroundColor: Colors.glass.white,
 
-    borderRadius: 10,
+  alignItems: "center",
+  justifyContent: "center",
 
-    alignItems: "center",
-    justifyContent: "center",
-
-    paddingHorizontal: 6,
-  },
+  paddingHorizontal: 6,
+},
 
   monitorLabel: {
-    color: Colors.light.textSecondary,
+    color: "#000000",
+
+    textAlign: "center",
+
+    marginBottom: 3,
+
+    fontWeight: "400",
+  },
+
+  monitorValue: {
+    color: "#000000",
+
+    fontSize: 21,
+
+    fontWeight: "700",
 
     textAlign: "center",
   },
 
-  monitorValue: {
-    color: Colors.light.text,
+  onlineValue: {
+    color: Colors.light.primary,
 
-    fontSize: 20,
+    fontSize: 21,
 
     fontWeight: "700",
 
@@ -420,78 +579,93 @@ const styles = StyleSheet.create({
   },
 
   statusBadge: {
-    marginTop: 3,
+    marginTop: 4,
 
-    paddingHorizontal: 7,
-    paddingVertical: 1,
+    paddingHorizontal: 9,
 
-    borderRadius: 6,
+    paddingVertical: 3,
 
-    backgroundColor: Colors.light.text,
+    borderRadius: 8,
+
+    backgroundColor: Colors.light.primary,
   },
 
   statusBadgeText: {
-    color: Colors.light.surface,
+    color: "#FFFFFF",
 
     fontSize: 8,
+
+    fontWeight: "600",
   },
 
-  activitySection: {
-    width: "100%",
+  /* =========================
+     ACTIVITY
+  ========================= */
 
-    backgroundColor: Colors.light.background,
+  activityHeader: {
+    flexDirection: "row",
 
-    borderRadius: dashboardDimensions.cardRadius,
+    alignItems: "center",
 
-    padding: dashboardDimensions.sectionPadding,
+    justifyContent: "space-between",
+  },
 
-    borderWidth: 2,
+  viewAll: {
+    color: Colors.light.secondary,
 
-    borderColor: Colors.light.secondary,
-
-    marginBottom:
-      dashboardDimensions.sectionSpacing,
+    fontWeight: "700",
   },
 
   activityList: {
     width: "100%",
 
-    backgroundColor: Colors.light.surface,
-
-    borderRadius: 10,
-
-    padding: 10,
-
-    gap: 8,
+    gap: 9,
   },
 
-  activityItem: {
-    minHeight:
-      dashboardDimensions.activityItemHeight,
+ activityItem: {
+  minHeight: dashboardDimensions.activityHeight,
 
-    backgroundColor: Colors.light.text,
+  borderWidth: dashboardDimensions.borderWidth,
+  borderColor: Colors.light.primary,
+  borderRadius: dashboardDimensions.innerRadius,
 
-    borderRadius: 6,
+  backgroundColor: Colors.glass.white,
 
-    justifyContent: "center",
+  flexDirection: "row",
+  alignItems: "center",
 
-    paddingHorizontal: 14,
+  paddingHorizontal: 13,
+},
+
+  activityDot: {
+    width: 10,
+
+    height: 10,
+
+    borderRadius: 5,
+
+    backgroundColor: Colors.light.secondary,
+
+    marginRight: 11,
   },
 
-  activityText: {
-    color: Colors.light.surface,
+  activityInfo: {
+    flex: 1,
   },
 
-  testSection: {
-    width: "100%",
+  activityTitle: {
+    color: "#000000",
 
-    backgroundColor: Colors.light.background,
+    fontWeight: "600",
+  },
 
-    borderRadius: dashboardDimensions.cardRadius,
+  activityTime: {
+    color: Colors.light.textSecondary,
 
-    padding: dashboardDimensions.sectionPadding,
+    marginTop: 2,
 
-    marginBottom:
-      dashboardDimensions.sectionSpacing,
+    fontSize: 11,
+
+    fontWeight: "400",
   },
 });
