@@ -10,6 +10,7 @@ import ScreenContainer from "@/components/layout/ScreenContainer";
 import AppButton from "@/components/ui/AppButton";
 import AppLogo from "@/components/ui/AppLogo";
 import AppText from "@/components/ui/AppText";
+import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 
 export default function LoginScreen() {
@@ -31,7 +32,7 @@ export default function LoginScreen() {
       <View style={styles.container}>
         <AppLogo
           width={300}
-          height={200}
+          height={180}
         />
 
         <AuthHeader
@@ -54,13 +55,14 @@ export default function LoginScreen() {
             label="Password"
             value={password}
             onChangeText={setPassword}
+            placeholder="Enter your password"
           />
 
           <View style={styles.options}>
             <AppCheckbox
               label="Remember Me"
               checked={rememberMe}
-              onPress={() => setRememberMe(!rememberMe)}
+              onPress={() => setRememberMe((previous) => !previous)}
             />
           </View>
 
@@ -91,8 +93,8 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
     width: "100%",
+    justifyContent: "flex-start",
   },
 
   form: {
@@ -109,7 +111,7 @@ const styles = StyleSheet.create({
   },
 
   registerLink: {
-    color: "#00A86B",
+    color: Colors.light.primary,
     fontWeight: "600",
     marginTop: 6,
   },
