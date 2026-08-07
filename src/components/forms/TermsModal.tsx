@@ -340,21 +340,22 @@ const styles = StyleSheet.create({
 
   modal: {
     height: "92%",
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.light.surface,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     overflow: "hidden",
   },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
+header: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: Spacing.lg,
+  paddingVertical: Spacing.md,
+  backgroundColor: Colors.light.secondary,
+  borderBottomWidth: 1,
+  borderBottomColor: Colors.light.border,
+},
 
   title: {
     fontSize: Typography.heading,
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.surface,
+    backgroundColor: Colors.light.background,
   },
 
   timerContainer: {
