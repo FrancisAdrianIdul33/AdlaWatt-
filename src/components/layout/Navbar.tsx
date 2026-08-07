@@ -27,7 +27,7 @@ export default function NavBar({
       Colors.gradient.navBarStart,
       Colors.gradient.navBarEnd,
     ]}
-    start={{ x: -50, y: 0 }}
+    start={{ x: -200, y: 0 }}
     end={{ x: 1, y: 0 }}
     style={navBarStyles.container}
     >
