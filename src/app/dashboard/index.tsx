@@ -66,21 +66,21 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Dashboard Header */}
-        <View style={styles.header}>
-          <AppText
-            variant="heading"
-            style={styles.headerTitle}
-          >
-            Dashboard
-          </AppText>
+       <View style={styles.headerCard}>
+  <AppText
+    variant="heading"
+    style={styles.headerTitle}
+  >
+    Dashboard
+  </AppText>
 
-          <AppText
-            variant="caption"
-            style={styles.headerSubtitle}
-          >
-            Monitor your AdlaWatt system in real time.
-          </AppText>
-        </View>
+  <AppText
+    variant="caption"
+    style={styles.headerSubtitle}
+  >
+    Monitor your AdlaWatt system in real time.
+  </AppText>
+</View>
 
         {/* Appliance Recommendation */}
         <View style={styles.section}>
@@ -349,25 +349,24 @@ const styles = StyleSheet.create({
      HEADER
   ========================= */
 
-  header: {
-    marginBottom: 20,
-  },
+  headerCard: {
+  backgroundColor: Colors.glass.white,
+  borderWidth: 3,
+  borderColor: Colors.light.secondary,
+  borderRadius: 16,
+  padding: 18,
+  marginBottom: 18,
+},
 
-  headerTitle: {
-    color: "#000000",
+headerTitle: {
+  color: "#000000",
+  fontWeight: "700",
+},
 
-    fontSize: 27,
-
-    fontWeight: "700",
-  },
-
-  headerSubtitle: {
-    color: Colors.light.textSecondary,
-
-    marginTop: 4,
-
-    fontWeight: "400",
-  },
+headerSubtitle: {
+  color: Colors.light.textSecondary,
+  marginTop: 6,
+},
 
   /* =========================
      SECTIONS
