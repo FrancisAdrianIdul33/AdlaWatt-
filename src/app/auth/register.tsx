@@ -1,10 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import AppCheckbox from "@/components/forms/AppCheckbox";
 import AppInput from "@/components/forms/AppInput";
 import PasswordInput from "@/components/forms/PasswordInput";
+import TermsModal from "@/components/forms/TermsModal";
 import AuthHeader from "@/components/layout/AuthHeader";
 import ScreenContainer from "@/components/layout/ScreenContainer";
 import AppButton from "@/components/ui/AppButton";
@@ -12,21 +14,32 @@ import AppLogo from "@/components/ui/AppLogo";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
+import { Radius, Spacing } from "@/constants/theme";
 
 export default function RegisterScreen() {
-  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   const handleRegister = () => {
+    if (!termsAgreed) {
+      return;
+    }
+
     // Temporary navigation until authentication is connected.
     router.replace(Routes.LOGIN);
   };
 
   const handleLogin = () => {
     router.replace(Routes.LOGIN);
+  };
+
+  const handleTermsAgree = () => {
+    setTermsAgreed(true);
   };
 
   return (
@@ -45,10 +58,10 @@ export default function RegisterScreen() {
         <View style={styles.form}>
           <AppInput
             label="Username"
-            value={fullName}
-            onChangeText={setFullName}
+            value={username}
+            onChangeText={setUsername}
             placeholder="Enter your username"
-            autoCapitalize="words"
+            autoCapitalize="none"
             autoCorrect={false}
           />
 
@@ -76,16 +89,37 @@ export default function RegisterScreen() {
             placeholder="Confirm your password"
           />
 
-          <AppCheckbox
-            label="I agree to the Terms and Conditions"
-            checked={acceptedTerms}
-            onPress={() => setAcceptedTerms((previous) => !previous)}
-          />
+          <View style={styles.termsRow}>
+            <AppCheckbox
+              label="I agree to the Terms and Conditions"
+              checked={termsAgreed}
+              onPress={() => {
+                if (termsAgreed) {
+                  setTermsAgreed(false);
+                } else {
+                  setTermsModalVisible(true);
+                }
+              }}
+            />
+
+            <Pressable
+              onPress={() => setTermsModalVisible(true)}
+              style={styles.termsIconButton}
+              accessibilityRole="button"
+              accessibilityLabel="Open Terms and Conditions"
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={22}
+                color={Colors.light.primary}
+              />
+            </Pressable>
+          </View>
 
           <AppButton
             title="Create Account"
             onPress={handleRegister}
-            disabled={!acceptedTerms}
+            disabled={!termsAgreed}
           />
         </View>
 
@@ -106,6 +140,12 @@ export default function RegisterScreen() {
           </AppText>
         </View>
       </View>
+
+      <TermsModal
+        visible={termsModalVisible}
+        onClose={() => setTermsModalVisible(false)}
+        onAgree={handleTermsAgree}
+      />
     </ScreenContainer>
   );
 }
@@ -113,17 +153,32 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
     width: "100%",
+    justifyContent: "flex-start",
   },
 
   form: {
     width: "100%",
   },
 
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.md,
+  },
+
+  termsIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   loginContainer: {
     alignItems: "center",
-    marginTop: 28,
+    marginTop: Spacing.lg,
   },
 
   loginText: {
