@@ -10,7 +10,7 @@ export const Colors = {
     onPrimary: "#FFFFFF",
 
     text: "#1a1a1a",
-    textSecondary: "#1c1c1c",
+    textSecondary: "#454545",
 
     border: "#D8D2C2",
 

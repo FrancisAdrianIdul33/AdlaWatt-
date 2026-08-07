@@ -1,9 +1,9 @@
 import React from "react";
 import {
-    StyleSheet,
-    TextInput,
-    TextInputProps,
-    View,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  View,
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
@@ -57,20 +57,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  input: {
-    backgroundColor: Colors.light.surface,
-    color: Colors.light.text,
+input: {
+  backgroundColor: Colors.light.surface,
+  color: Colors.light.textSecondary,
 
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+  borderWidth: 1,
+  borderColor: Colors.light.border,
 
-    borderRadius: 12,
+  borderRadius: 12,
 
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
 
-    fontSize: 16,
-  },
+  fontSize: 16,
+},
 
   inputError: {
     borderColor: Colors.light.error,
