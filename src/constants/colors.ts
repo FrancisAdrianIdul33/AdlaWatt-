@@ -7,6 +7,7 @@ export const Colors = {
 
     background: "#F0EAD6",
     surface: "#FFFFFF",
+    onPrimary: "#FFFFFF",
 
     text: "#1a1a1a",
     textSecondary: "#1c1c1c",

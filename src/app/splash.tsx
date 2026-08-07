@@ -5,8 +5,7 @@ import {
     ActivityIndicator,
     Image,
     StyleSheet,
-    Text,
-    View,
+    View
 } from "react-native";
 
 export default function SplashScreen() {
@@ -27,10 +26,6 @@ export default function SplashScreen() {
         style={styles.logo}
         resizeMode="contain"
       />
-
-      <Text style={styles.subtitle}>
-        Smart Off-Grid Solar Energy Monitoring System
-      </Text>
 
       <ActivityIndicator
         size="large"
@@ -54,14 +49,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 200,
     marginBottom: 5,
-  },
-
-  subtitle: {
-    marginTop: 10,
-    fontSize: 16,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
   },
 
   loading: {
