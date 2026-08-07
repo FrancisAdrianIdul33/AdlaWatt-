@@ -37,6 +37,6 @@ export const Colors = {
   },
   gradient: {
     navBarStart: "#f5f9f5",
-    navBarEnd: "#25b825",
+    navBarEnd: "#22C55E",
   },
 } as const;

@@ -50,7 +50,7 @@ export default function NavBar({
             <Ionicons
               name="notifications-outline"
               size={navBarDimensions.notificationIconSize}
-              color={Colors.light.surface}
+              color={Colors.light.text}
             />
 
             <View style={navBarStyles.notificationDot} />
@@ -66,7 +66,7 @@ export default function NavBar({
             <Ionicons
               name="menu-outline"
               size={navBarDimensions.menuIconSize}
-              color={Colors.light.surface}
+              color={Colors.light.text}
             />
           </Pressable>
         </View>
@@ -180,7 +180,7 @@ const navBarStyles = StyleSheet.create({
     borderRadius:
       navBarDimensions.notificationDotSize / 2,
 
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: Colors.light.error,
   },
 
   accentLine: {
