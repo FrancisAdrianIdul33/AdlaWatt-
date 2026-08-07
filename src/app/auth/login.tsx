@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import Copyright from "@/components/forms/Copyright";
 import AppCheckbox from "@/components/forms/AppCheckbox";
 import AppInput from "@/components/forms/AppInput";
 import PasswordInput from "@/components/forms/PasswordInput";
@@ -13,10 +14,8 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 
-import Copyright from "@/components/forms/Copyright";
-
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
+  const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -32,10 +31,13 @@ export default function LoginScreen() {
   return (
     <ScreenContainer>
       <View style={styles.container}>
-        <AppLogo
-          width={300}
-          height={180}
-        />
+        {/* AdlaWatt Logo */}
+        <View style={styles.logoContainer}>
+          <AppLogo
+            width={300}
+            height={200}
+          />
+        </View>
 
         <AuthHeader
           title="Welcome Back"
@@ -44,11 +46,10 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <AppInput
-            label="Email Address"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            keyboardType="email-address"
+            label="Username or Email"
+            value={usernameOrEmail}
+            onChangeText={setUsernameOrEmail}
+            placeholder="Enter your username or email"
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -64,7 +65,9 @@ export default function LoginScreen() {
             <AppCheckbox
               label="Remember Me"
               checked={rememberMe}
-              onPress={() => setRememberMe((previous) => !previous)}
+              onPress={() =>
+                setRememberMe((previous) => !previous)
+              }
             />
           </View>
 
@@ -101,11 +104,18 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
 
+  logoContainer: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
   form: {
     width: "100%",
   },
 
   options: {
+    width: "100%",
     marginBottom: 12,
   },
 
