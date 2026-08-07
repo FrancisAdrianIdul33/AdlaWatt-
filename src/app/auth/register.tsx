@@ -16,6 +16,8 @@ import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { Radius, Spacing } from "@/constants/theme";
 
+import Copyright from "@/components/forms/Copyright";
+
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -139,6 +141,8 @@ export default function RegisterScreen() {
             Sign In
           </AppText>
         </View>
+
+        <Copyright />
       </View>
 
       <TermsModal

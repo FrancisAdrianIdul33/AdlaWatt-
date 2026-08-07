@@ -13,6 +13,8 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 
+import Copyright from "@/components/forms/Copyright";
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -85,6 +87,8 @@ export default function LoginScreen() {
             Create Account
           </AppText>
         </View>
+
+        <Copyright />
       </View>
     </ScreenContainer>
   );
