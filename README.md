@@ -38,3 +38,9 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - **Historical Data** — Provides access to previous energy and monitoring records.
 - **Appliance Recommendation** — Recommends suitable appliances based on the current battery
 
+### Appliance Management
+
+- View compatible household appliances.
+- View appliance power consumption information.
+- Input appliances that the user plans to use.
+- Receive appliance recommendations based on available battery power.
