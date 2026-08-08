@@ -44,3 +44,10 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - View appliance power consumption information.
 - Input appliances that the user plans to use.
 - Receive appliance recommendations based on available battery power.
+
+### Notifications
+
+- Display system notifications.
+- Display important system alerts.
+- Provide critical energy-related notifications.
+- Quick access through the notification icon in the navigation bar.
