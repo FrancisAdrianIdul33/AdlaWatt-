@@ -1,8 +1,3 @@
-Absolutely. Based on the **AdlaWatt capstone paper**, the current **React Native + Expo application**, and the implementation details we've established, here is a complete `README.md`. I kept the README aligned with the current state of the project, including the fact that the database and IoT backend are **not yet connected** and the application currently uses static/mock data.
-
-The capstone describes AdlaWatt as a transportable IoT-based off-grid solar energy harvesting system with battery storage, a built-in AC outlet, real-time monitoring, appliance recommendations, and a cross-platform mobile application.  The documented architecture uses ESP32, INA219, INA226, DS18B20, voltage sensing, Supabase, and mobile monitoring. 
-
-````markdown
 # AdlaWatt
 
 An IoT-based transportable off-grid solar energy harvesting system with a mobile application for real-time energy monitoring, appliance recommendations, notifications, and backup power management during electricity interruptions.
