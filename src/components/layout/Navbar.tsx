@@ -1,14 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React from "react";
 import {
-    Pressable,
-    StyleSheet,
-    View,
+  Pressable,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import AppLogo from "@/components/ui/AppLogo";
 import { Colors } from "@/constants/colors";
+import { Routes } from "@/constants/routes";
 
 interface NavBarProps {
   onNotificationPress?: () => void;
@@ -19,6 +21,15 @@ export default function NavBar({
   onNotificationPress,
   onMenuPress,
 }: NavBarProps) {
+  const handleNotificationPress = () => {
+    if (onNotificationPress) {
+      onNotificationPress();
+      return;
+    }
+
+    router.push(Routes.NOTIFICATIONS);
+  };
+
   return (
     <View style={navBarStyles.wrapper}>
       <LinearGradient
@@ -33,8 +44,8 @@ export default function NavBar({
         {/* AdlaWatt Logo */}
         <View style={navBarStyles.logoContainer}>
           <AppLogo
-            width={105}
-            height={50}
+            width={navBarDimensions.logoWidth}
+            height={navBarDimensions.logoHeight}
           />
         </View>
 
@@ -42,7 +53,7 @@ export default function NavBar({
         <View style={navBarStyles.actions}>
           {/* Notification */}
           <Pressable
-            onPress={onNotificationPress}
+            onPress={handleNotificationPress}
             style={navBarStyles.iconButton}
             accessibilityRole="button"
             accessibilityLabel="Notifications"
@@ -72,7 +83,7 @@ export default function NavBar({
         </View>
       </LinearGradient>
 
-      {/* Orange accent line */}
+      {/* Secondary accent line */}
       <View style={navBarStyles.accentLine} />
     </View>
   );
@@ -110,11 +121,14 @@ const navBarStyles = StyleSheet.create({
     elevation: 8,
 
     shadowColor: "#000",
+
     shadowOffset: {
       width: 0,
       height: 2,
     },
+
     shadowOpacity: 0.12,
+
     shadowRadius: 4,
   },
 
@@ -135,17 +149,21 @@ const navBarStyles = StyleSheet.create({
 
   logoContainer: {
     width: navBarDimensions.logoWidth,
+
     height: navBarDimensions.logoHeight,
 
     alignItems: "flex-start",
+
     justifyContent: "center",
 
     transform: [
       {
-        translateX: navBarDimensions.logoOffsetX,
+        translateX:
+          navBarDimensions.logoOffsetX,
       },
       {
-        translateY: navBarDimensions.logoOffsetY,
+        translateY:
+          navBarDimensions.logoOffsetY,
       },
     ],
   },
@@ -160,9 +178,11 @@ const navBarStyles = StyleSheet.create({
 
   iconButton: {
     width: navBarDimensions.iconButtonWidth,
+
     height: navBarDimensions.iconButtonHeight,
 
     alignItems: "center",
+
     justifyContent: "center",
 
     position: "relative",
@@ -172,9 +192,11 @@ const navBarStyles = StyleSheet.create({
     position: "absolute",
 
     top: 8,
+
     right: 8,
 
     width: navBarDimensions.notificationDotSize,
+
     height: navBarDimensions.notificationDotSize,
 
     borderRadius:
