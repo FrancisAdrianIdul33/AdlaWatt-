@@ -70,3 +70,13 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - About Us navigation.
 - Settings navigation.
 - Log Out and Exit actions.
+
+### Authentication
+
+- User login.
+- User registration.
+- Username or email login.
+- Password input with show/hide functionality.
+- Remember Me option.
+- Terms and Conditions modal.
+- Authentication-specific screen layout.
