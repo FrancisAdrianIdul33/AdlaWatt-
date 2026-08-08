@@ -7,3 +7,20 @@ AdlaWatt is designed to provide households with an alternative source of electri
 The mobile application provides real-time monitoring of solar energy, battery status, energy consumption, system status, temperature information, historical data, notifications, and appliance recommendations.
 
 ---
+
+## Table of Contents
+
+- [Features](#features)
+- [System Overview](#system-overview)
+- [Tech Stack](#tech-stack)
+- [Hardware](#hardware)
+- [Mobile Application Structure](#mobile-application-structure)
+- [System Architecture](#system-architecture)
+- [Installation](#installation)
+- [Development](#development)
+- [Configuration](#configuration)
+- [Scope and Limitations](#scope-and-limitations)
+- [Research Alignment](#research-alignment)
+- [Development Status](#development-status)
+
+---
