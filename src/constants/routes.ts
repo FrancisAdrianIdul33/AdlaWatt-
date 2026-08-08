@@ -11,6 +11,7 @@ export const Routes = {
   APPLIANCES: "/dashboard/appliances",
   COMPONENTS: "/dashboard/components",
   ACTIVITY_LOGS: "/dashboard/activity-logs",
+  
   NOTIFICATIONS: "/dashboard/notifications",
   SETTINGS: "/dashboard/settings",
   ABOUT_US: "/dashboard/about-us",

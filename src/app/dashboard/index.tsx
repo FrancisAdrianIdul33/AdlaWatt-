@@ -12,6 +12,8 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+import { Routes } from "@/constants/routes";
+import { router } from "expo-router";
 
 export default function DashboardScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -251,14 +253,16 @@ export default function DashboardScreen() {
               Recent Activity
             </AppText>
 
-            <Pressable>
-              <AppText
-                variant="caption"
-                style={styles.viewAll}
-              >
-                View All
-              </AppText>
-            </Pressable>
+           <Pressable
+  onPress={() => router.push(Routes.ACTIVITY_LOGS)}
+>
+  <AppText
+    variant="caption"
+    style={styles.viewAll}
+  >
+    View All
+  </AppText>
+</Pressable>
           </View>
 
           <View style={styles.activityList}>
