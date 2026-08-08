@@ -24,3 +24,17 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - [Development Status](#development-status)
 
 ---
+
+## Features
+
+### Dashboard
+
+- **Real-Time Monitoring** — Displays current information from the AdlaWatt system.
+- **Battery Monitoring** — Displays battery level and battery status.
+- **Solar Input Monitoring** — Displays solar energy input information.
+- **Load Monitoring** — Displays current energy consumption from connected appliances.
+- **Temperature Monitoring** — Displays battery and system temperature information.
+- **System Status** — Displays the current status of the AdlaWatt system.
+- **Historical Data** — Provides access to previous energy and monitoring records.
+- **Appliance Recommendation** — Recommends suitable appliances based on the current battery
+
