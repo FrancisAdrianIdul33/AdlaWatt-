@@ -51,3 +51,9 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - Display important system alerts.
 - Provide critical energy-related notifications.
 - Quick access through the notification icon in the navigation bar.
+
+### Activity Logs
+
+- Display recorded system activities.
+- View previous system events and activities.
+- Provide users with a history of relevant system information.
