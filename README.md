@@ -57,3 +57,16 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - Display recorded system activities.
 - View previous system events and activities.
 - Provide users with a history of relevant system information.
+
+### Navigation
+
+- Fixed navigation bar.
+- Notification shortcut.
+- Sidebar navigation.
+- Dashboard navigation.
+- Appliances navigation.
+- Components navigation.
+- Activity Logs navigation.
+- About Us navigation.
+- Settings navigation.
+- Log Out and Exit actions.
