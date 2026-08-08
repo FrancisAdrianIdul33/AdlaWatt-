@@ -80,3 +80,19 @@ The mobile application provides real-time monitoring of solar energy, battery st
 - Remember Me option.
 - Terms and Conditions modal.
 - Authentication-specific screen layout.
+
+## System Overview
+
+AdlaWatt combines solar energy harvesting, energy storage, IoT monitoring, cloud data processing, and mobile application monitoring.
+
+The system is designed around four major stages:
+
+```text
+Solar Energy Harvesting
+        ↓
+IoT Hardware Processing
+        ↓
+Supabase Cloud Storage
+and Real-Time Streaming
+        ↓
+Mobile Application Display
