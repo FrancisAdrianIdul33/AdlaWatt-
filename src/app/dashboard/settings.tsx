@@ -693,9 +693,15 @@ export default function SettingsScreen() {
                     {fontFamily}
                   </AppText>
 
-                  <AppText style={styles.dropdownInputArrow}>
-                    {fontFamilyOpen ? "⌃" : "⌄"}
-                  </AppText>
+                 <Ionicons
+  name={
+    preferencesExpanded
+      ? "chevron-up-outline"
+      : "chevron-down-outline"
+  }
+  size={22}
+  color="#000000"
+/>
                 </Pressable>
 
                 {fontFamilyOpen && (
@@ -751,9 +757,15 @@ export default function SettingsScreen() {
                     {language}
                   </AppText>
 
-                  <AppText style={styles.dropdownInputArrow}>
-                    {languageOpen ? "⌃" : "⌄"}
-                  </AppText>
+             <Ionicons
+  name={
+    preferencesExpanded
+      ? "chevron-up-outline"
+      : "chevron-down-outline"
+  }
+  size={22}
+  color="#000000"
+/>
                 </Pressable>
 
                 {languageOpen && (
