@@ -386,18 +386,22 @@ export default function SettingsScreen() {
                         secureTextEntry={!showNewPassword}
                       />
 
-                      <Pressable
-                        onPress={() =>
-                          setShowNewPassword(
-                            !showNewPassword,
-                          )
-                        }
-                        style={styles.eyeButton}
-                      >
-                        <AppText style={styles.eyeText}>
-                          {showNewPassword ? "◉" : "○"}
-                        </AppText>
-                      </Pressable>
+                    <Pressable
+  onPress={() =>
+    setShowNewPassword(!showNewPassword)
+  }
+  style={styles.eyeButton}
+>
+  <Ionicons
+    name={
+      showNewPassword
+        ? "eye-outline"
+        : "eye-off-outline"
+    }
+    size={22}
+    color="#000000"
+  />
+</Pressable>
                     </View>
                   </View>
 
@@ -426,18 +430,24 @@ export default function SettingsScreen() {
                         }
                       />
 
-                      <Pressable
-                        onPress={() =>
-                          setShowConfirmPassword(
-                            !showConfirmPassword,
-                          )
-                        }
-                        style={styles.eyeButton}
-                      >
-                        <AppText style={styles.eyeText}>
-                          {showConfirmPassword ? "◉" : "○"}
-                        </AppText>
-                      </Pressable>
+                    <Pressable
+  onPress={() =>
+    setShowConfirmPassword(
+      !showConfirmPassword,
+    )
+  }
+  style={styles.eyeButton}
+>
+  <Ionicons
+    name={
+      showConfirmPassword
+        ? "eye-outline"
+        : "eye-off-outline"
+    }
+    size={22}
+    color="#000000"
+  />
+</Pressable>
                     </View>
                   </View>
 
