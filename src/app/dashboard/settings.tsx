@@ -15,6 +15,7 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 
 export default function SettingsScreen() {
@@ -213,10 +214,14 @@ export default function SettingsScreen() {
 
         {/* ================= ACCOUNT PROFILE ================= */}
         <View style={styles.sectionContainer}>
-          <Pressable
-            onPress={() =>
-              setAccountExpanded(!accountExpanded)
-            }
+         <Pressable
+  onPress={() => {
+    if (accountExpanded && isEditingAccount) {
+      handleCancelUpdate();
+    }
+
+    setAccountExpanded(!accountExpanded);
+  }}
             style={({ pressed }) => [
               styles.dropdownHeader,
               pressed && styles.pressed,
@@ -238,9 +243,15 @@ export default function SettingsScreen() {
               </AppText>
             </View>
 
-            <AppText style={styles.dropdownArrow}>
-              {accountExpanded ? "⌃" : "⌄"}
-            </AppText>
+            <Ionicons
+  name={
+    accountExpanded
+      ? "chevron-up-outline"
+      : "chevron-down-outline"
+  }
+  size={22}
+  color="#000000"
+/>
           </Pressable>
 
           {accountExpanded && (
@@ -496,9 +507,15 @@ export default function SettingsScreen() {
               </AppText>
             </View>
 
-            <AppText style={styles.dropdownArrow}>
-              {preferencesExpanded ? "⌃" : "⌄"}
-            </AppText>
+            <Ionicons
+  name={
+    accountExpanded
+      ? "chevron-up-outline"
+      : "chevron-down-outline"
+  }
+  size={22}
+  color="#000000"
+/>
           </Pressable>
 
           {preferencesExpanded && (
