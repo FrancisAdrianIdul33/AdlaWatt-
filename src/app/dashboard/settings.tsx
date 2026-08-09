@@ -42,6 +42,9 @@ export default function SettingsScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [showConfirmationPassword, setShowConfirmationPassword] =
+  useState(false);
+
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
 
@@ -943,17 +946,23 @@ export default function SettingsScreen() {
                 />
 
                 <Pressable
-                  onPress={() =>
-                    setShowCurrentPassword(
-                      !showCurrentPassword,
-                    )
-                  }
-                  style={styles.eyeButton}
-                >
-                  <AppText style={styles.eyeText}>
-                    {showCurrentPassword ? "◉" : "○"}
-                  </AppText>
-                </Pressable>
+  onPress={() =>
+    setShowConfirmPassword(
+      !showConfirmPassword,
+    )
+  }
+  style={styles.eyeButton}
+>
+  <Ionicons
+    name={
+      showConfirmPassword
+        ? "eye-outline"
+        : "eye-off-outline"
+    }
+    size={22}
+    color="#000000"
+  />
+</Pressable>
               </View>
             </View>
 
