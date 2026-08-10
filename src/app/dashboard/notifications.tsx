@@ -11,26 +11,18 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
+import NotificationCard, {
+  NotificationCardData,
+  NotificationType,
+} from "@/components/NotificationCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
-
-type NotificationType = "normal" | "alert";
 
 type TimeFilter =
   | "Last Hour"
   | "Today"
   | "This Week"
   | "This Year";
-
-interface NotificationData {
-  id: string;
-  title: string;
-  message: string;
-  date: string;
-  time: string;
-  type: NotificationType;
-  isRead: boolean;
-}
 
 export default function NotificationsScreen() {
   const [sidebarVisible, setSidebarVisible] =
@@ -53,14 +45,14 @@ export default function NotificationsScreen() {
   /*
    * Static notification data for development.
    *
-   * The notifications are intentionally arranged
-   * from newest to oldest.
+   * The notifications are arranged from newest
+   * to oldest.
    *
-   * When the database is connected, this array can
-   * be replaced with fetched notification records.
+   * Later, this can be replaced with data
+   * fetched from the database.
    */
   const [notifications, setNotifications] =
-    useState<NotificationData[]>([
+    useState<NotificationCardData[]>([
       {
         id: "1",
         title: "Battery Level Low",
@@ -107,7 +99,7 @@ export default function NotificationsScreen() {
         message:
           "The connected appliances are currently consuming more power than usual.",
         date: "Aug 10, 2026",
-        time: "09:58 AM",
+        time: "9:58 AM",
         type: "alert",
         isRead: true,
       },
@@ -117,7 +109,7 @@ export default function NotificationsScreen() {
         message:
           "An appliance has been connected to the AdlaWatt system.",
         date: "Aug 10, 2026",
-        time: "09:42 AM",
+        time: "9:42 AM",
         type: "normal",
         isRead: true,
       },
@@ -127,7 +119,7 @@ export default function NotificationsScreen() {
         message:
           "The solar panel has started charging the battery.",
         date: "Aug 10, 2026",
-        time: "09:12 AM",
+        time: "9:12 AM",
         type: "normal",
         isRead: true,
       },
@@ -137,7 +129,7 @@ export default function NotificationsScreen() {
         message:
           "Real-time system monitoring is currently active.",
         date: "Aug 10, 2026",
-        time: "08:55 AM",
+        time: "8:55 AM",
         type: "normal",
         isRead: true,
       },
@@ -147,7 +139,7 @@ export default function NotificationsScreen() {
         message:
           "The inverter detected a load that is approaching its operating limit.",
         date: "Aug 10, 2026",
-        time: "08:41 AM",
+        time: "8:41 AM",
         type: "alert",
         isRead: true,
       },
@@ -157,7 +149,7 @@ export default function NotificationsScreen() {
         message:
           "The battery has reached its current charging capacity.",
         date: "Aug 10, 2026",
-        time: "08:30 AM",
+        time: "8:30 AM",
         type: "normal",
         isRead: true,
       },
@@ -167,7 +159,7 @@ export default function NotificationsScreen() {
         message:
           "The latest energy consumption data has been recorded.",
         date: "Aug 10, 2026",
-        time: "08:18 AM",
+        time: "8:18 AM",
         type: "normal",
         isRead: true,
       },
@@ -177,7 +169,7 @@ export default function NotificationsScreen() {
         message:
           "One of the system sensors may have temporarily lost connection.",
         date: "Aug 10, 2026",
-        time: "08:05 AM",
+        time: "8:05 AM",
         type: "alert",
         isRead: true,
       },
@@ -187,7 +179,7 @@ export default function NotificationsScreen() {
         message:
           "The system has updated appliance recommendations based on battery capacity.",
         date: "Aug 10, 2026",
-        time: "07:48 AM",
+        time: "7:48 AM",
         type: "normal",
         isRead: true,
       },
@@ -197,7 +189,7 @@ export default function NotificationsScreen() {
         message:
           "The system successfully recorded the latest appliance energy consumption.",
         date: "Aug 10, 2026",
-        time: "07:32 AM",
+        time: "7:32 AM",
         type: "normal",
         isRead: true,
       },
@@ -234,31 +226,29 @@ export default function NotificationsScreen() {
     ]);
 
   /*
-   * IMPORTANT:
+   * Total notification count.
    *
-   * This is the total number of notifications
-   * stored in the database.
+   * This represents ALL notifications and is
+   * independent of the active filters.
    *
-   * It is NOT affected by the current filters.
-   *
-   * Later, this can be replaced with:
-   *
-   * const totalNotifications = databaseCount;
+   * When connected to the database, this value
+   * should come from the database count.
    */
   const totalNotifications = notifications.length;
 
   const notificationsPerPage = 15;
 
   /*
-   * Filter notifications.
+   * Apply filters.
    *
-   * Filtering does NOT change totalNotifications.
+   * Filtering does not affect the total
+   * notification count above.
    */
   const filteredNotifications = useMemo(() => {
     let result = [...notifications];
 
     /*
-     * Notification type filter
+     * Notification type
      */
     if (typeFilter !== "All") {
       result = result.filter(
@@ -270,9 +260,10 @@ export default function NotificationsScreen() {
     /*
      * Time filter
      *
-     * Static development behavior for now.
-     * This can later be replaced by timestamp
-     * filtering from the database.
+     * This is temporary development logic.
+     * When connected to the database, the
+     * actual notification timestamps should
+     * be used.
      */
     if (timeFilter === "Last Hour") {
       result = result.slice(0, 4);
@@ -288,11 +279,13 @@ export default function NotificationsScreen() {
     }
 
     /*
-     * Always ensure newest notification comes first.
+     * Newest first.
      *
-     * The static data is already arranged this way.
-     * When using a database, this should be based
-     * on the notification timestamp.
+     * The current static data is already ordered
+     * this way.
+     *
+     * Database implementation should eventually
+     * sort using the notification timestamp.
      */
     return result;
   }, [
@@ -303,9 +296,6 @@ export default function NotificationsScreen() {
 
   /*
    * Pagination
-   *
-   * Recent + Earlier notifications are treated as
-   * one combined list for the 15-item page limit.
    */
   const totalPages = Math.max(
     1,
@@ -329,8 +319,8 @@ export default function NotificationsScreen() {
     );
 
   /*
-   * Separate the CURRENT PAGE into Recent
-   * and Earlier sections.
+   * Divide the current page into Recent
+   * and Earlier notifications.
    */
   const recentNotifications =
     currentPageNotifications.filter(
@@ -345,7 +335,7 @@ export default function NotificationsScreen() {
     );
 
   /*
-   * Time filter handler
+   * Time filter
    */
   const handleTimeFilter = (
     value: TimeFilter,
@@ -356,7 +346,7 @@ export default function NotificationsScreen() {
   };
 
   /*
-   * Notification type filter handler
+   * Notification type filter
    */
   const handleTypeFilter = (
     value: "All" | NotificationType,
@@ -367,11 +357,9 @@ export default function NotificationsScreen() {
   };
 
   /*
-   * Mark all notifications currently displayed
-   * as read.
+   * Mark all notifications as read.
    *
-   * Later this action can also update the
-   * corresponding database records.
+   * Later this should also update the database.
    */
   const handleMarkAsRead = () => {
     setNotifications((current) =>
@@ -638,7 +626,7 @@ export default function NotificationsScreen() {
           </Pressable>
         </View>
 
-        {/* Recent Section */}
+        {/* Recent */}
         {recentNotifications.length > 0 && (
           <View style={styles.section}>
             <AppText
@@ -651,101 +639,17 @@ export default function NotificationsScreen() {
             <View style={styles.notificationList}>
               {recentNotifications.map(
                 (notification) => (
-                  <View
+                  <NotificationCard
                     key={notification.id}
-                    style={[
-                      styles.notificationCard,
-                      styles.recentNotification,
-                      notification.type ===
-                        "normal" &&
-                        styles.normalNotification,
-                      notification.type ===
-                        "alert" &&
-                        styles.alertNotification,
-                    ]}
-                  >
-                    {/* Unread Indicator */}
-                    <View
-                      style={
-                        styles.unreadIndicator
-                      }
-                    />
-
-                    {/* Notification Icon */}
-                    <View
-                      style={
-                        styles.notificationIconContainer
-                      }
-                    >
-                      <Ionicons
-                        name={
-                          notification.type ===
-                          "alert"
-                            ? "alert-circle-outline"
-                            : "notifications-outline"
-                        }
-                        size={21}
-                        color={
-                          notification.type ===
-                          "alert"
-                            ? Colors.light.error
-                            : "#2196F3"
-                        }
-                      />
-                    </View>
-
-                    {/* Content */}
-                    <View
-                      style={
-                        styles.notificationContent
-                      }
-                    >
-                      <AppText
-                        variant="body"
-                        style={
-                          styles.notificationTitle
-                        }
-                      >
-                        {notification.title}
-                      </AppText>
-
-                      <AppText
-                        variant="caption"
-                        style={
-                          styles.notificationMessage
-                        }
-                      >
-                        {notification.message}
-                      </AppText>
-
-                      <View
-                        style={
-                          styles.dateTimeRow
-                        }
-                      >
-                        <AppText
-                          variant="caption"
-                          style={styles.dateText}
-                        >
-                          {notification.date}
-                        </AppText>
-
-                        <AppText
-                          variant="caption"
-                          style={styles.timeText}
-                        >
-                          {notification.time}
-                        </AppText>
-                      </View>
-                    </View>
-                  </View>
+                    notification={notification}
+                  />
                 ),
               )}
             </View>
           </View>
         )}
 
-        {/* Earlier Section */}
+        {/* Earlier */}
         {earlierNotifications.length > 0 && (
           <View
             style={[
@@ -764,89 +668,10 @@ export default function NotificationsScreen() {
             <View style={styles.notificationList}>
               {earlierNotifications.map(
                 (notification) => (
-                  <View
+                  <NotificationCard
                     key={notification.id}
-                    style={[
-                      styles.notificationCard,
-                      styles.earlierNotification,
-                      notification.type ===
-                        "normal" &&
-                        styles.normalNotification,
-                      notification.type ===
-                        "alert" &&
-                        styles.alertNotification,
-                    ]}
-                  >
-                    {/* No unread dot for earlier notifications */}
-
-                    {/* Notification Icon */}
-                    <View
-                      style={
-                        styles.notificationIconContainer
-                      }
-                    >
-                      <Ionicons
-                        name={
-                          notification.type ===
-                          "alert"
-                            ? "alert-circle-outline"
-                            : "notifications-outline"
-                        }
-                        size={21}
-                        color={
-                          notification.type ===
-                          "alert"
-                            ? Colors.light.error
-                            : "#2196F3"
-                        }
-                      />
-                    </View>
-
-                    {/* Content */}
-                    <View
-                      style={
-                        styles.notificationContent
-                      }
-                    >
-                      <AppText
-                        variant="body"
-                        style={
-                          styles.notificationTitle
-                        }
-                      >
-                        {notification.title}
-                      </AppText>
-
-                      <AppText
-                        variant="caption"
-                        style={
-                          styles.notificationMessage
-                        }
-                      >
-                        {notification.message}
-                      </AppText>
-
-                      <View
-                        style={
-                          styles.dateTimeRow
-                        }
-                      >
-                        <AppText
-                          variant="caption"
-                          style={styles.dateText}
-                        >
-                          {notification.date}
-                        </AppText>
-
-                        <AppText
-                          variant="caption"
-                          style={styles.timeText}
-                        >
-                          {notification.time}
-                        </AppText>
-                      </View>
-                    </View>
-                  </View>
+                    notification={notification}
+                  />
                 ),
               )}
             </View>
@@ -979,10 +804,6 @@ export default function NotificationsScreen() {
 const notificationDimensions = {
   borderWidth: 3,
   cardRadius: 16,
-  cardPadding: 15,
-  cardSpacing: 12,
-
-  indicatorSize: 9,
 
   filterHeight: 42,
   filterRadius: 12,
@@ -1029,8 +850,11 @@ const styles = StyleSheet.create({
 
   subtitle: {
     color: Colors.light.textSecondary,
+
     marginTop: 6,
+
     fontWeight: "400",
+
     lineHeight: 19,
   },
 
@@ -1038,7 +862,9 @@ const styles = StyleSheet.create({
 
   totalContainer: {
     width: "100%",
+
     alignItems: "flex-end",
+
     marginBottom: 10,
   },
 
@@ -1055,16 +881,23 @@ const styles = StyleSheet.create({
 
   controlsContainer: {
     width: "100%",
+
     flexDirection: "row",
+
     alignItems: "center",
+
     gap: 8,
+
     marginBottom: 20,
+
     zIndex: 100,
   },
 
   dropdownWrapper: {
     position: "relative",
+
     flex: 1,
+
     zIndex: 100,
   },
 
@@ -1073,7 +906,9 @@ const styles = StyleSheet.create({
       notificationDimensions.filterHeight,
 
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "center",
 
     gap: 6,
@@ -1083,6 +918,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.glass.white,
 
     borderWidth: 2,
+
     borderColor: Colors.light.primary,
 
     borderRadius:
@@ -1091,7 +927,9 @@ const styles = StyleSheet.create({
 
   dropdownButtonText: {
     color: "#000000",
+
     fontWeight: "600",
+
     flexShrink: 1,
   },
 
@@ -1102,11 +940,13 @@ const styles = StyleSheet.create({
       notificationDimensions.filterHeight + 6,
 
     left: 0,
+
     right: 0,
 
     backgroundColor: "#FFFFFF",
 
     borderWidth: 2,
+
     borderColor: Colors.light.primary,
 
     borderRadius:
@@ -1126,6 +966,7 @@ const styles = StyleSheet.create({
     },
 
     shadowOpacity: 0.12,
+
     shadowRadius: 8,
   },
 
@@ -1134,6 +975,7 @@ const styles = StyleSheet.create({
       notificationDimensions.dropdownItemHeight,
 
     flexDirection: "row",
+
     alignItems: "center",
 
     gap: 8,
@@ -1143,11 +985,13 @@ const styles = StyleSheet.create({
 
   dropdownItemText: {
     color: "#000000",
+
     fontWeight: "500",
   },
 
   selectedDropdownText: {
     color: Colors.light.primary,
+
     fontWeight: "700",
   },
 
@@ -1158,7 +1002,9 @@ const styles = StyleSheet.create({
       notificationDimensions.filterHeight,
 
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "center",
 
     gap: 5,
@@ -1173,6 +1019,7 @@ const styles = StyleSheet.create({
 
   markReadText: {
     color: "#FFFFFF",
+
     fontWeight: "700",
   },
 
@@ -1188,7 +1035,9 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     color: "#000000",
+
     fontWeight: "700",
+
     marginBottom: 10,
   },
 
@@ -1196,133 +1045,8 @@ const styles = StyleSheet.create({
 
   notificationList: {
     width: "100%",
-    gap: notificationDimensions.cardSpacing,
-  },
 
-  /* Notification Card */
-
-  notificationCard: {
-    width: "100%",
-
-    minHeight: 96,
-
-    flexDirection: "row",
-    alignItems: "flex-start",
-
-    borderWidth:
-      notificationDimensions.borderWidth,
-
-    borderRadius:
-      notificationDimensions.cardRadius,
-
-    padding:
-      notificationDimensions.cardPadding,
-  },
-
-  /*
-   * Recent notifications use a subtle
-   * light-gray background.
-   */
-  recentNotification: {
-    backgroundColor:
-      "rgba(225, 225, 225, 0.65)",
-  },
-
-  /*
-   * Earlier notifications use the
-   * normal glass background.
-   */
-  earlierNotification: {
-    backgroundColor: Colors.glass.white,
-  },
-
-  /* Notification Type Borders */
-
-  normalNotification: {
-    borderColor: "#2196F3",
-  },
-
-  alertNotification: {
-    borderColor: Colors.light.error,
-  },
-
-  /* Recent / Unread Dot */
-
-  unreadIndicator: {
-    width:
-      notificationDimensions.indicatorSize,
-
-    height:
-      notificationDimensions.indicatorSize,
-
-    borderRadius:
-      notificationDimensions.indicatorSize / 2,
-
-    backgroundColor:
-      Colors.light.error,
-
-    marginTop: 6,
-
-    marginRight: 8,
-  },
-
-  /* Icon */
-
-  notificationIconContainer: {
-    width: 28,
-
-    alignItems: "center",
-
-    marginTop: 1,
-
-    marginRight: 7,
-  },
-
-  /* Content */
-
-  notificationContent: {
-    flex: 1,
-  },
-
-  notificationTitle: {
-    color: "#000000",
-
-    fontWeight: "700",
-
-    marginBottom: 3,
-  },
-
-  notificationMessage: {
-    color: Colors.light.textSecondary,
-
-    lineHeight: 18,
-
-    fontWeight: "400",
-  },
-
-  dateTimeRow: {
-    flexDirection: "row",
-
-    justifyContent: "flex-end",
-
-    alignItems: "center",
-
-    gap: 10,
-
-    marginTop: 7,
-  },
-
-  dateText: {
-    color: Colors.light.textSecondary,
-    fontSize: 10,
-  },
-
-  timeText: {
-    color: Colors.light.textSecondary,
-
-    fontSize: 10,
-
-    fontWeight: "600",
+    gap: 12,
   },
 
   /* Empty State */
@@ -1361,9 +1085,11 @@ const styles = StyleSheet.create({
 
   pageButton: {
     width: 36,
+
     height: 36,
 
     alignItems: "center",
+
     justifyContent: "center",
 
     borderWidth: 2,
@@ -1385,9 +1111,11 @@ const styles = StyleSheet.create({
 
   pageNumber: {
     width: 36,
+
     height: 36,
 
     alignItems: "center",
+
     justifyContent: "center",
 
     borderRadius: 10,
