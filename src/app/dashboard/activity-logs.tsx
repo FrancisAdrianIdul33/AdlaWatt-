@@ -7,11 +7,11 @@ import {
   View,
 } from "react-native";
 
+import ActivityCard from "@/components/ActivityCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
-import ActivityCard from "@/components/ActivityCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor: "#FFFFFF",
 
     borderWidth: 2,
     borderColor: Colors.light.primary,
