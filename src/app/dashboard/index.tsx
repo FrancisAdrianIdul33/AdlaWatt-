@@ -1,14 +1,11 @@
 import React, { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, View, Pressable } from "react-native";
+import { router } from "expo-router";
 
 import ActivityCard, {
   ActivityCardData,
 } from "@/components/ActivityCard";
+import ApplianceCard from "@/components/ApplianceCard";
 import ChartCard from "@/components/ChartCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
@@ -17,11 +14,9 @@ import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
-import { router } from "expo-router";
 
 export default function DashboardScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const activities: ActivityCardData[] = [
     {
@@ -55,8 +50,7 @@ export default function DashboardScreen() {
       id: "4",
       type: "info",
       title: "Battery Level Updated",
-      details:
-        "The battery level changed from 52% to 50%.",
+      details: "The battery level changed from 52% to 50%.",
       date: "Aug 10, 2026",
       time: "07:44 AM",
     },
@@ -110,16 +104,13 @@ export default function DashboardScreen() {
     deviceStatus: "Online" as const,
     batteryTemperature: 20.0,
     batteryTemperatureStatus: "Normal" as const,
-    recommendedAppliance: "Electric Fan",
   };
 
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
       <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
+        onMenuPress={() => setSidebarVisible(true)}
       />
 
       {/* Dashboard */}
@@ -154,29 +145,9 @@ export default function DashboardScreen() {
             Appliance Recommendation
           </AppText>
 
-          <View style={styles.recommendation}>
-            <View style={styles.recommendationIcon}>
-              <AppText style={styles.bolt}>
-                ⚡
-              </AppText>
-            </View>
-
-            <View style={styles.recommendationInfo}>
-              <AppText
-                variant="body"
-                style={styles.recommendationTitle}
-              >
-                {dashboardData.recommendedAppliance}
-              </AppText>
-
-              <AppText
-                variant="caption"
-                style={styles.secondaryText}
-              >
-                Recommended based on available power.
-              </AppText>
-            </View>
-          </View>
+          <ApplianceCard
+            batteryLevel={dashboardData.batteryLevel}
+          />
         </View>
 
         {/* Real-Time Monitoring */}
@@ -260,9 +231,7 @@ export default function DashboardScreen() {
       {/* Sidebar */}
       <Sidebar
         visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
+        onClose={() => setSidebarVisible(false)}
       />
     </ScreenContainer2>
   );
@@ -271,10 +240,8 @@ export default function DashboardScreen() {
 const dashboardDimensions = {
   horizontalPadding: 16,
   sectionSpacing: 18,
-  borderWidth: 3,
   cardRadius: 16,
   monitorGap: 10,
-  recommendationHeight: 76,
 };
 
 const styles = StyleSheet.create({
@@ -284,8 +251,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingHorizontal:
-      dashboardDimensions.horizontalPadding,
+    paddingHorizontal: dashboardDimensions.horizontalPadding,
     paddingTop: 20,
     paddingBottom: 24,
   },
@@ -294,7 +260,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.glass.white,
     borderWidth: 3,
     borderColor: Colors.light.secondary,
-    borderRadius: 16,
+    borderRadius: dashboardDimensions.cardRadius,
     padding: 18,
     marginBottom: 18,
   },
@@ -311,60 +277,13 @@ const styles = StyleSheet.create({
 
   section: {
     width: "100%",
-    marginBottom:
-      dashboardDimensions.sectionSpacing,
+    marginBottom: dashboardDimensions.sectionSpacing,
   },
 
   sectionTitle: {
     color: "#000000",
     fontWeight: "700",
     marginBottom: 10,
-  },
-
-  recommendation: {
-    minHeight:
-      dashboardDimensions.recommendationHeight,
-    width: "100%",
-    borderWidth:
-      dashboardDimensions.borderWidth,
-    borderColor: Colors.light.primary,
-    borderRadius:
-      dashboardDimensions.cardRadius,
-    backgroundColor: Colors.glass.white,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  recommendationIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.light.primary,
-    marginRight: 12,
-  },
-
-  bolt: {
-    fontSize: 22,
-    color: "#FFFFFF",
-  },
-
-  recommendationInfo: {
-    flex: 1,
-  },
-
-  recommendationTitle: {
-    color: "#000000",
-    fontWeight: "700",
-    marginBottom: 3,
-  },
-
-  secondaryText: {
-    color: Colors.light.textSecondary,
-    lineHeight: 19,
-    fontWeight: "400",
   },
 
   monitorGrid: {

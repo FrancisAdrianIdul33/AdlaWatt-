@@ -18,6 +18,10 @@ type Appliance = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
+type ApplianceCardProps = {
+  batteryLevel: number;
+};
+
 const appliances: Appliance[] = [
   {
     name: "Emergency Light",
@@ -65,7 +69,9 @@ const appliances: Appliance[] = [
 
 const BATTERY_LEVEL = 50;
 
-export default function ApplianceCard() {
+export default function ApplianceCard({
+  batteryLevel,
+}: ApplianceCardProps) {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
 
