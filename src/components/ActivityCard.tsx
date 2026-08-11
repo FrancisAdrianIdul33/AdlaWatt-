@@ -1,8 +1,15 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+
+export type ActivityType =
+  | "info"
+  | "warning"
+  | "error"
+  | "critical";
 
 export type ActivityCardData = {
   id: string;
@@ -10,31 +17,68 @@ export type ActivityCardData = {
   details: string;
   date: string;
   time: string;
-  type: "info" | "warning" | "error";
+  type: ActivityType;
 };
 
 type ActivityCardProps = {
-  activity: ActivityCardData;
+  activity?: ActivityCardData | null;
 };
 
 export default function ActivityCard({
   activity,
 }: ActivityCardProps) {
-  const getActivityColor = () => {
-    switch (activity.type) {
-      case "warning":
-        return Colors.light.secondary;
-
-      case "error":
-        return "#D32F2F";
-
-      case "info":
-      default:
-        return Colors.light.primary;
-    }
+  /*
+   * Safety fallback
+   *
+   * This prevents the component from crashing if
+   * activity-logs.tsx temporarily passes undefined
+   * or null.
+   */
+  const safeActivity: ActivityCardData = activity ?? {
+    id: "unknown",
+    title: "Activity",
+    details: "No activity details available.",
+    date: "",
+    time: "",
+    type: "info",
   };
 
-  const activityColor = getActivityColor();
+  /*
+   * Normalize the activity type.
+   *
+   * This keeps the component safe even if the database
+   * later uses "critical" instead of "error".
+   */
+  const activityType: ActivityType =
+    safeActivity.type === "critical"
+      ? "critical"
+      : safeActivity.type === "error"
+        ? "error"
+        : safeActivity.type === "warning"
+          ? "warning"
+          : "info";
+
+  /*
+   * Activity border, indicator, and icon color.
+   */
+  const activityColor =
+    activityType === "warning"
+      ? Colors.light.secondary
+      : activityType === "error" ||
+          activityType === "critical"
+        ? Colors.light.error
+        : Colors.light.primary;
+
+  /*
+   * Activity icon.
+   */
+  const activityIcon =
+    activityType === "warning"
+      ? "warning-outline"
+      : activityType === "error" ||
+          activityType === "critical"
+        ? "alert-circle-outline"
+        : "information-circle-outline";
 
   return (
     <View
@@ -45,7 +89,7 @@ export default function ActivityCard({
         },
       ]}
     >
-      {/* Activity Indicator */}
+      {/* Activity Type Indicator */}
       <View
         style={[
           styles.indicator,
@@ -55,50 +99,61 @@ export default function ActivityCard({
         ]}
       />
 
-      {/* Activity Content */}
+      {/* Activity Information */}
       <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <AppText
-            variant="body"
-            style={styles.title}
-          >
-            {activity.title}
-          </AppText>
-
-          <View style={styles.dateTimeContainer}>
+        <View style={styles.mainRow}>
+          {/* Title and Details */}
+          <View style={styles.textContainer}>
             <AppText
               variant="caption"
-              style={styles.date}
+              style={styles.title}
+              numberOfLines={2}
             >
-              {activity.date}
+              {safeActivity.title}
             </AppText>
 
             <AppText
               variant="caption"
-              style={styles.time}
+              style={styles.details}
             >
-              {activity.time}
+              {safeActivity.details}
             </AppText>
           </View>
-        </View>
 
-        <AppText
-          variant="caption"
-          style={styles.details}
-        >
-          {activity.details}
-        </AppText>
+          {/* Date and Time */}
+          <View style={styles.dateTimeContainer}>
+            {safeActivity.date ? (
+              <AppText
+                variant="caption"
+                style={styles.date}
+              >
+                {safeActivity.date}
+              </AppText>
+            ) : null}
+
+            {safeActivity.time ? (
+              <AppText
+                variant="caption"
+                style={styles.time}
+              >
+                {safeActivity.time}
+              </AppText>
+            ) : null}
+          </View>
+        </View>
+      </View>
+
+      {/* Activity Icon */}
+      <View style={styles.iconContainer}>
+        <Ionicons
+          name={activityIcon}
+          size={17}
+          color={activityColor}
+        />
       </View>
     </View>
   );
 }
-
-const activityDimensions = {
-  borderWidth: 3,
-  cardRadius: 16,
-  cardPadding: 15,
-  indicatorSize: 11,
-};
 
 const styles = StyleSheet.create({
   card: {
@@ -108,40 +163,38 @@ const styles = StyleSheet.create({
 
     flexDirection: "row",
 
-    alignItems: "flex-start",
+    alignItems: "center",
 
     backgroundColor: Colors.glass.white,
 
-    borderWidth:
-      activityDimensions.borderWidth,
+    borderWidth: 3,
 
-    borderRadius:
-      activityDimensions.cardRadius,
+    borderRadius: 16,
 
-    padding:
-      activityDimensions.cardPadding,
+    paddingVertical: 13,
+
+    paddingHorizontal: 13,
+
+    marginBottom: 9,
   },
 
   indicator: {
-    width:
-      activityDimensions.indicatorSize,
+    width: 11,
 
-    height:
-      activityDimensions.indicatorSize,
+    height: 11,
 
-    borderRadius:
-      activityDimensions.indicatorSize / 2,
+    borderRadius: 5.5,
 
-    marginRight: 12,
-
-    marginTop: 5,
+    marginRight: 11,
   },
 
   content: {
     flex: 1,
+
+    minWidth: 0,
   },
 
-  titleRow: {
+  mainRow: {
     width: "100%",
 
     flexDirection: "row",
@@ -151,27 +204,42 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  title: {
+  textContainer: {
     flex: 1,
 
+    minWidth: 0,
+
+    paddingRight: 10,
+  },
+
+  title: {
     color: "#000000",
 
     fontWeight: "700",
 
-    marginRight: 10,
+    marginBottom: 3,
+  },
+
+  details: {
+    color: Colors.light.textSecondary,
+
+    lineHeight: 18,
+
+    fontWeight: "400",
   },
 
   dateTimeContainer: {
+    minWidth: 78,
+
     alignItems: "flex-end",
 
     justifyContent: "flex-start",
 
-    minWidth: 90,
+    marginLeft: 5,
   },
 
   date: {
-    color:
-      Colors.light.textSecondary,
+    color: Colors.light.textSecondary,
 
     fontSize: 10,
 
@@ -181,8 +249,7 @@ const styles = StyleSheet.create({
   },
 
   time: {
-    color:
-      Colors.light.textSecondary,
+    color: Colors.light.textSecondary,
 
     fontSize: 10,
 
@@ -193,16 +260,15 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 
-  details: {
-    color:
-      Colors.light.textSecondary,
+  iconContainer: {
+    width: 24,
 
-    lineHeight: 18,
+    height: 24,
 
-    fontWeight: "400",
+    alignItems: "center",
 
-    marginTop: 4,
+    justifyContent: "center",
 
-    paddingRight: 4,
+    marginLeft: 4,
   },
 });

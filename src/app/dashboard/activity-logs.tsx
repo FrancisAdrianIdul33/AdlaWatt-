@@ -7,7 +7,10 @@ import {
   View,
 } from "react-native";
 
-import ActivityCard from "@/components/ActivityCard";
+import ActivityCard, {
+  ActivityCardData,
+  ActivityType,
+} from "@/components/ActivityCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
@@ -15,109 +18,118 @@ import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
-type ActivityType = "info" | "warning" | "error";
-
 type TimeFilter =
   | "Last Hour"
   | "Today"
   | "This Week"
   | "This Year";
 
-interface ActivityLog {
-  id: string;
-  type: ActivityType;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
+type ActivityLog = ActivityCardData & {
   timestamp: number;
-}
+};
 
 const activityLogs: ActivityLog[] = [
   {
     id: "1",
     type: "info",
     title: "Solar Charging Started",
-    description:
+    details:
       "The solar panel is currently charging the battery using available sunlight.",
     date: "Aug 10, 2026",
     time: "08:42 AM",
-    timestamp: new Date("2026-08-10T08:42:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T08:42:00",
+    ).getTime(),
   },
   {
     id: "2",
     type: "info",
     title: "Appliance Connected",
-    description:
+    details:
       "An electric fan was detected and added to the current power load.",
     date: "Aug 10, 2026",
     time: "08:35 AM",
-    timestamp: new Date("2026-08-10T08:35:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T08:35:00",
+    ).getTime(),
   },
   {
     id: "3",
     type: "warning",
     title: "Battery Level Low",
-    description:
+    details:
       "The battery level has dropped below the recommended operating level.",
     date: "Aug 10, 2026",
     time: "07:58 AM",
-    timestamp: new Date("2026-08-10T07:58:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T07:58:00",
+    ).getTime(),
   },
   {
     id: "4",
     type: "info",
     title: "Battery Level Updated",
-    description:
+    details:
       "The battery level changed from 52% to 50%.",
     date: "Aug 10, 2026",
     time: "07:44 AM",
-    timestamp: new Date("2026-08-10T07:44:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T07:44:00",
+    ).getTime(),
   },
   {
     id: "5",
     type: "warning",
     title: "High Power Consumption",
-    description:
+    details:
       "The current appliance load is higher than the recommended level.",
     date: "Aug 10, 2026",
     time: "07:20 AM",
-    timestamp: new Date("2026-08-10T07:20:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T07:20:00",
+    ).getTime(),
   },
   {
     id: "6",
     type: "error",
     title: "Sensor Connection Lost",
-    description:
+    details:
       "The battery temperature sensor is no longer responding.",
     date: "Aug 10, 2026",
     time: "06:52 AM",
-    timestamp: new Date("2026-08-10T06:52:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T06:52:00",
+    ).getTime(),
   },
   {
     id: "7",
     type: "info",
     title: "System Online",
-    description:
+    details:
       "AdlaWatt successfully connected to the monitoring system.",
     date: "Aug 10, 2026",
     time: "06:30 AM",
-    timestamp: new Date("2026-08-10T06:30:00").getTime(),
+    timestamp: new Date(
+      "2026-08-10T06:30:00",
+    ).getTime(),
   },
   {
     id: "8",
     type: "error",
     title: "Inverter Overload Detected",
-    description:
+    details:
       "The inverter detected a load that exceeded the recommended operating level.",
     date: "Aug 09, 2026",
     time: "09:15 PM",
-    timestamp: new Date("2026-08-09T21:15:00").getTime(),
+    timestamp: new Date(
+      "2026-08-09T21:15:00",
+    ).getTime(),
   },
 ];
 
 export default function ActivityLogsScreen() {
-  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarVisible, setSidebarVisible] =
+    useState(false);
 
   const [timeFilter, setTimeFilter] =
     useState<TimeFilter>("Last Hour");
@@ -136,13 +148,19 @@ export default function ActivityLogsScreen() {
 
     if (typeFilter !== "all") {
       filtered = filtered.filter(
-        (activity) => activity.type === typeFilter,
+        (activity) =>
+          activity.type === typeFilter,
       );
     }
 
-    const now = new Date("2026-08-10T09:00:00").getTime();
+    const now = new Date(
+      "2026-08-10T09:00:00",
+    ).getTime();
 
-    const filterDuration: Record<TimeFilter, number> = {
+    const filterDuration: Record<
+      TimeFilter,
+      number
+    > = {
       "Last Hour": 60 * 60 * 1000,
       Today: 24 * 60 * 60 * 1000,
       "This Week": 7 * 24 * 60 * 60 * 1000,
@@ -161,7 +179,9 @@ export default function ActivityLogsScreen() {
     return filtered;
   }, [timeFilter, typeFilter]);
 
-  const handleTimeFilter = (filter: TimeFilter) => {
+  const handleTimeFilter = (
+    filter: TimeFilter,
+  ) => {
     setTimeFilter(filter);
     setTimeDropdownVisible(false);
   };
@@ -177,32 +197,41 @@ export default function ActivityLogsScreen() {
     switch (typeFilter) {
       case "info":
         return "Info";
+
       case "warning":
         return "Warning";
+
       case "error":
         return "Critical / Error";
+
       default:
         return "All";
     }
   };
 
-  const getTypeIcon = (): keyof typeof Ionicons.glyphMap => {
-    switch (typeFilter) {
-      case "info":
-        return "information-circle-outline";
-      case "warning":
-        return "warning-outline";
-      case "error":
-        return "alert-circle-outline";
-      default:
-        return "list-outline";
-    }
-  };
+  const getTypeIcon =
+    (): keyof typeof Ionicons.glyphMap => {
+      switch (typeFilter) {
+        case "info":
+          return "information-circle-outline";
+
+        case "warning":
+          return "warning-outline";
+
+        case "error":
+          return "alert-circle-outline";
+
+        default:
+          return "list-outline";
+      }
+    };
 
   return (
     <ScreenContainer2>
       <NavBar
-        onMenuPress={() => setSidebarVisible(true)}
+        onMenuPress={() =>
+          setSidebarVisible(true)
+        }
       />
 
       <ScrollView
@@ -380,6 +409,7 @@ export default function ActivityLogsScreen() {
 
             {typeDropdownVisible && (
               <View style={styles.dropdown}>
+                {/* All */}
                 <Pressable
                   onPress={() =>
                     handleTypeFilter("all")
@@ -414,6 +444,7 @@ export default function ActivityLogsScreen() {
                   </AppText>
                 </Pressable>
 
+                {/* Info */}
                 <Pressable
                   onPress={() =>
                     handleTypeFilter("info")
@@ -444,6 +475,7 @@ export default function ActivityLogsScreen() {
                   </AppText>
                 </Pressable>
 
+                {/* Warning */}
                 <Pressable
                   onPress={() =>
                     handleTypeFilter("warning")
@@ -474,6 +506,7 @@ export default function ActivityLogsScreen() {
                   </AppText>
                 </Pressable>
 
+                {/* Critical / Error */}
                 <Pressable
                   onPress={() =>
                     handleTypeFilter("error")
@@ -514,11 +547,7 @@ export default function ActivityLogsScreen() {
             filteredLogs.map((activity) => (
               <ActivityCard
                 key={activity.id}
-                type={activity.type}
-                title={activity.title}
-                description={activity.description}
-                date={activity.date}
-                time={activity.time}
+                activity={activity}
               />
             ))
           ) : (
@@ -540,7 +569,8 @@ export default function ActivityLogsScreen() {
                 variant="caption"
                 style={styles.emptyDescription}
               >
-                No activities match the selected filters.
+                No activities match the selected
+                filters.
               </AppText>
             </View>
           )}
@@ -551,7 +581,9 @@ export default function ActivityLogsScreen() {
 
       <Sidebar
         visible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
+        onClose={() =>
+          setSidebarVisible(false)
+        }
       />
     </ScreenContainer2>
   );
@@ -582,17 +614,27 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal:
       dashboardDimensions.horizontalPadding,
-    paddingTop: dashboardDimensions.sectionSpacing,
+
+    paddingTop:
+      dashboardDimensions.sectionSpacing,
+
     paddingBottom: 20,
   },
 
   /* Header */
+
   headerCard: {
     backgroundColor: Colors.glass.white,
+
     borderWidth: 3,
     borderColor: Colors.light.primary,
-    borderRadius: dashboardDimensions.cardRadius,
-    padding: dashboardDimensions.cardPadding,
+
+    borderRadius:
+      dashboardDimensions.cardRadius,
+
+    padding:
+      dashboardDimensions.cardPadding,
+
     marginBottom: 12,
   },
 
@@ -608,6 +650,7 @@ const styles = StyleSheet.create({
   },
 
   /* Total */
+
   totalContainer: {
     width: "100%",
     alignItems: "flex-end",
@@ -625,11 +668,16 @@ const styles = StyleSheet.create({
   },
 
   /* Filters */
+
   filterRow: {
     width: "100%",
+
     flexDirection: "row",
+
     gap: dashboardDimensions.filterGap,
+
     marginBottom: 14,
+
     zIndex: 10,
   },
 
@@ -639,10 +687,13 @@ const styles = StyleSheet.create({
   },
 
   filterButton: {
-    height: dashboardDimensions.filterHeight,
+    height:
+      dashboardDimensions.filterHeight,
+
     width: "100%",
 
     flexDirection: "row",
+
     alignItems: "center",
 
     paddingHorizontal: 13,
@@ -652,14 +703,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.glass.white,
 
     borderWidth: 3,
+
     borderColor: Colors.light.primary,
 
-    borderRadius: dashboardDimensions.filterRadius,
+    borderRadius:
+      dashboardDimensions.filterRadius,
   },
 
   filterText: {
     flex: 1,
+
     color: "#000000",
+
     fontWeight: "600",
   },
 
@@ -668,19 +723,24 @@ const styles = StyleSheet.create({
   },
 
   /* Dropdown */
+
   dropdown: {
     position: "absolute",
 
-    top: dashboardDimensions.filterHeight + 6,
+    top:
+      dashboardDimensions.filterHeight + 6,
+
     left: 0,
     right: 0,
 
     backgroundColor: "#FFFFFF",
 
     borderWidth: 2,
+
     borderColor: Colors.light.primary,
 
-    borderRadius: dashboardDimensions.dropdownRadius,
+    borderRadius:
+      dashboardDimensions.dropdownRadius,
 
     paddingVertical: 5,
 
@@ -689,11 +749,14 @@ const styles = StyleSheet.create({
     elevation: 10,
 
     shadowColor: "#000",
+
     shadowOffset: {
       width: 0,
       height: 4,
     },
+
     shadowOpacity: 0.12,
+
     shadowRadius: 8,
   },
 
@@ -702,6 +765,7 @@ const styles = StyleSheet.create({
       dashboardDimensions.dropdownItemHeight,
 
     flexDirection: "row",
+
     alignItems: "center",
 
     paddingHorizontal: 13,
@@ -710,7 +774,8 @@ const styles = StyleSheet.create({
   },
 
   selectedDropdownItem: {
-    backgroundColor: "rgba(0, 168, 107, 0.10)",
+    backgroundColor:
+      "rgba(0, 168, 107, 0.10)",
   },
 
   dropdownItemPressed: {
@@ -725,10 +790,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* Activity list */
+  /* Activity List */
+
   activityList: {
     width: "100%",
+
     gap: dashboardDimensions.activityGap,
+
     zIndex: 1,
   },
 
@@ -736,28 +804,37 @@ const styles = StyleSheet.create({
     width: "100%",
 
     alignItems: "center",
+
     justifyContent: "center",
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor:
+      Colors.glass.white,
 
     borderWidth: 3,
+
     borderColor: Colors.light.border,
 
-    borderRadius: dashboardDimensions.cardRadius,
+    borderRadius:
+      dashboardDimensions.cardRadius,
 
     paddingVertical: 35,
+
     paddingHorizontal: 20,
   },
 
   emptyTitle: {
     color: "#000000",
+
     fontWeight: "700",
+
     marginTop: 10,
   },
 
   emptyDescription: {
     color: Colors.light.textSecondary,
+
     textAlign: "center",
+
     marginTop: 5,
   },
 });

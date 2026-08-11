@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 
 import ActivityCard, {
-  ActivityCardData,
+    ActivityCardData,
 } from "@/components/ActivityCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
@@ -108,8 +108,8 @@ export default function DashboardScreen() {
    * Only the 5 most recent activities are displayed
    * on the Dashboard.
    *
-   * The complete activity history remains available
-   * through the Activity Logs screen.
+   * The complete activity history will remain available
+   * in the Activity Logs screen.
    */
   const recentActivities =
     dashboardData.activities.slice(0, 5);
@@ -218,8 +218,7 @@ export default function DashboardScreen() {
               variant="caption"
               style={styles.remainingText}
             >
-              Time Remaining:{" "}
-              {dashboardData.timeRemaining}
+              Time Remaining: {dashboardData.timeRemaining}
             </AppText>
           </View>
 
@@ -328,7 +327,6 @@ export default function DashboardScreen() {
             </Pressable>
           </View>
 
-          {/* Recent Activity Cards */}
           <View style={styles.activityList}>
             {recentActivities.map((activity) => (
               <ActivityCard
@@ -704,11 +702,14 @@ const styles = StyleSheet.create({
   },
 
   /*
-   * Kept from the original Dashboard structure.
+   * These original activity styles are intentionally
+   * preserved for consistency with the original
+   * Dashboard structure.
    *
-   * ActivityCard.tsx now controls the actual
-   * Recent Activity card appearance.
+   * ActivityCard.tsx now handles the actual
+   * Recent Activity card presentation.
    */
+
   activityItem: {
     minHeight:
       dashboardDimensions.activityHeight,
