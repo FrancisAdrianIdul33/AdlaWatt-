@@ -6,348 +6,354 @@ import Svg, { Circle } from "react-native-svg";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
-type ChartCardProps =
-  | {
-      type: "battery";
-      value?: number;
-      status?: string;
-      timeRemaining?: string;
-    }
-  | {
-      type: "solar";
-      value?: string;
-      status?: "Normal" | "Moderate" | "Alarming";
-    }
-  | {
-      type: "load";
-      value?: string;
-    }
-  | {
-      type: "device";
-      status?: "Online" | "Offline";
-    }
-  | {
-      type: "temperature";
-      value?: number;
-      status?: "Normal" | "Moderate" | "Alarming";
-    };
+type ChartType =
+  | "battery"
+  | "solar"
+  | "load"
+  | "device"
+  | "temperature";
 
-const CARD = {
-  radius: 16,
-  border: 3,
-  padding: 18,
-};
+type TemperatureStatus =
+  | "Normal"
+  | "Moderate"
+  | "Alarming";
 
-const statusStyle = (
-  status: "Normal" | "Moderate" | "Alarming",
-) => {
-  if (status === "Normal") {
-    return {
-      backgroundColor: Colors.light.primary,
-      color: "#FFFFFF",
-    };
-  }
+type DeviceStatus = "Online" | "Offline";
 
-  if (status === "Moderate") {
-    return {
-      backgroundColor: Colors.light.secondary,
-      color: "#000000",
-    };
-  }
+interface ChartCardProps {
+  type: ChartType;
+  value?: number | string;
+  status?: string;
+  timeRemaining?: string;
+}
 
-  return {
-    backgroundColor: Colors.light.error,
-    color: "#FFFFFF",
-  };
-};
+const RING_SIZE = 150;
+const RADIUS = 60;
+const STROKE = 11;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export default function ChartCard(props: ChartCardProps) {
-  const renderContent = () => {
-    switch (props.type) {
-      case "battery": {
-        const level = props.value ?? 50;
-        const radius = 55;
-        const strokeWidth = 12;
-        const circumference = 2 * Math.PI * radius;
-        const progress = Math.min(Math.max(level, 0), 100);
-        const offset =
-          circumference -
-          (progress / 100) * circumference;
+export default function ChartCard({
+  type,
+  value,
+  status,
+  timeRemaining,
+}: ChartCardProps) {
+  if (type === "battery") {
+    const level =
+      typeof value === "number" ? value : 50;
 
-        return (
-          <>
-            <View style={styles.ring}>
-              <Svg width={140} height={140}>
-                <Circle
-                  cx="70"
-                  cy="70"
-                  r={radius}
-                  stroke={Colors.light.border}
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                />
+    const progress =
+      Math.max(0, Math.min(100, level)) / 100;
 
-                <Circle
-                  cx="70"
-                  cy="70"
-                  r={radius}
-                  stroke={Colors.light.primary}
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={`${circumference} ${circumference}`}
-                  strokeDashoffset={offset}
-                  transform="rotate(-90 70 70)"
-                />
-              </Svg>
-
-              <View style={styles.ringText}>
-                <AppText style={styles.batteryValue}>
-                  {progress}%
-                </AppText>
-              </View>
-            </View>
-
-            <AppText style={styles.cardLabel}>
-              Battery
-            </AppText>
-
-            <View style={styles.statusRow}>
-              <Ionicons
-                name="flash-outline"
-                size={15}
-                color={Colors.light.primary}
-              />
-
-              <AppText style={styles.statusText}>
-                {props.status ?? "Discharging"}
-              </AppText>
-            </View>
-
-            <AppText style={styles.secondaryText}>
-              Time Remaining:{" "}
-              {props.timeRemaining ?? "4h 12m"}
-            </AppText>
-          </>
-        );
-      }
-
-      case "solar": {
-        const status = props.status ?? "Moderate";
-        const badge = statusStyle(status);
-
-        return (
-          <>
-            <Ionicons
-              name="sunny-outline"
-              size={24}
-              color={Colors.light.primary}
+    return (
+      <View style={styles.batterySection}>
+        <View style={styles.batteryCircle}>
+          <Svg
+            width={RING_SIZE}
+            height={RING_SIZE}
+            viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+          >
+            {/* Background Ring */}
+            <Circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RADIUS}
+              stroke="#D8D6CC"
+              strokeWidth={STROKE}
+              fill="none"
             />
 
-            <AppText style={styles.cardLabel}>
-              Solar Input
-            </AppText>
-
-            <AppText style={styles.mainValue}>
-              {props.value ?? "46W"}
-            </AppText>
-
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: badge.backgroundColor },
-              ]}
-            >
-              <AppText
-                style={[
-                  styles.badgeText,
-                  { color: badge.color },
-                ]}
-              >
-                {status}
-              </AppText>
-            </View>
-          </>
-        );
-      }
-
-      case "load":
-        return (
-          <>
-            <Ionicons
-              name="flash-outline"
-              size={24}
-              color={Colors.light.primary}
-            />
-
-            <AppText style={styles.cardLabel}>
-              Load Now
-            </AppText>
-
-            <AppText style={styles.mainValue}>
-              {props.value ?? "170W"}
-            </AppText>
-          </>
-        );
-
-      case "device": {
-        const online =
-          (props.status ?? "Online") === "Online";
-
-        return (
-          <>
-            <Ionicons
-              name="hardware-chip-outline"
-              size={24}
-              color={
-                online
-                  ? Colors.light.primary
-                  : Colors.light.error
+            {/* Progress Ring */}
+            <Circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RADIUS}
+              stroke={Colors.light.primary}
+              strokeWidth={STROKE}
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+              strokeDashoffset={
+                CIRCUMFERENCE * (1 - progress)
               }
             />
+          </Svg>
 
-            <AppText style={styles.cardLabel}>
-              Device
+          <View style={styles.batteryCenter}>
+            <AppText
+              variant="heading"
+              style={styles.batteryPercentage}
+            >
+              {level}%
             </AppText>
 
             <AppText
-              style={[
-                styles.mainValue,
-                {
-                  color: online
-                    ? Colors.light.primary
-                    : Colors.light.error,
-                },
-              ]}
+              variant="caption"
+              style={styles.batteryLabel}
             >
-              {online ? "Online" : "Offline"}
-            </AppText>
-          </>
-        );
-      }
-
-      case "temperature": {
-        const status = props.status ?? "Normal";
-        const badge = statusStyle(status);
-
-        return (
-          <>
-            <Ionicons
-              name="thermometer-outline"
-              size={24}
-              color={Colors.light.primary}
-            />
-
-            <AppText style={styles.cardLabel}>
-              Battery Temp
+              Battery
             </AppText>
 
-            <AppText style={styles.mainValue}>
-              {props.value ?? 20.0}°C
-            </AppText>
-
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: badge.backgroundColor },
-              ]}
-            >
+            <View style={styles.batteryStatus}>
               <AppText
-                style={[
-                  styles.badgeText,
-                  { color: badge.color },
-                ]}
+                variant="caption"
+                style={styles.batteryStatusText}
               >
-                {status}
+                {status || "Discharging"}
               </AppText>
             </View>
-          </>
-        );
-      }
-    }
-  };
+          </View>
+        </View>
+
+        <AppText
+          variant="caption"
+          style={styles.remainingText}
+        >
+          Time Remaining: {timeRemaining || "4h 12m"}
+        </AppText>
+      </View>
+    );
+  }
+
+  const data = getCardData(type, value, status);
 
   return (
-    <View style={styles.card}>
-      {renderContent()}
+    <View style={styles.monitorCard}>
+      <Ionicons
+        name={data.icon}
+        size={23}
+        color={Colors.light.primary}
+        style={styles.icon}
+      />
+
+      <AppText
+        variant="caption"
+        style={styles.monitorLabel}
+      >
+        {data.label}
+      </AppText>
+
+      {data.value !== undefined && (
+        <AppText
+          variant="heading"
+          style={[
+            styles.monitorValue,
+            type === "device" &&
+              data.value === "Offline" &&
+              styles.offlineValue,
+          ]}
+        >
+          {data.value}
+        </AppText>
+      )}
+
+      {data.badge && (
+        <View
+          style={[
+            styles.statusBadge,
+            data.badgeStyle,
+          ]}
+        >
+          <AppText
+            variant="caption"
+            style={[
+              styles.statusBadgeText,
+              data.badgeTextStyle,
+            ]}
+          >
+            {data.badge}
+          </AppText>
+        </View>
+      )}
     </View>
   );
 }
 
+function getCardData(
+  type: Exclude<ChartType, "battery">,
+  value?: number | string,
+  status?: string,
+) {
+  switch (type) {
+    case "solar":
+      return {
+        icon: "sunny-outline" as keyof typeof Ionicons.glyphMap,
+        label: "Solar Input",
+        value: value ?? "46W",
+        badge: status ?? "Moderate",
+        badgeStyle: styles.moderateBadge,
+        badgeTextStyle: styles.darkBadgeText,
+      };
+
+    case "load":
+      return {
+        icon: "flash-outline" as keyof typeof Ionicons.glyphMap,
+        label: "Load Now",
+        value: value ?? "170W",
+      };
+
+    case "device": {
+      const deviceStatus =
+        (status as DeviceStatus) || "Online";
+
+      return {
+        icon: "hardware-chip-outline" as keyof typeof Ionicons.glyphMap,
+        label: "Device",
+        value: deviceStatus,
+      };
+    }
+
+    case "temperature": {
+      const tempStatus =
+        (status as TemperatureStatus) || "Normal";
+
+      const badgeStyle =
+        tempStatus === "Alarming"
+          ? styles.alarmingBadge
+          : tempStatus === "Moderate"
+            ? styles.moderateBadge
+            : styles.normalBadge;
+
+      const badgeTextStyle =
+        tempStatus === "Moderate"
+          ? styles.darkBadgeText
+          : styles.lightBadgeText;
+
+      return {
+        icon: "thermometer-outline" as keyof typeof Ionicons.glyphMap,
+        label: "Battery Temp",
+        value:
+          typeof value === "number"
+            ? `${value}°C`
+            : value ?? "20°C",
+        badge: tempStatus,
+        badgeStyle,
+        badgeTextStyle,
+      };
+    }
+  }
+}
+
 const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    minHeight: 150,
+  /* Battery */
+  batterySection: {
+    width: "100%",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.glass.white,
-    borderWidth: CARD.border,
-    borderColor: Colors.light.primary,
-    borderRadius: CARD.radius,
-    padding: CARD.padding,
+    marginBottom: 14,
   },
 
-  ring: {
-    width: 140,
-    height: 140,
+  batteryCircle: {
+    width: RING_SIZE,
+    height: RING_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  ringText: {
+  batteryCenter: {
     position: "absolute",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  batteryValue: {
+  batteryPercentage: {
     color: "#000000",
     fontSize: 26,
     fontWeight: "700",
   },
 
-  cardLabel: {
+  batteryLabel: {
     color: "#000000",
-    fontSize: 15,
-    fontWeight: "700",
+    marginTop: -2,
+  },
+
+  batteryStatus: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 3,
+  },
+
+  batteryStatusText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+  },
+
+  remainingText: {
+    color: Colors.light.textSecondary,
     marginTop: 8,
   },
 
-  mainValue: {
-    color: "#000000",
-    fontSize: 22,
-    fontWeight: "700",
-    marginTop: 6,
-  },
+  /* Monitoring Cards */
+  monitorCard: {
+    width: "48%",
+    minHeight: 95,
 
-  statusRow: {
-    flexDirection: "row",
+    backgroundColor: Colors.glass.white,
+
+    borderWidth: 3,
+    borderColor: Colors.light.primary,
+    borderRadius: 16,
+
     alignItems: "center",
-    gap: 4,
-    marginTop: 5,
+    justifyContent: "center",
+
+    paddingHorizontal: 8,
+    paddingVertical: 10,
   },
 
-  statusText: {
-    color: Colors.light.primary,
-    fontSize: 13,
+  icon: {
+    marginBottom: 3,
+  },
+
+  monitorLabel: {
+    color: "#000000",
+    textAlign: "center",
     fontWeight: "600",
   },
 
-  secondaryText: {
-    color: Colors.light.textSecondary,
-    fontSize: 12,
-    marginTop: 5,
+  monitorValue: {
+    color: "#000000",
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 3,
   },
 
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    marginTop: 7,
+  offlineValue: {
+    color: Colors.light.error,
   },
 
-  badgeText: {
-    fontSize: 12,
+  /* Status Badges */
+  statusBadge: {
+    marginTop: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+
+  statusBadgeText: {
+    fontSize: 9,
     fontWeight: "600",
+  },
+
+  normalBadge: {
+    backgroundColor: Colors.light.primary,
+  },
+
+  moderateBadge: {
+    backgroundColor: Colors.light.secondary,
+  },
+
+  alarmingBadge: {
+    backgroundColor: Colors.light.error,
+  },
+
+  lightBadgeText: {
+    color: "#FFFFFF",
+  },
+
+  darkBadgeText: {
+    color: "#000000",
   },
 });

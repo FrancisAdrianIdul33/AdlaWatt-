@@ -9,6 +9,7 @@ import {
 import ActivityCard, {
   ActivityCardData,
 } from "@/components/ActivityCard";
+import ChartCard from "@/components/ChartCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
@@ -22,13 +23,6 @@ export default function DashboardScreen() {
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
 
-  /*
-   * Activity data currently matches the same
-   * activity data used by activity-logs.tsx.
-   *
-   * Later, this can be replaced with data fetched
-   * from the database.
-   */
   const activities: ActivityCardData[] = [
     {
       id: "1",
@@ -104,29 +98,18 @@ export default function DashboardScreen() {
     },
   ];
 
-  /*
-   * The activity data is already arranged from newest
-   * to oldest, matching activity-logs.tsx.
-   *
-   * Only the latest 5 activities are shown on the
-   * Dashboard.
-   */
   const recentActivities = activities.slice(0, 5);
 
   const dashboardData = {
     batteryLevel: 50,
     batteryStatus: "Discharging",
     timeRemaining: "4h 12m",
-
     solarInput: "46W",
-    solarStatus: "Moderate",
-
+    solarStatus: "Moderate" as const,
     currentLoad: "170W",
-
-    deviceStatus: "Online",
-
-    batteryTemperature: "20.0°C",
-
+    deviceStatus: "Online" as const,
+    batteryTemperature: 20.0,
+    batteryTemperatureStatus: "Normal" as const,
     recommendedAppliance: "Electric Fan",
   };
 
@@ -205,120 +188,35 @@ export default function DashboardScreen() {
             Real-Time Monitoring
           </AppText>
 
-          {/* Battery */}
-          <View style={styles.batterySection}>
-            <View style={styles.batteryCircle}>
-              <AppText
-                variant="heading"
-                style={styles.batteryPercentage}
-              >
-                {dashboardData.batteryLevel}%
-              </AppText>
-
-              <AppText
-                variant="caption"
-                style={styles.batteryLabel}
-              >
-                Battery
-              </AppText>
-
-              <View style={styles.batteryStatus}>
-                <AppText
-                  variant="caption"
-                  style={styles.batteryStatusText}
-                >
-                  {dashboardData.batteryStatus}
-                </AppText>
-              </View>
-            </View>
-
-            <AppText
-              variant="caption"
-              style={styles.remainingText}
-            >
-              Time Remaining:{" "}
-              {dashboardData.timeRemaining}
-            </AppText>
-          </View>
-
-          {/* Monitoring Values */}
           <View style={styles.monitorGrid}>
-            {/* Solar Input */}
-            <View style={styles.monitorCard}>
-              <AppText
-                variant="caption"
-                style={styles.monitorLabel}
-              >
-                Solar Input
-              </AppText>
+            <ChartCard
+              type="battery"
+              value={dashboardData.batteryLevel}
+              status={dashboardData.batteryStatus}
+              timeRemaining={dashboardData.timeRemaining}
+            />
 
-              <AppText
-                variant="heading"
-                style={styles.monitorValue}
-              >
-                {dashboardData.solarInput}
-              </AppText>
+            <ChartCard
+              type="solar"
+              value={dashboardData.solarInput}
+              status={dashboardData.solarStatus}
+            />
 
-              <View style={styles.statusBadge}>
-                <AppText
-                  variant="caption"
-                  style={styles.statusBadgeText}
-                >
-                  {dashboardData.solarStatus}
-                </AppText>
-              </View>
-            </View>
+            <ChartCard
+              type="load"
+              value={dashboardData.currentLoad}
+            />
 
-            {/* Load */}
-            <View style={styles.monitorCard}>
-              <AppText
-                variant="caption"
-                style={styles.monitorLabel}
-              >
-                Load Now
-              </AppText>
+            <ChartCard
+              type="device"
+              status={dashboardData.deviceStatus}
+            />
 
-              <AppText
-                variant="heading"
-                style={styles.monitorValue}
-              >
-                {dashboardData.currentLoad}
-              </AppText>
-            </View>
-
-            {/* Device */}
-            <View style={styles.monitorCard}>
-              <AppText
-                variant="caption"
-                style={styles.monitorLabel}
-              >
-                Device
-              </AppText>
-
-              <AppText
-                variant="heading"
-                style={styles.onlineValue}
-              >
-                {dashboardData.deviceStatus}
-              </AppText>
-            </View>
-
-            {/* Battery Temperature */}
-            <View style={styles.monitorCard}>
-              <AppText
-                variant="caption"
-                style={styles.monitorLabel}
-              >
-                Battery Temp
-              </AppText>
-
-              <AppText
-                variant="heading"
-                style={styles.monitorValue}
-              >
-                {dashboardData.batteryTemperature}
-              </AppText>
-            </View>
+            <ChartCard
+              type="temperature"
+              value={dashboardData.batteryTemperature}
+              status={dashboardData.batteryTemperatureStatus}
+            />
           </View>
         </View>
 
@@ -372,141 +270,84 @@ export default function DashboardScreen() {
 
 const dashboardDimensions = {
   horizontalPadding: 16,
-
   sectionSpacing: 18,
-
   borderWidth: 3,
-
   cardRadius: 16,
-
-  innerRadius: 12,
-
-  batteryCircleSize: 128,
-
   monitorGap: 10,
-
-  monitorHeight: 86,
-
   recommendationHeight: 76,
-
-  activityHeight: 62,
 };
 
 const styles = StyleSheet.create({
-  /* =========================
-     MAIN DASHBOARD
-  ========================= */
-
   scrollView: {
     flex: 1,
-
     backgroundColor: Colors.light.background,
   },
 
   scrollContent: {
     paddingHorizontal:
       dashboardDimensions.horizontalPadding,
-
     paddingTop: 20,
-
     paddingBottom: 24,
   },
 
-  /* =========================
-     HEADER
-  ========================= */
-
   headerCard: {
     backgroundColor: Colors.glass.white,
-
     borderWidth: 3,
-
     borderColor: Colors.light.secondary,
-
     borderRadius: 16,
-
     padding: 18,
-
     marginBottom: 18,
   },
 
   headerTitle: {
     color: "#000000",
-
     fontWeight: "700",
   },
 
   headerSubtitle: {
     color: Colors.light.textSecondary,
-
     marginTop: 6,
   },
 
-  /* =========================
-     SECTIONS
-  ========================= */
-
   section: {
     width: "100%",
-
     marginBottom:
       dashboardDimensions.sectionSpacing,
   },
 
   sectionTitle: {
     color: "#000000",
-
     fontWeight: "700",
-
     marginBottom: 10,
   },
-
-  /* =========================
-     APPLIANCE RECOMMENDATION
-  ========================= */
 
   recommendation: {
     minHeight:
       dashboardDimensions.recommendationHeight,
-
     width: "100%",
-
     borderWidth:
       dashboardDimensions.borderWidth,
-
     borderColor: Colors.light.primary,
-
     borderRadius:
       dashboardDimensions.cardRadius,
-
     backgroundColor: Colors.glass.white,
-
     paddingHorizontal: 14,
-
     flexDirection: "row",
-
     alignItems: "center",
   },
 
   recommendationIcon: {
     width: 46,
-
     height: 46,
-
     borderRadius: 23,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     backgroundColor: Colors.light.primary,
-
     marginRight: 12,
   },
 
   bolt: {
     fontSize: 22,
-
     color: "#FFFFFF",
   },
 
@@ -516,216 +357,42 @@ const styles = StyleSheet.create({
 
   recommendationTitle: {
     color: "#000000",
-
     fontWeight: "700",
-
     marginBottom: 3,
   },
 
   secondaryText: {
     color: Colors.light.textSecondary,
-
     lineHeight: 19,
-
     fontWeight: "400",
   },
-
-  /* =========================
-     BATTERY
-  ========================= */
-
-  batterySection: {
-    alignItems: "center",
-
-    marginBottom: 18,
-  },
-
-  batteryCircle: {
-    width:
-      dashboardDimensions.batteryCircleSize,
-
-    height:
-      dashboardDimensions.batteryCircleSize,
-
-    borderWidth:
-      dashboardDimensions.borderWidth,
-
-    borderColor: Colors.light.primary,
-
-    borderRadius:
-      dashboardDimensions.batteryCircleSize / 2,
-
-    backgroundColor: Colors.glass.white,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-  },
-
-  batteryPercentage: {
-    color: "#000000",
-
-    fontSize: 28,
-
-    fontWeight: "700",
-  },
-
-  batteryLabel: {
-    color: "#000000",
-
-    marginTop: -2,
-
-    fontWeight: "400",
-  },
-
-  batteryStatus: {
-    paddingHorizontal: 9,
-
-    paddingVertical: 3,
-
-    borderRadius: 8,
-
-    backgroundColor: Colors.light.primary,
-
-    marginTop: 4,
-  },
-
-  batteryStatusText: {
-    color: "#FFFFFF",
-
-    fontSize: 8,
-
-    fontWeight: "600",
-  },
-
-  remainingText: {
-    color: Colors.light.textSecondary,
-
-    marginTop: 9,
-
-    fontWeight: "400",
-  },
-
-  /* =========================
-     MONITORING
-  ========================= */
 
   monitorGrid: {
     flexDirection: "row",
-
     flexWrap: "wrap",
-
     gap: dashboardDimensions.monitorGap,
   },
 
-  monitorCard: {
-    width: "48%",
-
-    minHeight:
-      dashboardDimensions.monitorHeight,
-
-    borderWidth:
-      dashboardDimensions.borderWidth,
-
-    borderColor: Colors.light.secondary,
-
-    borderRadius:
-      dashboardDimensions.innerRadius,
-
-    backgroundColor: Colors.glass.white,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    paddingHorizontal: 6,
-  },
-
-  monitorLabel: {
-    color: "#000000",
-
-    textAlign: "center",
-
-    marginBottom: 3,
-
-    fontWeight: "400",
-  },
-
-  monitorValue: {
-    color: "#000000",
-
-    fontSize: 21,
-
-    fontWeight: "700",
-
-    textAlign: "center",
-  },
-
-  onlineValue: {
-    color: Colors.light.primary,
-
-    fontSize: 21,
-
-    fontWeight: "700",
-
-    textAlign: "center",
-  },
-
-  statusBadge: {
-    marginTop: 4,
-
-    paddingHorizontal: 9,
-
-    paddingVertical: 3,
-
-    borderRadius: 8,
-
-    backgroundColor: Colors.light.primary,
-  },
-
-  statusBadgeText: {
-    color: "#FFFFFF",
-
-    fontSize: 8,
-
-    fontWeight: "600",
-  },
-
-  /* =========================
-     ACTIVITY
-  ========================= */
-
   activityHeader: {
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "space-between",
   },
 
   viewAll: {
     color: "#FFFFFF",
-
     fontWeight: "700",
-
     backgroundColor: Colors.light.primary,
-
     paddingHorizontal: 12,
-
     paddingVertical: 6,
-
     borderRadius: 15,
-
     fontSize: 12,
-
     marginTop: -10,
-
     marginRight: 2,
   },
 
   activityList: {
     width: "100%",
-
     gap: 9,
   },
 });
