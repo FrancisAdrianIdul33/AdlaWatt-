@@ -1,52 +1,36 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
-type ActivityType = "info" | "warning" | "error";
-
-interface ActivityCardProps {
-  type: ActivityType;
+export type ActivityCardData = {
+  id: string;
   title: string;
-  description: string;
+  details: string;
   date: string;
   time: string;
-}
+  type: "info" | "warning" | "error";
+};
+
+type ActivityCardProps = {
+  activity: ActivityCardData;
+};
 
 export default function ActivityCard({
-  type,
-  title,
-  description,
-  date,
-  time,
+  activity,
 }: ActivityCardProps) {
   const getActivityColor = () => {
-    switch (type) {
+    switch (activity.type) {
       case "warning":
         return Colors.light.secondary;
 
       case "error":
-        return Colors.light.error;
+        return "#D32F2F";
 
       case "info":
       default:
         return Colors.light.primary;
-    }
-  };
-
-  const getActivityIcon = (): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case "warning":
-        return "warning-outline";
-
-      case "error":
-        return "alert-circle-outline";
-
-      case "info":
-      default:
-        return "information-circle-outline";
     }
   };
 
@@ -61,129 +45,110 @@ export default function ActivityCard({
         },
       ]}
     >
+      {/* Activity Indicator */}
+      <View
+        style={[
+          styles.indicator,
+          {
+            backgroundColor: activityColor,
+          },
+        ]}
+      />
+
       {/* Activity Content */}
       <View style={styles.content}>
-        {/* Left Content */}
-        <View style={styles.mainContent}>
-          <View style={styles.titleRow}>
-            {/* Activity Type Icon */}
-            <Ionicons
-              name={getActivityIcon()}
-              size={20}
-              color={activityColor}
-              style={styles.activityIcon}
-            />
-
-            {/* Activity Title */}
-            <AppText
-              variant="body"
-              style={styles.title}
-              numberOfLines={2}
-            >
-              {title}
-            </AppText>
-          </View>
-
-          {/* Activity Description */}
+        <View style={styles.titleRow}>
           <AppText
-            variant="caption"
-            style={styles.description}
+            variant="body"
+            style={styles.title}
           >
-            {description}
+            {activity.title}
           </AppText>
-        </View>
 
-        {/* Date and Time */}
-        <View style={styles.dateTimeContainer}>
-          <View style={styles.dateRow}>
-            <Ionicons
-              name="calendar-outline"
-              size={14}
-              color={Colors.light.textSecondary}
-            />
+          <View style={styles.dateTimeContainer}>
+            <AppText
+              variant="caption"
+              style={styles.date}
+            >
+              {activity.date}
+            </AppText>
 
             <AppText
               variant="caption"
-              style={styles.dateText}
-              numberOfLines={1}
+              style={styles.time}
             >
-              {date}
-            </AppText>
-          </View>
-
-          <View style={styles.timeRow}>
-            <Ionicons
-              name="time-outline"
-              size={14}
-              color={Colors.light.textSecondary}
-            />
-
-            <AppText
-              variant="caption"
-              style={styles.timeText}
-              numberOfLines={1}
-            >
-              {time}
+              {activity.time}
             </AppText>
           </View>
         </View>
+
+        <AppText
+          variant="caption"
+          style={styles.details}
+        >
+          {activity.details}
+        </AppText>
       </View>
     </View>
   );
 }
 
-const activityCardDimensions = {
+const activityDimensions = {
   borderWidth: 3,
-  radius: 16,
-  padding: 16,
-
-  iconSize: 20,
-  dateIconSize: 14,
-
-  contentGap: 12,
-  titleGap: 8,
-
-  dateTimeGap: 4,
+  cardRadius: 16,
+  cardPadding: 15,
+  indicatorSize: 11,
 };
 
 const styles = StyleSheet.create({
   card: {
     width: "100%",
 
+    minHeight: 90,
+
+    flexDirection: "row",
+
+    alignItems: "flex-start",
+
     backgroundColor: Colors.glass.white,
 
-    borderWidth: activityCardDimensions.borderWidth,
-    borderRadius: activityCardDimensions.radius,
+    borderWidth:
+      activityDimensions.borderWidth,
 
-    padding: activityCardDimensions.padding,
+    borderRadius:
+      activityDimensions.cardRadius,
+
+    padding:
+      activityDimensions.cardPadding,
+  },
+
+  indicator: {
+    width:
+      activityDimensions.indicatorSize,
+
+    height:
+      activityDimensions.indicatorSize,
+
+    borderRadius:
+      activityDimensions.indicatorSize / 2,
+
+    marginRight: 12,
+
+    marginTop: 5,
   },
 
   content: {
-    width: "100%",
-
-    flexDirection: "row",
-    alignItems: "flex-start",
-
-    gap: activityCardDimensions.contentGap,
-  },
-
-  mainContent: {
     flex: 1,
-
-    minWidth: 0,
   },
 
   titleRow: {
+    width: "100%",
+
     flexDirection: "row",
+
     alignItems: "flex-start",
 
-    gap: activityCardDimensions.titleGap,
-
-    paddingRight: 4,
-  },
-
-  activityIcon: {
-    marginTop: 2,
+    justifyContent: "space-between",
   },
 
   title: {
@@ -193,62 +158,51 @@ const styles = StyleSheet.create({
 
     fontWeight: "700",
 
-    lineHeight: 21,
-  },
-
-  description: {
-    color: Colors.light.textSecondary,
-
-    lineHeight: 19,
-
-    marginTop: 6,
-
-    paddingRight: 4,
+    marginRight: 10,
   },
 
   dateTimeContainer: {
     alignItems: "flex-end",
 
-    gap: activityCardDimensions.dateTimeGap,
+    justifyContent: "flex-start",
 
-    minWidth: 105,
+    minWidth: 90,
   },
 
-  dateRow: {
-    flexDirection: "row",
+  date: {
+    color:
+      Colors.light.textSecondary,
 
-    alignItems: "center",
+    fontSize: 10,
 
-    gap: 4,
-  },
-
-  timeRow: {
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    gap: 4,
-  },
-
-  dateText: {
-    color: Colors.light.textSecondary,
-
-    fontSize: 11,
-
-    lineHeight: 15,
+    fontWeight: "400",
 
     textAlign: "right",
   },
 
-  timeText: {
-    color: Colors.light.textSecondary,
+  time: {
+    color:
+      Colors.light.textSecondary,
 
-    fontSize: 11,
+    fontSize: 10,
 
-    fontWeight: "600",
+    fontWeight: "400",
 
-    lineHeight: 15,
+    marginTop: 2,
 
     textAlign: "right",
+  },
+
+  details: {
+    color:
+      Colors.light.textSecondary,
+
+    lineHeight: 18,
+
+    fontWeight: "400",
+
+    marginTop: 4,
+
+    paddingRight: 4,
   },
 });

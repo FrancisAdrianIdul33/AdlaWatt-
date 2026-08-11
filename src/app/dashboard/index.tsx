@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
 
+import ActivityCard, {
+  ActivityCardData,
+} from "@/components/ActivityCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
@@ -36,23 +39,80 @@ export default function DashboardScreen() {
 
     activities: [
       {
+        id: "1",
         title: "Battery started discharging",
+        details:
+          "The battery is currently supplying power to connected appliances.",
+        date: "August 11, 2026",
         time: "10:42 AM",
+        type: "info",
       },
       {
+        id: "2",
         title: "Solar input detected",
+        details:
+          "Solar energy is currently being received by the system.",
+        date: "August 11, 2026",
         time: "10:35 AM",
+        type: "info",
       },
       {
+        id: "3",
         title: "Electric Fan connected",
+        details:
+          "An Electric Fan has been connected to the AdlaWatt system.",
+        date: "August 11, 2026",
         time: "10:28 AM",
+        type: "info",
       },
       {
+        id: "4",
         title: "System connected",
+        details:
+          "AdlaWatt is connected and monitoring the system.",
+        date: "August 11, 2026",
         time: "10:15 AM",
+        type: "info",
       },
-    ],
+      {
+        id: "5",
+        title: "Battery temperature warning",
+        details:
+          "The battery temperature is approaching the recommended operating limit.",
+        date: "August 11, 2026",
+        time: "10:05 AM",
+        type: "warning",
+      },
+      {
+        id: "6",
+        title: "High power consumption",
+        details:
+          "Connected appliances are currently consuming more power than usual.",
+        date: "August 11, 2026",
+        time: "9:58 AM",
+        type: "warning",
+      },
+      {
+        id: "7",
+        title: "Inverter overload detected",
+        details:
+          "The inverter detected a load approaching its operating limit.",
+        date: "August 11, 2026",
+        time: "9:50 AM",
+        type: "error",
+      },
+    ] as ActivityCardData[],
   };
+
+  /*
+   * Only the 5 most recent activities are displayed
+   * on the Dashboard.
+   *
+   * The complete activity history remains available
+   * through the Activity Logs screen.
+   */
+  const recentActivities =
+    dashboardData.activities.slice(0, 5);
 
   return (
     <ScreenContainer2>
@@ -68,21 +128,21 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Dashboard Header */}
-       <View style={styles.headerCard}>
-  <AppText
-    variant="heading"
-    style={styles.headerTitle}
-  >
-    Dashboard
-  </AppText>
+        <View style={styles.headerCard}>
+          <AppText
+            variant="heading"
+            style={styles.headerTitle}
+          >
+            Dashboard
+          </AppText>
 
-  <AppText
-    variant="caption"
-    style={styles.headerSubtitle}
-  >
-    Monitor your AdlaWatt system in real time.
-  </AppText>
-</View>
+          <AppText
+            variant="caption"
+            style={styles.headerSubtitle}
+          >
+            Monitor your AdlaWatt system in real time.
+          </AppText>
+        </View>
 
         {/* Appliance Recommendation */}
         <View style={styles.section}>
@@ -158,7 +218,8 @@ export default function DashboardScreen() {
               variant="caption"
               style={styles.remainingText}
             >
-              Time Remaining: {dashboardData.timeRemaining}
+              Time Remaining:{" "}
+              {dashboardData.timeRemaining}
             </AppText>
           </View>
 
@@ -253,45 +314,28 @@ export default function DashboardScreen() {
               Recent Activity
             </AppText>
 
-           <Pressable
-  onPress={() => router.push(Routes.ACTIVITY_LOGS)}
->
-  <AppText
-    variant="caption"
-    style={styles.viewAll}
-  >
-    View All
-  </AppText>
-</Pressable>
+            <Pressable
+              onPress={() =>
+                router.push(Routes.ACTIVITY_LOGS)
+              }
+            >
+              <AppText
+                variant="caption"
+                style={styles.viewAll}
+              >
+                View All
+              </AppText>
+            </Pressable>
           </View>
 
+          {/* Recent Activity Cards */}
           <View style={styles.activityList}>
-            {dashboardData.activities.map(
-              (activity, index) => (
-                <View
-                  key={`${activity.title}-${index}`}
-                  style={styles.activityItem}
-                >
-                  <View style={styles.activityDot} />
-
-                  <View style={styles.activityInfo}>
-                    <AppText
-                      variant="caption"
-                      style={styles.activityTitle}
-                    >
-                      {activity.title}
-                    </AppText>
-
-                    <AppText
-                      variant="caption"
-                      style={styles.activityTime}
-                    >
-                      {activity.time}
-                    </AppText>
-                  </View>
-                </View>
-              ),
-            )}
+            {recentActivities.map((activity) => (
+              <ActivityCard
+                key={activity.id}
+                activity={activity}
+              />
+            ))}
           </View>
         </View>
 
@@ -354,23 +398,23 @@ const styles = StyleSheet.create({
   ========================= */
 
   headerCard: {
-  backgroundColor: Colors.glass.white,
-  borderWidth: 3,
-  borderColor: Colors.light.secondary,
-  borderRadius: 16,
-  padding: 18,
-  marginBottom: 18,
-},
+    backgroundColor: Colors.glass.white,
+    borderWidth: 3,
+    borderColor: Colors.light.secondary,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 18,
+  },
 
-headerTitle: {
-  color: "#000000",
-  fontWeight: "700",
-},
+  headerTitle: {
+    color: "#000000",
+    fontWeight: "700",
+  },
 
-headerSubtitle: {
-  color: Colors.light.textSecondary,
-  marginTop: 6,
-},
+  headerSubtitle: {
+    color: Colors.light.textSecondary,
+    marginTop: 6,
+  },
 
   /* =========================
      SECTIONS
@@ -395,21 +439,28 @@ headerSubtitle: {
      APPLIANCE RECOMMENDATION
   ========================= */
 
-recommendation: {
-  minHeight: dashboardDimensions.recommendationHeight,
-  width: "100%",
+  recommendation: {
+    minHeight:
+      dashboardDimensions.recommendationHeight,
 
-  borderWidth: dashboardDimensions.borderWidth,
-  borderColor: Colors.light.primary,
-  borderRadius: dashboardDimensions.cardRadius,
+    width: "100%",
 
-  backgroundColor: Colors.glass.white,
+    borderWidth:
+      dashboardDimensions.borderWidth,
 
-  paddingHorizontal: 14,
+    borderColor: Colors.light.primary,
 
-  flexDirection: "row",
-  alignItems: "center",
-},
+    borderRadius:
+      dashboardDimensions.cardRadius,
+
+    backgroundColor: Colors.glass.white,
+
+    paddingHorizontal: 14,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+  },
 
   recommendationIcon: {
     width: 46,
@@ -463,21 +514,27 @@ recommendation: {
     marginBottom: 18,
   },
 
- batteryCircle: {
-  width: dashboardDimensions.batteryCircleSize,
-  height: dashboardDimensions.batteryCircleSize,
+  batteryCircle: {
+    width:
+      dashboardDimensions.batteryCircleSize,
 
-  borderWidth: dashboardDimensions.borderWidth,
-  borderColor: Colors.light.primary,
+    height:
+      dashboardDimensions.batteryCircleSize,
 
-  borderRadius:
-    dashboardDimensions.batteryCircleSize / 2,
+    borderWidth:
+      dashboardDimensions.borderWidth,
 
-  backgroundColor: Colors.glass.white,
+    borderColor: Colors.light.primary,
 
-  alignItems: "center",
-  justifyContent: "center",
-},
+    borderRadius:
+      dashboardDimensions.batteryCircleSize / 2,
+
+    backgroundColor: Colors.glass.white,
+
+    alignItems: "center",
+
+    justifyContent: "center",
+  },
 
   batteryPercentage: {
     color: "#000000",
@@ -536,20 +593,27 @@ recommendation: {
   },
 
   monitorCard: {
-  width: "48%",
-  minHeight: dashboardDimensions.monitorHeight,
+    width: "48%",
 
-  borderWidth: dashboardDimensions.borderWidth,
-  borderColor: Colors.light.secondary,
-  borderRadius: dashboardDimensions.innerRadius,
+    minHeight:
+      dashboardDimensions.monitorHeight,
 
-  backgroundColor: Colors.glass.white,
+    borderWidth:
+      dashboardDimensions.borderWidth,
 
-  alignItems: "center",
-  justifyContent: "center",
+    borderColor: Colors.light.secondary,
 
-  paddingHorizontal: 6,
-},
+    borderRadius:
+      dashboardDimensions.innerRadius,
+
+    backgroundColor: Colors.glass.white,
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    paddingHorizontal: 6,
+  },
 
   monitorLabel: {
     color: "#000000",
@@ -614,21 +678,24 @@ recommendation: {
   },
 
   viewAll: {
-  color: "#FFFFFF",
-  fontWeight: "700",
+    color: "#FFFFFF",
 
-  backgroundColor: Colors.light.primary,
+    fontWeight: "700",
 
-  paddingHorizontal: 12,
-  paddingVertical: 6,
+    backgroundColor: Colors.light.primary,
 
-  borderRadius: 15,
+    paddingHorizontal: 12,
 
-  fontSize: 12,
+    paddingVertical: 6,
 
-  marginTop: -10,
-  marginRight: 2,
-},
+    borderRadius: 15,
+
+    fontSize: 12,
+
+    marginTop: -10,
+
+    marginRight: 2,
+  },
 
   activityList: {
     width: "100%",
@@ -636,20 +703,32 @@ recommendation: {
     gap: 9,
   },
 
- activityItem: {
-  minHeight: dashboardDimensions.activityHeight,
+  /*
+   * Kept from the original Dashboard structure.
+   *
+   * ActivityCard.tsx now controls the actual
+   * Recent Activity card appearance.
+   */
+  activityItem: {
+    minHeight:
+      dashboardDimensions.activityHeight,
 
-  borderWidth: dashboardDimensions.borderWidth,
-  borderColor: Colors.light.primary,
-  borderRadius: dashboardDimensions.innerRadius,
+    borderWidth:
+      dashboardDimensions.borderWidth,
 
-  backgroundColor: Colors.glass.white,
+    borderColor: Colors.light.primary,
 
-  flexDirection: "row",
-  alignItems: "center",
+    borderRadius:
+      dashboardDimensions.innerRadius,
 
-  paddingHorizontal: 13,
-},
+    backgroundColor: Colors.glass.white,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    paddingHorizontal: 13,
+  },
 
   activityDot: {
     width: 10,
