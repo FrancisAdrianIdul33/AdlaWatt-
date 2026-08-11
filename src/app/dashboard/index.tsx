@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import ActivityCard, {
-    ActivityCardData,
+  ActivityCardData,
 } from "@/components/ActivityCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
@@ -19,7 +19,99 @@ import { Routes } from "@/constants/routes";
 import { router } from "expo-router";
 
 export default function DashboardScreen() {
-  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarVisible, setSidebarVisible] =
+    useState(false);
+
+  /*
+   * Activity data currently matches the same
+   * activity data used by activity-logs.tsx.
+   *
+   * Later, this can be replaced with data fetched
+   * from the database.
+   */
+  const activities: ActivityCardData[] = [
+    {
+      id: "1",
+      type: "info",
+      title: "Solar Charging Started",
+      details:
+        "The solar panel is currently charging the battery using available sunlight.",
+      date: "Aug 10, 2026",
+      time: "08:42 AM",
+    },
+    {
+      id: "2",
+      type: "info",
+      title: "Appliance Connected",
+      details:
+        "An electric fan was detected and added to the current power load.",
+      date: "Aug 10, 2026",
+      time: "08:35 AM",
+    },
+    {
+      id: "3",
+      type: "warning",
+      title: "Battery Level Low",
+      details:
+        "The battery level has dropped below the recommended operating level.",
+      date: "Aug 10, 2026",
+      time: "07:58 AM",
+    },
+    {
+      id: "4",
+      type: "info",
+      title: "Battery Level Updated",
+      details:
+        "The battery level changed from 52% to 50%.",
+      date: "Aug 10, 2026",
+      time: "07:44 AM",
+    },
+    {
+      id: "5",
+      type: "warning",
+      title: "High Power Consumption",
+      details:
+        "The current appliance load is higher than the recommended level.",
+      date: "Aug 10, 2026",
+      time: "07:20 AM",
+    },
+    {
+      id: "6",
+      type: "error",
+      title: "Sensor Connection Lost",
+      details:
+        "The battery temperature sensor is no longer responding.",
+      date: "Aug 10, 2026",
+      time: "06:52 AM",
+    },
+    {
+      id: "7",
+      type: "info",
+      title: "System Online",
+      details:
+        "AdlaWatt successfully connected to the monitoring system.",
+      date: "Aug 10, 2026",
+      time: "06:30 AM",
+    },
+    {
+      id: "8",
+      type: "error",
+      title: "Inverter Overload Detected",
+      details:
+        "The inverter detected a load that exceeded the recommended operating level.",
+      date: "Aug 09, 2026",
+      time: "09:15 PM",
+    },
+  ];
+
+  /*
+   * The activity data is already arranged from newest
+   * to oldest, matching activity-logs.tsx.
+   *
+   * Only the latest 5 activities are shown on the
+   * Dashboard.
+   */
+  const recentActivities = activities.slice(0, 5);
 
   const dashboardData = {
     batteryLevel: 50,
@@ -36,89 +128,15 @@ export default function DashboardScreen() {
     batteryTemperature: "20.0°C",
 
     recommendedAppliance: "Electric Fan",
-
-    activities: [
-      {
-        id: "1",
-        title: "Battery started discharging",
-        details:
-          "The battery is currently supplying power to connected appliances.",
-        date: "August 11, 2026",
-        time: "10:42 AM",
-        type: "info",
-      },
-      {
-        id: "2",
-        title: "Solar input detected",
-        details:
-          "Solar energy is currently being received by the system.",
-        date: "August 11, 2026",
-        time: "10:35 AM",
-        type: "info",
-      },
-      {
-        id: "3",
-        title: "Electric Fan connected",
-        details:
-          "An Electric Fan has been connected to the AdlaWatt system.",
-        date: "August 11, 2026",
-        time: "10:28 AM",
-        type: "info",
-      },
-      {
-        id: "4",
-        title: "System connected",
-        details:
-          "AdlaWatt is connected and monitoring the system.",
-        date: "August 11, 2026",
-        time: "10:15 AM",
-        type: "info",
-      },
-      {
-        id: "5",
-        title: "Battery temperature warning",
-        details:
-          "The battery temperature is approaching the recommended operating limit.",
-        date: "August 11, 2026",
-        time: "10:05 AM",
-        type: "warning",
-      },
-      {
-        id: "6",
-        title: "High power consumption",
-        details:
-          "Connected appliances are currently consuming more power than usual.",
-        date: "August 11, 2026",
-        time: "9:58 AM",
-        type: "warning",
-      },
-      {
-        id: "7",
-        title: "Inverter overload detected",
-        details:
-          "The inverter detected a load approaching its operating limit.",
-        date: "August 11, 2026",
-        time: "9:50 AM",
-        type: "error",
-      },
-    ] as ActivityCardData[],
   };
-
-  /*
-   * Only the 5 most recent activities are displayed
-   * on the Dashboard.
-   *
-   * The complete activity history will remain available
-   * in the Activity Logs screen.
-   */
-  const recentActivities =
-    dashboardData.activities.slice(0, 5);
 
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
       <NavBar
-        onMenuPress={() => setSidebarVisible(true)}
+        onMenuPress={() =>
+          setSidebarVisible(true)
+        }
       />
 
       {/* Dashboard */}
@@ -218,7 +236,8 @@ export default function DashboardScreen() {
               variant="caption"
               style={styles.remainingText}
             >
-              Time Remaining: {dashboardData.timeRemaining}
+              Time Remaining:{" "}
+              {dashboardData.timeRemaining}
             </AppText>
           </View>
 
@@ -343,7 +362,9 @@ export default function DashboardScreen() {
       {/* Sidebar */}
       <Sidebar
         visible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
+        onClose={() =>
+          setSidebarVisible(false)
+        }
       />
     </ScreenContainer2>
   );
@@ -397,20 +418,27 @@ const styles = StyleSheet.create({
 
   headerCard: {
     backgroundColor: Colors.glass.white,
+
     borderWidth: 3,
+
     borderColor: Colors.light.secondary,
+
     borderRadius: 16,
+
     padding: 18,
+
     marginBottom: 18,
   },
 
   headerTitle: {
     color: "#000000",
+
     fontWeight: "700",
   },
 
   headerSubtitle: {
     color: Colors.light.textSecondary,
+
     marginTop: 6,
   },
 
@@ -699,67 +727,5 @@ const styles = StyleSheet.create({
     width: "100%",
 
     gap: 9,
-  },
-
-  /*
-   * These original activity styles are intentionally
-   * preserved for consistency with the original
-   * Dashboard structure.
-   *
-   * ActivityCard.tsx now handles the actual
-   * Recent Activity card presentation.
-   */
-
-  activityItem: {
-    minHeight:
-      dashboardDimensions.activityHeight,
-
-    borderWidth:
-      dashboardDimensions.borderWidth,
-
-    borderColor: Colors.light.primary,
-
-    borderRadius:
-      dashboardDimensions.innerRadius,
-
-    backgroundColor: Colors.glass.white,
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    paddingHorizontal: 13,
-  },
-
-  activityDot: {
-    width: 10,
-
-    height: 10,
-
-    borderRadius: 5,
-
-    backgroundColor: Colors.light.secondary,
-
-    marginRight: 11,
-  },
-
-  activityInfo: {
-    flex: 1,
-  },
-
-  activityTitle: {
-    color: "#000000",
-
-    fontWeight: "600",
-  },
-
-  activityTime: {
-    color: Colors.light.textSecondary,
-
-    marginTop: 2,
-
-    fontSize: 11,
-
-    fontWeight: "400",
   },
 });
