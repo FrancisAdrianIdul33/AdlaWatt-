@@ -2,24 +2,39 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
+type PowerLevel = "All" | "Highest" | "Moderate" | "Low";
+
+type Area =
+  | "All Areas"
+  | "Living Area"
+  | "Dining Area"
+  | "Bedroom"
+  | "Office"
+  | "Kitchen"
+  | "Other";
+
 type Appliance = {
   name: string;
   watts: string;
   power: number;
+  powerLevel: Exclude<PowerLevel, "All">;
+  area: Exclude<Area, "All Areas">;
   icon: keyof typeof Ionicons.glyphMap;
 };
 
 type ApplianceCardProps = {
-  batteryLevel: number;
+  batteryLevel?: number;
+  powerFilter?: PowerLevel;
+  areaFilter?: Area;
 };
 
 const appliances: Appliance[] = [
@@ -27,50 +42,64 @@ const appliances: Appliance[] = [
     name: "Emergency Light",
     watts: "5–10W",
     power: 10,
+    powerLevel: "Low",
+    area: "Bedroom",
     icon: "flashlight-outline",
   },
   {
     name: "LED Bulb",
     watts: "9W",
     power: 9,
+    powerLevel: "Low",
+    area: "Living Area",
     icon: "bulb-outline",
   },
   {
     name: "Router",
     watts: "10–20W",
     power: 20,
+    powerLevel: "Low",
+    area: "Office",
     icon: "wifi-outline",
   },
   {
     name: "Phone Charger",
     watts: "20W",
     power: 20,
+    powerLevel: "Low",
+    area: "Bedroom",
     icon: "phone-portrait-outline",
   },
   {
     name: "TV",
     watts: "30–50W",
     power: 50,
+    powerLevel: "Moderate",
+    area: "Living Area",
     icon: "tv-outline",
   },
   {
     name: "Fan",
     watts: "50–75W",
     power: 75,
+    powerLevel: "Highest",
+    area: "Living Area",
     icon: "speedometer-outline",
   },
   {
     name: "Laptop",
     watts: "65W",
     power: 65,
+    powerLevel: "Highest",
+    area: "Office",
     icon: "laptop-outline",
   },
 ];
 
-const BATTERY_LEVEL = 50;
-
 export default function ApplianceCard({
-  batteryLevel,
+  batteryLevel = 50,
+  powerFilter = "All",
+  areaFilter = "All Areas",
 }: ApplianceCardProps) {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
@@ -79,35 +108,45 @@ export default function ApplianceCard({
   const [offset, setOffset] = useState(0);
   const direction = useRef(1);
 
-  const recommended = appliances.filter(
-    (item) => {
-      if (BATTERY_LEVEL >= 80) return true;
-      if (BATTERY_LEVEL >= 40) return item.power <= 30;
-      return item.power <= 10;
-    },
-  );
+  const filteredAppliances = appliances.filter((appliance) => {
+    const matchesPower =
+      powerFilter === "All" ||
+      appliance.powerLevel === powerFilter;
+
+    const matchesArea =
+      areaFilter === "All Areas" ||
+      appliance.area === areaFilter;
+
+    return matchesPower && matchesArea;
+  });
 
   const getStatus = (power: number) =>
-    BATTERY_LEVEL >= 80 ||
-    (BATTERY_LEVEL >= 40 && power <= 30) ||
-    (BATTERY_LEVEL < 40 && power <= 10);
+    batteryLevel >= 80 ||
+    (batteryLevel >= 40 && power <= 30) ||
+    (batteryLevel < 40 && power <= 10);
 
   useEffect(() => {
     if (!autoMove) return;
 
     const timer = setInterval(() => {
       setOffset((current) => {
-        const next = current + direction.current * 2;
+        const next =
+          current + direction.current * 2;
 
         if (next >= 120) direction.current = -1;
         if (next <= 0) direction.current = 1;
 
+        const position = Math.max(
+          0,
+          Math.min(120, next),
+        );
+
         scrollRef.current?.scrollTo({
-          x: Math.max(0, Math.min(120, next)),
+          x: position,
           animated: true,
         });
 
-        return Math.max(0, Math.min(120, next));
+        return position;
       });
     }, 80);
 
@@ -115,19 +154,25 @@ export default function ApplianceCard({
   }, [autoMove]);
 
   const note =
-    BATTERY_LEVEL >= 80
+    batteryLevel >= 80
       ? "Your battery has plenty of energy. You can safely use your supported appliances."
-      : BATTERY_LEVEL >= 40
+      : batteryLevel >= 40
         ? "Your battery is at a moderate level. Consider using low-power appliances first."
         : "Your battery is getting low. Save energy for essential appliances.";
 
   return (
     <View style={styles.container}>
-      <AppText variant="body" style={styles.title}>
+      <AppText
+        variant="body"
+        style={styles.title}
+      >
         Recommended Appliances
       </AppText>
 
-      <AppText variant="caption" style={styles.subtitle}>
+      <AppText
+        variant="caption"
+        style={styles.subtitle}
+      >
         Based on your current battery level
       </AppText>
 
@@ -138,68 +183,92 @@ export default function ApplianceCard({
         contentContainerStyle={styles.list}
         scrollEventThrottle={16}
       >
-        {appliances.map((appliance) => {
-          const okay = getStatus(appliance.power);
+        {filteredAppliances.length > 0 ? (
+          filteredAppliances.map((appliance) => {
+            const okay = getStatus(appliance.power);
 
-          return (
-            <View key={appliance.name} style={styles.item}>
-              <Ionicons
-                name={appliance.icon}
-                size={23}
-                color={
-                  okay
-                    ? Colors.light.primary
-                    : Colors.light.error
-                }
-              />
-
-              <AppText
-                variant="caption"
-                style={styles.name}
-              >
-                {appliance.name}
-              </AppText>
-
-              <AppText
-                variant="caption"
-                style={styles.watts}
-              >
-                {appliance.watts}
-              </AppText>
-
+            return (
               <View
-                style={[
-                  styles.status,
-                  okay
-                    ? styles.okStatus
-                    : styles.notOkStatus,
-                ]}
+                key={appliance.name}
+                style={styles.item}
               >
                 <Ionicons
-                  name={
+                  name={appliance.icon}
+                  size={23}
+                  color={
                     okay
-                      ? "checkmark-outline"
-                      : "close-outline"
+                      ? Colors.light.primary
+                      : Colors.light.error
                   }
-                  size={11}
-                  color="#FFFFFF"
                 />
 
                 <AppText
                   variant="caption"
-                  style={styles.statusText}
+                  style={styles.name}
                 >
-                  {okay ? "OK to use" : "Not advised"}
+                  {appliance.name}
                 </AppText>
+
+                <AppText
+                  variant="caption"
+                  style={styles.watts}
+                >
+                  {appliance.watts}
+                </AppText>
+
+                <View
+                  style={[
+                    styles.status,
+                    okay
+                      ? styles.okStatus
+                      : styles.notOkStatus,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      okay
+                        ? "checkmark-outline"
+                        : "close-outline"
+                    }
+                    size={11}
+                    color="#FFFFFF"
+                  />
+
+                  <AppText
+                    variant="caption"
+                    style={styles.statusText}
+                  >
+                    {okay
+                      ? "OK to use"
+                      : "Not advised"}
+                  </AppText>
+                </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        ) : (
+          <View style={styles.empty}>
+            <Ionicons
+              name="search-outline"
+              size={25}
+              color={Colors.light.textSecondary}
+            />
+
+            <AppText
+              variant="caption"
+              style={styles.emptyText}
+            >
+              No appliances match the selected filters.
+            </AppText>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.controls}>
         <Pressable
-          onPress={() => setAutoMove((value) => !value)}
+          onPress={() =>
+            setAutoMove((value) => !value)
+          }
           style={({ pressed }) => [
             styles.controlButton,
             pressed && styles.pressed,
@@ -224,7 +293,9 @@ export default function ApplianceCard({
         </Pressable>
 
         <Pressable
-         onPress={() => router.push("/dashboard/appliances")}
+          onPress={() =>
+            router.push("/dashboard/appliances")
+          }
           style={({ pressed }) => [
             styles.controlButton,
             pressed && styles.pressed,
@@ -381,5 +452,19 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     fontSize: 11,
     lineHeight: 17,
+  },
+
+  empty: {
+    width: "100%",
+    minHeight: 80,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+
+  emptyText: {
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    fontSize: 11,
   },
 });
