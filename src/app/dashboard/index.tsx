@@ -136,17 +136,7 @@ export default function DashboardScreen() {
           </AppText>
         </View>
 
-        {/* Appliance Recommendation */}
-        <View style={styles.section}>
-          <AppText
-            variant="body"
-            style={styles.sectionTitle}
-          >
-            Appliance Recommendation
-          </AppText>
-
-     <AppRecCard />
-        </View>
+        
         {/* Real-Time Monitoring */}
         <View style={styles.section}>
           <AppText
@@ -186,6 +176,18 @@ export default function DashboardScreen() {
               status={dashboardData.batteryTemperatureStatus}
             />
           </View>
+        </View>
+
+        {/* Appliance Recommendation */}
+        <View style={styles.section}>
+          <AppText
+            variant="body"
+            style={styles.sectionTitle}
+          >
+            Appliance Recommendation
+          </AppText>
+
+     <AppRecCard />
         </View>
 
         {/* Recent Activity */}

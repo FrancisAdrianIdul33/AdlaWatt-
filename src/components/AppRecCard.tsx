@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Image,
-  Pressable,
-  StyleSheet,
-  View,
+    Image,
+    Pressable,
+    StyleSheet,
+    View,
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
@@ -87,6 +87,31 @@ export default function AppRecCard({
 
   return (
     <View style={styles.wrapper}>
+         {/* Rotating Tip */}
+      <View style={styles.tip}>
+        <Ionicons
+          name="bulb-outline"
+          size={19}
+          color={Colors.light.secondary}
+        />
+
+        <View style={styles.tipContent}>
+          <AppText
+            variant="caption"
+            style={styles.tipTitle}
+          >
+            Tip
+          </AppText>
+
+          <AppText
+            variant="caption"
+            style={styles.tipText}
+          >
+            {tips[tipIndex]}
+          </AppText>
+        </View>
+      </View>
+
       {/* Appliance Carousel */}
       <View
         style={[
@@ -235,30 +260,7 @@ export default function AppRecCard({
         />
       </Pressable>
 
-      {/* Rotating Tip */}
-      <View style={styles.tip}>
-        <Ionicons
-          name="bulb-outline"
-          size={19}
-          color={Colors.light.secondary}
-        />
-
-        <View style={styles.tipContent}>
-          <AppText
-            variant="caption"
-            style={styles.tipTitle}
-          >
-            Tip
-          </AppText>
-
-          <AppText
-            variant="caption"
-            style={styles.tipText}
-          >
-            {tips[tipIndex]}
-          </AppText>
-        </View>
-      </View>
+     
     </View>
   );
 }
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
 
   applianceBox: {
     width: "72%",
-    maxWidth: 280,
+    maxWidth: 200,
     backgroundColor: "#e6e3e3",
     borderWidth: 2,
     borderRadius: Radius.md,
@@ -396,7 +398,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.secondary,
     borderRadius: Radius.md,
     padding: 10,
-    marginTop: Spacing.md,
+    marginTop: 5,
+    marginBottom: 14,
   },
 
   tipContent: {
@@ -406,14 +409,14 @@ const styles = StyleSheet.create({
 
   tipTitle: {
     color: "#000000",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     marginBottom: 2,
   },
 
   tipText: {
     color: Colors.light.textSecondary,
-    fontSize: 12,
+    fontSize: 14,
     lineHeight: 17,
   },
 
