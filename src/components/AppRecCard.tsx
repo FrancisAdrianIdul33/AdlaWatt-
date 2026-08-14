@@ -56,7 +56,10 @@ export default function AppRecCard({
     [mode],
   );
 
-  const current = filteredAppliances[index % filteredAppliances.length];
+  const currentAppliances = [
+  filteredAppliances[index % filteredAppliances.length],
+  filteredAppliances[(index + 1) % filteredAppliances.length],
+].filter(Boolean);
 
   const isAdvisable = mode === "advisable";
   const statusColor = isAdvisable
@@ -83,7 +86,7 @@ export default function AppRecCard({
     return () => clearInterval(timer);
   }, []);
 
-  if (!current) return null;
+ if (!currentAppliances.length) return null;
 
   return (
     <View style={styles.wrapper}>
@@ -112,67 +115,70 @@ export default function AppRecCard({
         </View>
       </View>
 
-      {/* Appliance Carousel */}
+     {/* Appliance Carousel */}
+<View style={styles.applianceRow}>
+  {currentAppliances.map((appliance) => (
+    <View
+      key={appliance.id}
+      style={[
+        styles.applianceBox,
+        { borderColor: statusColor },
+      ]}
+    >
       <View
         style={[
-          styles.applianceBox,
+          styles.imageContainer,
           { borderColor: statusColor },
         ]}
       >
-        <View
-          style={[
-            styles.imageContainer,
-            { borderColor: statusColor },
-          ]}
-        >
-          <Image
-            source={defaultImage}
-            style={styles.image}
-            resizeMode="cover"
-          />
-        </View>
-
-        <AppText
-          variant="caption"
-          style={styles.name}
-          numberOfLines={2}
-        >
-          {current.name}
-        </AppText>
-
-        <AppText
-          variant="caption"
-          style={styles.watts}
-        >
-          {current.watts}
-        </AppText>
-
-        <View
-          style={[
-            styles.status,
-            { backgroundColor: statusColor },
-          ]}
-        >
-          <Ionicons
-            name={
-              isAdvisable
-                ? "checkmark-circle-outline"
-                : "alert-circle-outline"
-            }
-            size={13}
-            color="#FFFFFF"
-          />
-
-          <AppText
-            variant="caption"
-            style={styles.statusText}
-          >
-            {isAdvisable
-              ? "OK to use"
-              : "Not advisable"}
-          </AppText>
-        </View>
+        <Image
+          source={defaultImage}
+          style={styles.image}
+          resizeMode="cover"
+        />
       </View>
+
+      <AppText
+        variant="caption"
+        style={styles.name}
+        numberOfLines={2}
+      >
+        {appliance.name}
+      </AppText>
+
+      <AppText
+        variant="caption"
+        style={styles.watts}
+      >
+        {appliance.watts}
+      </AppText>
+
+      <View
+        style={[
+          styles.status,
+          { backgroundColor: statusColor },
+        ]}
+      >
+        <Ionicons
+          name={
+            isAdvisable
+              ? "checkmark-circle-outline"
+              : "alert-circle-outline"
+          }
+          size={13}
+          color="#FFFFFF"
+        />
+
+        <AppText
+          variant="caption"
+          style={styles.statusText}
+        >
+          {isAdvisable ? "OK to use" : "Not advisable"}
+        </AppText>
+      </View>
+    </View>
+  ))}
+</View>
 
       {/* Carousel Indicator */}
       <View style={styles.indicator}>
@@ -271,9 +277,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  applianceRow: {
+  width: "100%",
+  flexDirection: "row",
+  justifyContent: "center",
+  gap: 20,
+},
+
   applianceBox: {
-    width: "72%",
-    maxWidth: 200,
+    width: "45%",
+    maxWidth: 150,
     backgroundColor: "#e6e3e3",
     borderWidth: 2,
     borderRadius: Radius.md,
