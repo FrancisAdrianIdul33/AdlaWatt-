@@ -9,6 +9,7 @@ import {
     View,
 } from "react-native";
 
+import ApplianceBox from "@/components/forms/ApplianceBox";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Radius, Spacing, Typography } from "@/constants/theme";
@@ -270,74 +271,14 @@ export default function ApplianceModal({
                       const color = getAreaColor(appliance.area);
 
                       return (
-                        <Pressable
-                          key={appliance.id}
-                          onPress={() =>
-                            toggleAppliance(appliance.id)
-                          }
-                          style={({ pressed }) => [
-                            styles.item,
-                            {
-                              borderColor: color,
-                              backgroundColor: isSelected
-                                ? "rgba(0, 168, 107, 0.08)"
-                                : Colors.glass.white,
-                            },
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <View
-                            style={[
-                              styles.iconContainer,
-                              { borderColor: color },
-                            ]}
-                          >
-                            <Ionicons
-                              name="flash-outline"
-                              size={21}
-                              color={color}
-                            />
-                          </View>
-
-                          <AppText
-                            variant="caption"
-                            style={styles.name}
-                          >
-                            {appliance.name}
-                          </AppText>
-
-                          <AppText
-                            variant="caption"
-                            style={styles.watts}
-                          >
-                            {appliance.watts}
-                          </AppText>
-
-                          <View
-                            style={[
-                              styles.check,
-                              {
-                                backgroundColor: isSelected
-                                  ? Colors.light.primary
-                                  : Colors.light.border,
-                              },
-                            ]}
-                          >
-                            <Ionicons
-                              name={
-                                isSelected
-                                  ? "checkmark"
-                                  : "ellipse-outline"
-                              }
-                              size={12}
-                              color={
-                                isSelected
-                                  ? "#FFFFFF"
-                                  : Colors.light.textSecondary
-                              }
-                            />
-                          </View>
-                        </Pressable>
+                       <ApplianceBox
+  key={appliance.id}
+  name={appliance.name}
+  wattage={appliance.watts}
+  color={color}
+  selected={isSelected}
+  onPress={() => toggleAppliance(appliance.id)}
+/>
                       );
                     })}
                   </View>
@@ -542,49 +483,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 10,
-  },
-
-  item: {
-    width: "48%",
-    minHeight: 145,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderRadius: 14,
-    padding: 10,
-  },
-
-  iconContainer: {
-    width: 42,
-    height: 42,
-    borderWidth: 2,
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 5,
-  },
-
-  name: {
-    color: "#000000",
-    fontWeight: "700",
-    textAlign: "center",
-    fontSize: 14,
-    lineHeight: 15,
-  },
-
-  watts: {
-    color: Colors.light.textSecondary,
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  check: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 7,
   },
 
   footer: {
