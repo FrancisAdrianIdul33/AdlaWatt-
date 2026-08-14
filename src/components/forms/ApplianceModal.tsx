@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    View,
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
@@ -478,14 +478,14 @@ const styles = StyleSheet.create({
   advisoryTitle: {
     color: "#000000",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 20,
   },
 
   advisoryDescription: {
     color: Colors.light.textSecondary,
     lineHeight: 18,
     marginTop: 3,
-    fontSize: 11,
+    fontSize: 14,
   },
 
   customSection: {
@@ -497,8 +497,9 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#000000",
+    color: "#1b1b1b",
     fontWeight: "700",
+    fontSize: 20,
     marginBottom: Spacing.sm,
   },
 
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
   customButtonText: {
     color: Colors.light.primary,
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 14,
   },
 
   customForm: {
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 12,
     color: "#000000",
-    fontSize: 13,
+    fontSize: 14,
   },
 
   grid: {
@@ -567,13 +568,13 @@ const styles = StyleSheet.create({
     color: "#000000",
     fontWeight: "700",
     textAlign: "center",
-    fontSize: 11,
+    fontSize: 14,
     lineHeight: 15,
   },
 
   watts: {
     color: Colors.light.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 3,
   },
 
@@ -604,7 +605,7 @@ const styles = StyleSheet.create({
 
   selectedText: {
     color: Colors.light.textSecondary,
-    fontSize: 11,
+    fontSize: 14,
   },
 
   footerButtons: {
@@ -626,7 +627,7 @@ const styles = StyleSheet.create({
   resetText: {
     color: Colors.light.text,
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 14,
   },
 
   actionButton: {
@@ -641,7 +642,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: "#FFFFFF",
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: 14,
   },
 
   pressed: {
