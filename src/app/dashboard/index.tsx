@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, View, Pressable } from "react-native";
 import { router } from "expo-router";
+import React, { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import ActivityCard, {
   ActivityCardData,
 } from "@/components/ActivityCard";
-import ApplianceCard from "@/components/ApplianceCard";
+import AppRecCard from "@/components/AppRecCard";
 import ChartCard from "@/components/ChartCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
@@ -145,11 +145,8 @@ export default function DashboardScreen() {
             Appliance Recommendation
           </AppText>
 
-          <ApplianceCard
-            batteryLevel={dashboardData.batteryLevel}
-          />
+     <AppRecCard />
         </View>
-
         {/* Real-Time Monitoring */}
         <View style={styles.section}>
           <AppText
