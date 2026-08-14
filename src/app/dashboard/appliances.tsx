@@ -16,6 +16,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
+
 type PowerLevel =
   | "All"
   | "Highest"
