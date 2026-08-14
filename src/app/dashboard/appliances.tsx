@@ -7,8 +7,8 @@ import {
   View,
 } from "react-native";
 
-import ApplianceCards from "@/components/ApplianceCards";
 import ApplianceModal from "@/components/forms/ApplianceModal";
+import ApplianceStatusBox from "@/components/forms/ApplianceStatusBox";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
@@ -32,7 +32,23 @@ type Area =
   | "Kitchen"
   | "Other";
 
+  type SelectedAppliance = {
+  id: string;
+  name: string;
+  watts: string;
+  area: string;
+};
+
 export default function AppliancesScreen() {
+
+  const [selectedAppliances, setSelectedAppliances] =
+  useState<SelectedAppliance[]>([]);
+
+  const handleApplianceSave = (
+  appliances: SelectedAppliance[],
+) => {
+  setSelectedAppliances(appliances);
+};
 
   const [applianceModalVisible, setApplianceModalVisible] =
   useState(false);
@@ -281,18 +297,66 @@ export default function AppliancesScreen() {
             Appliances
           </AppText>
 
-          <ApplianceCards
-            powerFilter={powerFilter}
-            areaFilter={areaFilter}
-          />
+         <View style={styles.applianceGrid}>
+  {selectedAppliances
+    .filter((appliance) => {
+      const power = parseInt(appliance.watts.match(/\d+/)?.[0] ?? "0");
+
+      const matchesPower =
+        powerFilter === "All" ||
+        (powerFilter === "Highest" && power >= 50) ||
+        (powerFilter === "Moderate" && power >= 20 && power < 50) ||
+        (powerFilter === "Low" && power < 20);
+
+      const matchesArea =
+        areaFilter === "All Areas" ||
+        appliance.area === areaFilter;
+
+      return matchesPower && matchesArea;
+    })
+    .map((appliance) => {
+      const color =
+        appliance.area === "Living Area"
+          ? Colors.light.primary
+          : appliance.area === "Bedroom"
+            ? "#9B59B6"
+            : appliance.area === "Kitchen & Dining Area"
+              ? Colors.light.secondary
+              : appliance.area === "Work & Study Area"
+                ? "#4A90E2"
+                : appliance.area === "Bathroom & Laundry Area"
+                  ? "#16A085"
+                  : appliance.area === "Porch & Yard"
+                    ? "#E67E22"
+                    : Colors.light.border;
+
+      const power = parseInt(
+        appliance.watts.match(/\d+/)?.[0] ?? "0",
+      );
+
+      const status =
+        power <= 100 ? "OK to use" : "Not advised";
+
+      return (
+        <ApplianceStatusBox
+          key={appliance.id}
+          name={appliance.name}
+          wattage={appliance.watts}
+          color={color}
+          status={status}
+        />
+      );
+    })}
+</View>
         </View>
 
         <Copyright />
       </ScrollView>
 
-      <ApplianceModal
+     <ApplianceModal
   visible={applianceModalVisible}
   onClose={() => setApplianceModalVisible(false)}
+  onSave={handleApplianceSave}
 />
 
       <Sidebar
@@ -320,6 +384,13 @@ const styles = StyleSheet.create({
     padding: dimensions.padding,
     paddingBottom: 24,
   },
+
+  applianceGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  gap: 10,
+},
 
   /* Header */
 
