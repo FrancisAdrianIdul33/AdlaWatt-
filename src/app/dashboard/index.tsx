@@ -305,12 +305,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     fontSize: 12,
-    marginTop: -10,
+    marginTop: -14,
     marginRight: 2,
   },
 
   activityList: {
     width: "100%",
-    gap: 9,
+    gap: 5,
   },
 });

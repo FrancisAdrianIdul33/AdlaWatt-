@@ -8,8 +8,10 @@ import {
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
+import { Routes } from "@/constants/routes";
 import { Colors } from "@/constants/colors";
 import { Radius, Spacing } from "@/constants/theme";
+import { router } from "expo-router";
 
 type Status = "advisable" | "notAdvisable";
 
@@ -246,7 +248,7 @@ export default function AppRecCard({
 
       {/* View All */}
       <Pressable
-        onPress={onViewAll}
+    onPress={() => router.push(Routes.APPLIANCES)}
         style={({ pressed }) => [
           styles.viewAll,
           pressed && styles.pressed,
