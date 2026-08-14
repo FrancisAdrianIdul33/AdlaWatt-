@@ -404,18 +404,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  tip: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "rgba(255, 165, 0, 0.08)",
-    borderWidth: 1,
-    borderColor: Colors.light.secondary,
-    borderRadius: Radius.md,
-    padding: 10,
-    marginTop: 5,
-    marginBottom: 14,
-  },
+ tip: {
+  width: "100%",
+  height: 72,
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "rgba(255, 165, 0, 0.08)",
+  borderWidth: 1,
+  borderColor: Colors.light.secondary,
+  borderRadius: Radius.md,
+  padding: 10,
+  marginTop: 5,
+  marginBottom: 14,
+},
 
   tipContent: {
     flex: 1,
@@ -430,10 +431,11 @@ const styles = StyleSheet.create({
   },
 
   tipText: {
-    color: Colors.light.textSecondary,
-    fontSize: 14,
-    lineHeight: 17,
-  },
+  color: Colors.light.textSecondary,
+  fontSize: 14,
+  lineHeight: 17,
+  flexShrink: 1,
+},
 
   pressed: {
     opacity: 0.7,
