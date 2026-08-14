@@ -39,7 +39,12 @@ type Area =
   area: string;
 };
 
+type StatusFilter = "All" | "Advisable" | "notAdvisable";
+
 export default function AppliancesScreen() {
+
+  const [statusFilter, setStatusFilter] =
+  useState<StatusFilter>("All");
 
   const [selectedAppliances, setSelectedAppliances] =
   useState<SelectedAppliance[]>([]);
@@ -279,6 +284,7 @@ export default function AppliancesScreen() {
                           styles.selectedText,
                       ]}
                     >
+                      
                       {option}
                     </AppText>
                   </Pressable>
@@ -287,6 +293,41 @@ export default function AppliancesScreen() {
             )}
           </View>
         </View>
+
+        <View style={styles.statusToggle}>
+  {(["All", "Advisable", "notAdvisable"] as StatusFilter[]).map(
+    (option) => (
+      <Pressable
+        key={option}
+        onPress={() => setStatusFilter(option)}
+        style={({ pressed }) => [
+          styles.statusButton,
+          statusFilter === option && {
+            backgroundColor:
+              option === "Advisable"
+                ? Colors.light.primary
+                : option === "notAdvisable"
+                  ? "#EF4444"
+                  : Colors.light.primary,
+          },
+          pressed && styles.pressed,
+        ]}
+      >
+        <AppText
+          variant="caption"
+          style={[
+            styles.statusText,
+            statusFilter === option && styles.activeStatusText,
+          ]}
+        >
+          {option === "notAdvisable"
+            ? "Not Advisable"
+            : option}
+        </AppText>
+      </Pressable>
+    ),
+  )}
+</View>
 
         {/* Appliances */}
         <View style={styles.applianceSection}>
@@ -300,20 +341,29 @@ export default function AppliancesScreen() {
          <View style={styles.applianceGrid}>
   {selectedAppliances
     .filter((appliance) => {
-      const power = parseInt(appliance.watts.match(/\d+/)?.[0] ?? "0");
+  const power = parseInt(
+    appliance.watts.match(/\d+/)?.[0] ?? "0",
+  );
 
-      const matchesPower =
-        powerFilter === "All" ||
-        (powerFilter === "Highest" && power >= 50) ||
-        (powerFilter === "Moderate" && power >= 20 && power < 50) ||
-        (powerFilter === "Low" && power < 20);
+  const matchesPower =
+    powerFilter === "All" ||
+    (powerFilter === "Highest" && power >= 50) ||
+    (powerFilter === "Moderate" && power >= 20 && power < 50) ||
+    (powerFilter === "Low" && power < 20);
 
-      const matchesArea =
-        areaFilter === "All Areas" ||
-        appliance.area === areaFilter;
+  const matchesArea =
+    areaFilter === "All Areas" ||
+    appliance.area === areaFilter;
 
-      return matchesPower && matchesArea;
-    })
+  const status =
+    power <= 100 ? "Advisable" : "notAdvisable";
+
+  const matchesStatus =
+    statusFilter === "All" ||
+    status === statusFilter;
+
+  return matchesPower && matchesArea && matchesStatus;
+})
     .map((appliance) => {
       const color =
         appliance.area === "Living Area"
@@ -541,4 +591,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 10,
   },
+
+  /* Status Section */
+  statusToggle: {
+  width: "100%",
+  flexDirection: "row",
+  backgroundColor: Colors.glass.white,
+  borderWidth: 2,
+  borderColor: Colors.light.border,
+  borderRadius: 14,
+  padding: 3,
+  marginTop: 10,
+},
+
+statusButton: {
+  flex: 1,
+  minHeight: 40,
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: 11,
+},
+
+statusText: {
+  color: Colors.light.text,
+  fontSize: 13,
+  fontWeight: "700",
+},
+
+activeStatusText: {
+  color: "#FFFFFF",
+},
 });
