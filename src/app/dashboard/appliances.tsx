@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   Pressable,
@@ -8,6 +7,7 @@ import {
 } from "react-native";
 
 import ApplianceCards from "@/components/ApplianceCards";
+import ApplianceModal from "@/components/forms/ApplianceModal";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
@@ -15,11 +15,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
-type PowerLevel =
-  | "All"
-  | "Highest"
-  | "Moderate"
-  | "Low";
+type PowerLevel = "All" | "Highest" | "Moderate" | "Low";
 
 type Area =
   | "All Areas"
@@ -31,8 +27,8 @@ type Area =
   | "Other";
 
 export default function AppliancesScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const [powerFilter, setPowerFilter] =
     useState<PowerLevel>("All");
@@ -40,21 +36,28 @@ export default function AppliancesScreen() {
   const [areaFilter, setAreaFilter] =
     useState<Area>("All Areas");
 
-  const [powerDropdownVisible, setPowerDropdownVisible] =
+  const [powerDropdown, setPowerDropdown] =
     useState(false);
 
-  const [areaDropdownVisible, setAreaDropdownVisible] =
+  const [areaDropdown, setAreaDropdown] =
     useState(false);
 
-  const handlePowerFilter = (filter: PowerLevel) => {
-    setPowerFilter(filter);
-    setPowerDropdownVisible(false);
-  };
+  const powerOptions: PowerLevel[] = [
+    "All",
+    "Highest",
+    "Moderate",
+    "Low",
+  ];
 
-  const handleAreaFilter = (filter: Area) => {
-    setAreaFilter(filter);
-    setAreaDropdownVisible(false);
-  };
+  const areaOptions: Area[] = [
+    "All Areas",
+    "Living Area",
+    "Dining Area",
+    "Bedroom",
+    "Office",
+    "Kitchen",
+    "Other",
+  ];
 
   return (
     <ScreenContainer2>
@@ -69,109 +72,68 @@ export default function AppliancesScreen() {
       >
         {/* Header */}
         <View style={styles.card}>
-          <AppText
-            variant="heading"
-            style={styles.title}
-          >
+          <AppText variant="heading" style={styles.title}>
             Appliances
           </AppText>
 
-          <AppText
-            variant="caption"
-            style={styles.subtitle}
-          >
+          <AppText variant="caption" style={styles.subtitle}>
             Manage and monitor supported appliances.
           </AppText>
         </View>
 
         {/* Controls */}
         <View style={styles.controls}>
-          {/* Add New */}
           <Pressable
+            onPress={() => setModalVisible(true)}
             style={({ pressed }) => [
               styles.addButton,
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons
-              name="add-outline"
-              size={18}
-              color="#FFFFFF"
-            />
-
             <AppText
               variant="caption"
               style={styles.addButtonText}
             >
-              Add New
+              + Add New
             </AppText>
           </Pressable>
 
-          {/* Power Filter */}
-          <View style={styles.filterWrapper}>
+          {/* Power Dropdown */}
+          <View style={styles.dropdownWrapper}>
             <Pressable
               onPress={() => {
-                setPowerDropdownVisible(
-                  !powerDropdownVisible,
-                );
-                setAreaDropdownVisible(false);
+                setPowerDropdown(!powerDropdown);
+                setAreaDropdown(false);
               }}
-              style={({ pressed }) => [
-                styles.filterButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.dropdownButton}
             >
-              <Ionicons
-                name="flash-outline"
-                size={18}
-                color={Colors.light.primary}
-              />
-
               <AppText
                 variant="caption"
-                style={styles.filterText}
+                style={styles.dropdownText}
               >
                 {powerFilter}
               </AppText>
 
-              <Ionicons
-                name={
-                  powerDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
-                size={17}
-                color={Colors.light.text}
-              />
+              <AppText style={styles.chevron}>
+                {powerDropdown ? "▲" : "▼"}
+              </AppText>
             </Pressable>
 
-            {powerDropdownVisible && (
+            {powerDropdown && (
               <View style={styles.dropdown}>
-                {(
-                  [
-                    "All",
-                    "Highest",
-                    "Moderate",
-                    "Low",
-                  ] as PowerLevel[]
-                ).map((option) => (
+                {powerOptions.map((option) => (
                   <Pressable
                     key={option}
-                    onPress={() =>
-                      handlePowerFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      powerFilter === option &&
-                        styles.selectedItem,
-                      pressed &&
-                        styles.dropdownPressed,
-                    ]}
+                    onPress={() => {
+                      setPowerFilter(option);
+                      setPowerDropdown(false);
+                    }}
+                    style={styles.dropdownItem}
                   >
                     <AppText
                       variant="caption"
                       style={[
-                        styles.dropdownText,
+                        styles.dropdownItemText,
                         powerFilter === option &&
                           styles.selectedText,
                       ]}
@@ -184,74 +146,42 @@ export default function AppliancesScreen() {
             )}
           </View>
 
-          {/* Area Filter */}
-          <View style={styles.filterWrapper}>
+          {/* Area Dropdown */}
+          <View style={styles.dropdownWrapper}>
             <Pressable
               onPress={() => {
-                setAreaDropdownVisible(
-                  !areaDropdownVisible,
-                );
-                setPowerDropdownVisible(false);
+                setAreaDropdown(!areaDropdown);
+                setPowerDropdown(false);
               }}
-              style={({ pressed }) => [
-                styles.filterButton,
-                pressed && styles.pressed,
-              ]}
+              style={styles.dropdownButton}
             >
-              <Ionicons
-                name="location-outline"
-                size={18}
-                color={Colors.light.primary}
-              />
-
               <AppText
                 variant="caption"
-                style={styles.filterText}
+                style={styles.dropdownText}
               >
                 {areaFilter}
               </AppText>
 
-              <Ionicons
-                name={
-                  areaDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
-                size={17}
-                color={Colors.light.text}
-              />
+              <AppText style={styles.chevron}>
+                {areaDropdown ? "▲" : "▼"}
+              </AppText>
             </Pressable>
 
-            {areaDropdownVisible && (
+            {areaDropdown && (
               <View style={styles.dropdown}>
-                {(
-                  [
-                    "All Areas",
-                    "Living Area",
-                    "Dining Area",
-                    "Bedroom",
-                    "Office",
-                    "Kitchen",
-                    "Other",
-                  ] as Area[]
-                ).map((option) => (
+                {areaOptions.map((option) => (
                   <Pressable
                     key={option}
-                    onPress={() =>
-                      handleAreaFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      areaFilter === option &&
-                        styles.selectedItem,
-                      pressed &&
-                        styles.dropdownPressed,
-                    ]}
+                    onPress={() => {
+                      setAreaFilter(option);
+                      setAreaDropdown(false);
+                    }}
+                    style={styles.dropdownItem}
                   >
                     <AppText
                       variant="caption"
                       style={[
-                        styles.dropdownText,
+                        styles.dropdownItemText,
                         areaFilter === option &&
                           styles.selectedText,
                       ]}
@@ -265,23 +195,39 @@ export default function AppliancesScreen() {
           </View>
         </View>
 
-        {/* Appliances */}
-        <View style={styles.applianceSection}>
-          <AppText
-            variant="body"
-            style={styles.sectionTitle}
-          >
-            Appliances
-          </AppText>
+        {/* Appliance Label */}
+        <AppText
+          variant="body"
+          style={styles.applianceLabel}
+        >
+          Appliances
+        </AppText>
 
-          <ApplianceCards
-            powerFilter={powerFilter}
-            areaFilter={areaFilter}
-          />
-        </View>
+        {/* Appliance Cards */}
+        <ApplianceCards
+          powerFilter={
+            powerFilter === "All"
+              ? undefined
+              : powerFilter
+          }
+          areaFilter={
+            areaFilter === "All Areas"
+              ? undefined
+              : areaFilter
+          }
+        />
 
         <Copyright />
       </ScrollView>
+
+      {/* Add Appliance Modal */}
+      <ApplianceModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={() => {
+          setModalVisible(false);
+        }}
+      />
 
       <Sidebar
         visible={sidebarVisible}
@@ -291,13 +237,6 @@ export default function AppliancesScreen() {
   );
 }
 
-const dimensions = {
-  padding: 16,
-  radius: 16,
-  borderWidth: 3,
-  gap: 10,
-};
-
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
@@ -305,17 +244,15 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: dimensions.padding,
+    padding: 16,
     paddingBottom: 24,
   },
 
-  /* Header */
-
   card: {
     backgroundColor: Colors.glass.white,
-    borderWidth: dimensions.borderWidth,
+    borderWidth: 3,
     borderColor: Colors.light.primary,
-    borderRadius: dimensions.radius,
+    borderRadius: 16,
     padding: 18,
     marginBottom: 16,
   },
@@ -330,132 +267,95 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  /* Controls */
-
   controls: {
     width: "100%",
     flexDirection: "row",
-    alignItems: "center",
-    gap: dimensions.gap,
+    gap: 8,
     marginBottom: 18,
-    zIndex: 20,
+    zIndex: 10,
   },
 
   addButton: {
-    height: 46,
-    flexDirection: "row",
+    minHeight: 44,
+    paddingHorizontal: 13,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-
     backgroundColor: Colors.light.primary,
-
-    borderRadius: 14,
-
-    paddingHorizontal: 12,
+    borderRadius: 12,
   },
 
   addButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
+    fontSize: 11,
   },
 
-  filterWrapper: {
+  dropdownWrapper: {
     flex: 1,
     position: "relative",
   },
 
-  filterButton: {
-    height: 46,
-    width: "100%",
-
+  dropdownButton: {
+    minHeight: 44,
+    paddingHorizontal: 11,
     flexDirection: "row",
     alignItems: "center",
-
+    justifyContent: "space-between",
     backgroundColor: Colors.glass.white,
-
-    borderWidth: dimensions.borderWidth,
+    borderWidth: 2,
     borderColor: Colors.light.primary,
-    borderRadius: 14,
-
-    paddingHorizontal: 11,
-    gap: 6,
+    borderRadius: 12,
   },
 
-  filterText: {
+  dropdownText: {
     flex: 1,
     color: "#000000",
     fontWeight: "600",
+    fontSize: 11,
+  },
+
+  chevron: {
+    color: Colors.light.textSecondary,
+    fontSize: 9,
+  },
+
+  dropdown: {
+    position: "absolute",
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderRadius: 12,
+    paddingVertical: 4,
+    elevation: 10,
+    zIndex: 100,
+  },
+
+  dropdownItem: {
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: 11,
+  },
+
+  dropdownItemText: {
+    color: "#000000",
+    fontSize: 11,
+  },
+
+  selectedText: {
+    color: Colors.light.primary,
+    fontWeight: "700",
+  },
+
+  applianceLabel: {
+    color: "#000000",
+    fontWeight: "700",
+    marginBottom: 10,
   },
 
   pressed: {
     opacity: 0.7,
-  },
-
-  /* Dropdown */
-
-  dropdown: {
-    position: "absolute",
-
-    top: 52,
-    left: 0,
-    right: 0,
-
-    backgroundColor: "#FFFFFF",
-
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: 14,
-
-    paddingVertical: 5,
-
-    zIndex: 100,
-    elevation: 10,
-
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-  },
-
-  dropdownItem: {
-    minHeight: 42,
-
-    justifyContent: "center",
-
-    paddingHorizontal: 12,
-  },
-
-  selectedItem: {
-    backgroundColor: "rgba(0, 168, 107, 0.10)",
-  },
-
-  dropdownPressed: {
-    opacity: 0.7,
-  },
-
-  dropdownText: {
-    color: "#000000",
-  },
-
-  selectedText: {
-    fontWeight: "700",
-    color: Colors.light.primary,
-  },
-
-  /* Appliance Section */
-
-  applianceSection: {
-    width: "100%",
-    marginBottom: 18,
-  },
-
-  sectionTitle: {
-    color: "#000000",
-    fontWeight: "700",
-    marginBottom: 10,
   },
 });

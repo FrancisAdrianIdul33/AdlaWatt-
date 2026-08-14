@@ -1,9 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import {
-  StyleSheet,
-  View,
-} from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
@@ -18,8 +15,15 @@ type Appliance = {
 };
 
 type ApplianceCardsProps = {
-  powerFilter?: "Highest" | "Moderate" | "Low";
-  areaFilter?: string;
+  powerFilter?: "All" | "Highest" | "Moderate" | "Low";
+  areaFilter?:
+    | "All Areas"
+    | "Living Area"
+    | "Dining Area"
+    | "Bedroom"
+    | "Office"
+    | "Kitchen"
+    | "Other";
 };
 
 const appliances: Appliance[] = [
@@ -93,16 +97,12 @@ const getAreaColor = (area: string) => {
   switch (area) {
     case "Living Area":
       return Colors.light.primary;
-
     case "Dining Area":
       return Colors.light.secondary;
-
     case "Office":
       return "#4A90E2";
-
     case "Bedroom":
       return "#9B59B6";
-
     default:
       return Colors.light.border;
   }
@@ -118,87 +118,77 @@ export default function ApplianceCards({
   powerFilter,
   areaFilter,
 }: ApplianceCardsProps) {
-  const filteredAppliances = appliances.filter(
-    (appliance) => {
-      const matchesPower =
-        !powerFilter ||
-        getPowerLevel(appliance.power) ===
-          powerFilter;
+  const filteredAppliances = appliances.filter((appliance) => {
+    const matchesPower =
+      !powerFilter ||
+      powerFilter === "All" ||
+      getPowerLevel(appliance.power) === powerFilter;
 
-      const matchesArea =
-        !areaFilter ||
-        areaFilter === "All" ||
-        appliance.area === areaFilter;
+    const matchesArea =
+      !areaFilter ||
+      areaFilter === "All Areas" ||
+      appliance.area === areaFilter;
 
-      return matchesPower && matchesArea;
-    },
-  );
+    return matchesPower && matchesArea;
+  });
 
   return (
     <View style={styles.grid}>
-      {filteredAppliances.map((appliance) => (
-        <View
-          key={appliance.id}
-          style={[
-            styles.item,
-            {
-              borderColor: getAreaColor(
-                appliance.area,
-              ),
-            },
-          ]}
-        >
-          {/* Appliance Icon */}
+      {filteredAppliances.map((appliance) => {
+        const areaColor = getAreaColor(appliance.area);
+
+        return (
           <View
+            key={appliance.id}
             style={[
-              styles.iconContainer,
-              {
-                borderColor: getAreaColor(
-                  appliance.area,
-                ),
-              },
+              styles.item,
+              { borderColor: areaColor },
             ]}
           >
-            <Ionicons
-              name={appliance.icon}
-              size={23}
-              color={getAreaColor(appliance.area)}
-            />
-          </View>
-
-          {/* Appliance Name */}
-          <AppText
-            variant="caption"
-            style={styles.name}
-          >
-            {appliance.name}
-          </AppText>
-
-          {/* Wattage */}
-          <AppText
-            variant="caption"
-            style={styles.watts}
-          >
-            {appliance.watts}
-          </AppText>
-
-          {/* Status */}
-          <View style={styles.status}>
-            <Ionicons
-              name="checkmark-outline"
-              size={11}
-              color="#FFFFFF"
-            />
+            <View
+              style={[
+                styles.iconContainer,
+                { borderColor: areaColor },
+              ]}
+            >
+              <Ionicons
+                name={appliance.icon}
+                size={23}
+                color={areaColor}
+              />
+            </View>
 
             <AppText
               variant="caption"
-              style={styles.statusText}
+              style={styles.name}
             >
-              OK to use
+              {appliance.name}
             </AppText>
+
+            <AppText
+              variant="caption"
+              style={styles.watts}
+            >
+              {appliance.watts}
+            </AppText>
+
+            <View style={styles.status}>
+              <Ionicons
+                name="checkmark-outline"
+                size={11}
+                color="#FFFFFF"
+              />
+
+              <AppText
+                variant="caption"
+                style={styles.statusText}
+              >
+                OK to use
+              </AppText>
+            </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -215,28 +205,21 @@ const styles = StyleSheet.create({
   item: {
     width: "48%",
     minHeight: 125,
-
     alignItems: "center",
     justifyContent: "center",
-
     backgroundColor: Colors.glass.white,
-
     borderWidth: 2,
     borderRadius: 14,
-
     padding: 10,
   },
 
   iconContainer: {
     width: 42,
     height: 42,
-
     borderWidth: 2,
     borderRadius: 21,
-
     alignItems: "center",
     justifyContent: "center",
-
     marginBottom: 5,
   },
 
@@ -256,16 +239,11 @@ const styles = StyleSheet.create({
   status: {
     flexDirection: "row",
     alignItems: "center",
-
     gap: 2,
-
     backgroundColor: Colors.light.primary,
-
     borderRadius: 9,
-
     paddingHorizontal: 6,
     paddingVertical: 3,
-
     marginTop: 6,
   },
 
