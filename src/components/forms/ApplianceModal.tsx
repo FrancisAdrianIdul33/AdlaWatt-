@@ -590,7 +590,9 @@ const styles = StyleSheet.create({
 
   customActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
+    marginBottom: 15,
+    marginTop: 10,
   },
 
   customAction: {
