@@ -430,6 +430,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 10,
+    marginTop: 20,
   },
 
   /* Header */
