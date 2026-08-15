@@ -224,7 +224,13 @@ export default function ApplianceModal({
               </AppText>
 
               <Pressable
-                onPress={() => setCustomVisible((value) => !value)}
+                onPress={() => {
+                  if (customVisible) {
+                    setCustomName("");
+                    setCustomWatts("");
+                  }
+                  setCustomVisible((value) => !value);
+                }}
                 style={({ pressed }) => [
                   styles.customButton,
                   pressed && styles.pressed,
