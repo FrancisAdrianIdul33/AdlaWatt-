@@ -1,16 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    Image,
-    Pressable,
-    StyleSheet,
-    View,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-import { Routes } from "@/constants/routes";
 import { Colors } from "@/constants/colors";
-import { Radius, Spacing } from "@/constants/theme";
+import { Routes } from "@/constants/routes";
+import { Radius } from "@/constants/theme";
 import { router } from "expo-router";
 
 type Status = "advisable" | "notAdvisable";
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   applianceBox: {
     width: "45%",
     maxWidth: 150,
-    backgroundColor: "#e6e3e3",
+    backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderRadius: Radius.md,
     padding: 12,

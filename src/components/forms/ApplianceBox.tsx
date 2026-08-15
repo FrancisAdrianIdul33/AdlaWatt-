@@ -94,7 +94,7 @@ export default function ApplianceBox({
 const styles = StyleSheet.create({
   container: {
     width: "48%",
-    backgroundColor: "#e6e3e3",
+    backgroundColor: "#F0EAD6",
     borderWidth: 2,
     borderRadius: Radius.md,
     padding: 14,
