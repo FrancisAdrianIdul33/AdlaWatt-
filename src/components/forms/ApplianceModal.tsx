@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 
 import ApplianceBox from "@/components/forms/ApplianceBox";
@@ -134,6 +134,18 @@ export default function ApplianceModal({
     onClose();
   };
 
+  const handleCustomCancel = () => {
+    setCustomName("");
+    setCustomWatts("");
+    setCustomVisible(false);
+  };
+
+  const handleCustomAdd = () => {
+    if (!customName.trim() || !customWatts.trim()) return;
+
+    setCustomVisible(false);
+  };
+
   const sections = [
     "Living Area",
     "Bedroom",
@@ -231,27 +243,56 @@ export default function ApplianceModal({
                   Add Custom Appliance
                 </AppText>
               </Pressable>
-
-              {customVisible && (
-                <View style={styles.customForm}>
-                  <TextInput
-                    value={customName}
-                    onChangeText={setCustomName}
-                    placeholder="Appliance name"
-                    placeholderTextColor={Colors.light.textSecondary}
-                    style={styles.input}
-                  />
-
-                  <TextInput
-                    value={customWatts}
-                    onChangeText={setCustomWatts}
-                    placeholder="Wattage, e.g. 20–50W"
-                    placeholderTextColor={Colors.light.textSecondary}
-                    style={styles.input}
-                  />
-                </View>
-              )}
             </View>
+
+            {customVisible && (
+              <View style={styles.customForm}>
+                <TextInput
+                  value={customName}
+                  onChangeText={setCustomName}
+                  placeholder="Appliance name"
+                  placeholderTextColor={Colors.light.textSecondary}
+                  style={styles.input}
+                />
+
+                <TextInput
+                  value={customWatts}
+                  onChangeText={setCustomWatts}
+                  placeholder="Wattage, e.g. 20–50W"
+                  placeholderTextColor={Colors.light.textSecondary}
+                  style={styles.input}
+                />
+
+                <View style={styles.customActions}>
+                  <Pressable
+                    onPress={handleCustomCancel}
+                    style={({ pressed }) => [
+                      styles.customAction,
+                      styles.cancelAction,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <AppText variant="caption" style={styles.cancelText}>
+                      Cancel
+                    </AppText>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handleCustomAdd}
+                    disabled={!customName.trim() || !customWatts.trim()}
+                    style={({ pressed }) => [
+                      styles.customAction,
+                      styles.addAction,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <AppText variant="caption" style={styles.addText}>
+                      Add
+                    </AppText>
+                  </Pressable>
+                </View>
+              </View>
+            )}
 
             {/* Appliance Categories */}
             {sections.map((section) => {
@@ -271,14 +312,14 @@ export default function ApplianceModal({
                       const color = getAreaColor(appliance.area);
 
                       return (
-                       <ApplianceBox
-  key={appliance.id}
-  name={appliance.name}
-  wattage={appliance.watts}
-  color={color}
-  selected={isSelected}
-  onPress={() => toggleAppliance(appliance.id)}
-/>
+                        <ApplianceBox
+                          key={appliance.id}
+                          name={appliance.name}
+                          wattage={appliance.watts}
+                          color={color}
+                          selected={isSelected}
+                          onPress={() => toggleAppliance(appliance.id)}
+                        />
                       );
                     })}
                   </View>
@@ -545,5 +586,38 @@ const styles = StyleSheet.create({
 
   pressed: {
     opacity: 0.7,
+  },
+
+  customActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  customAction: {
+    flex: 1,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderRadius: Radius.md,
+  },
+
+  cancelAction: {
+    borderColor: "#EF4444",
+  },
+
+  addAction: {
+    borderColor: Colors.light.primary,
+  },
+
+  cancelText: {
+    color: "#EF4444",
+    fontWeight: "700",
+  },
+
+  addText: {
+    color: Colors.light.primary,
+    fontWeight: "700",
   },
 });
