@@ -50,10 +50,14 @@ export default function AppliancesScreen() {
   const [selectedAppliances, setSelectedAppliances] =
     useState<SelectedAppliance[]>([]);
 
-  const handleApplianceSave = (
-    appliances: SelectedAppliance[],
-  ) => {
-    setSelectedAppliances(appliances);
+  const handleApplianceSave = (appliances: SelectedAppliance[]) => {
+    setSelectedAppliances((prev) => [
+      ...prev,
+      ...appliances.map((appliance) => ({
+        ...appliance,
+        area: "Custom Appliances",
+      })),
+    ]);
   };
 
   const [applianceModalVisible, setApplianceModalVisible] =
@@ -371,7 +375,9 @@ export default function AppliancesScreen() {
                           ? "#16A085"
                           : appliance.area === "Porch & Yard"
                             ? "#E67E22"
-                            : Colors.light.border;
+                            : appliance.area === "Custom Appliances"
+                              ? Colors.light.secondary
+                              : Colors.light.border;
 
               const power = parseInt(
                 appliance.watts.match(/\d+/)?.[0] ?? "0",
