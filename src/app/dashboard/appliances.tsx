@@ -88,6 +88,9 @@ export default function AppliancesScreen() {
     setAreaDropdownVisible(false);
   };
 
+  const [customAppliances, setCustomAppliances] =
+    useState<SelectedAppliance[]>([]);
+
   return (
     <ScreenContainer2>
       <NavBar
@@ -405,6 +408,10 @@ export default function AppliancesScreen() {
         visible={applianceModalVisible}
         onClose={() => setApplianceModalVisible(false)}
         onSave={handleApplianceSave}
+        customAppliances={customAppliances}
+        onCustomAdd={(appliance) =>
+          setCustomAppliances((current) => [...current, appliance])
+        }
       />
 
       <Sidebar
