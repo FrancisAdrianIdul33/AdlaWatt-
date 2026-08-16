@@ -26,11 +26,12 @@ type PowerLevel =
 type Area =
   | "All Areas"
   | "Living Area"
-  | "Dining Area"
   | "Bedroom"
-  | "Office"
-  | "Kitchen"
-  | "Other";
+  | "Kitchen & Dining Area"
+  | "Work & Study Area"
+  | "Bathroom & Laundry Area"
+  | "Porch & Yard"
+  | "Custom Appliances";
 
 type SelectedAppliance = {
   id: string;
@@ -256,11 +257,12 @@ export default function AppliancesScreen() {
                   [
                     "All Areas",
                     "Living Area",
-                    "Dining Area",
                     "Bedroom",
-                    "Office",
-                    "Kitchen",
-                    "Other",
+                    "Kitchen & Dining Area",
+                    "Work & Study Area",
+                    "Bathroom & Laundry Area",
+                    "Porch & Yard",
+                    "Custom Appliances",
                   ] as Area[]
                 ).map((option) => (
                   <Pressable
