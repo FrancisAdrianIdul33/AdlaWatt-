@@ -19,7 +19,6 @@ type ComponentStatus =
 type ComponentStatusBoxProps = {
   name: string;
   status: ComponentStatus;
-  color: string;
   imageSource?: ImageSourcePropType;
 };
 
@@ -28,40 +27,30 @@ const defaultImage = require("@/assets/images/components/toph.jpg");
 export default function ComponentStatusBox({
   name,
   status,
-  color,
   imageSource = defaultImage,
 }: ComponentStatusBoxProps) {
   const isActive =
     status === "Active" || status === "Connected";
+
+  const statusColor = isActive
+    ? Colors.light.primary
+    : "#EF4444";
 
   return (
     <View
       style={[
         styles.container,
         {
-          borderColor: color,
+          borderColor: statusColor,
         },
       ]}
     >
-      {/* Status Indicator */}
-      <View
-        style={[
-          styles.statusCircle,
-          {
-            borderColor: color,
-            backgroundColor: isActive
-              ? color
-              : Colors.light.surface,
-          },
-        ]}
-      />
-
       {/* Component Image */}
       <View
         style={[
           styles.imageContainer,
           {
-            borderColor: color,
+            borderColor: statusColor,
           },
         ]}
       >
@@ -87,9 +76,7 @@ export default function ComponentStatusBox({
         style={[
           styles.status,
           {
-            color: isActive
-              ? Colors.light.primary
-              : "#EF4444",
+            color: statusColor,
           },
         ]}
       >
@@ -102,29 +89,13 @@ export default function ComponentStatusBox({
 const styles = StyleSheet.create({
   container: {
     width: "48%",
-    backgroundColor: "#F0EAD6",
+    backgroundColor: Colors.glass.white,
     borderWidth: 2,
     borderRadius: Radius.md,
     padding: 14,
     paddingTop: 14,
     alignItems: "center",
     position: "relative",
-  },
-
-  statusCircle: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    zIndex: 10,
-
-    width: 28,
-    height: 28,
-
-    borderWidth: 2,
-    borderRadius: 14,
-
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   imageContainer: {

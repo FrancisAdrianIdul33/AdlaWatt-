@@ -118,7 +118,6 @@ export default function ComponentsScreen() {
                 key={component.name}
                 name={component.name}
                 status={component.status}
-                color={component.color}
               />
             ))}
         </View>
