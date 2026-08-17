@@ -101,7 +101,8 @@ export default function ApplianceModal({
   const [customWatts, setCustomWatts] = useState("");
   const [customError, setCustomError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [editingCustom, setEditingCustom] = useState<Appliance | null>(null);
+  const [editingCustom, setEditingCustom] =
+    useState<Appliance | null>(null);
 
   useEffect(() => {
     if (!visible) {
@@ -109,6 +110,9 @@ export default function ApplianceModal({
       setCustomVisible(false);
       setCustomName("");
       setCustomWatts("");
+      setCustomError("");
+      setSuccessMessage("");
+      setEditingCustom(null);
     }
   }, [visible]);
 
@@ -124,20 +128,28 @@ export default function ApplianceModal({
     setSelected([]);
     setCustomName("");
     setCustomWatts("");
+    setCustomError("");
     setCustomVisible(false);
+    setEditingCustom(null);
   };
 
   const handleSave = () => {
-    onSave?.(
-      appliances.filter((item) => selected.includes(item.id))
-        .concat(customAppliances.filter((item) => selected.includes(item.id))),
+    const selectedBuiltIn = appliances.filter((item) =>
+      selected.includes(item.id),
     );
+
+    const selectedCustom = customAppliances.filter((item) =>
+      selected.includes(item.id),
+    );
+
+    onSave?.([...selectedBuiltIn, ...selectedCustom]);
     onClose();
   };
 
   const handleCustomCancel = () => {
     setCustomName("");
     setCustomWatts("");
+    setCustomError("");
     setCustomVisible(false);
   };
 
@@ -170,7 +182,45 @@ export default function ApplianceModal({
     setCustomVisible(false);
 
     setSuccessMessage(`${name} successfully added!`);
-    setTimeout(() => setSuccessMessage(""), 5000);
+
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 5000);
+  };
+
+  const handleCustomUpdate = () => {
+    if (!editingCustom) return;
+
+    const name = customName.trim();
+    const watts = customWatts.trim();
+
+    if (!/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(name)) {
+      setCustomError("Enter a valid appliance name.");
+      return;
+    }
+
+    if (!/^\d+-\d+$/.test(watts)) {
+      setCustomError("Enter wattage like 15-25.");
+      return;
+    }
+
+    onCustomUpdate?.({
+      ...editingCustom,
+      name,
+      watts: `${watts}W`,
+    });
+
+    setEditingCustom(null);
+    setCustomName("");
+    setCustomWatts("");
+    setCustomError("");
+  };
+
+  const openCustomEditor = (appliance: Appliance) => {
+    setEditingCustom(appliance);
+    setCustomName(appliance.name);
+    setCustomWatts(appliance.watts.replace(/W$/, ""));
+    setCustomError("");
   };
 
   const sections = [
@@ -255,7 +305,9 @@ export default function ApplianceModal({
                   if (customVisible) {
                     setCustomName("");
                     setCustomWatts("");
+                    setCustomError("");
                   }
+
                   setCustomVisible((value) => !value);
                 }}
                 style={({ pressed }) => [
@@ -280,8 +332,12 @@ export default function ApplianceModal({
 
             {customVisible && (
               <View style={styles.customForm}>
-                <AppText variant="caption" style={styles.infoNote}>
-                  Check the appliance wattage first, for example, soldering wire may use 15-25W.
+                <AppText
+                  variant="caption"
+                  style={styles.infoNote}
+                >
+                  Check the appliance wattage first, for example,
+                  soldering wire may use 15-25W.
                 </AppText>
 
                 <TextInput
@@ -298,19 +354,25 @@ export default function ApplianceModal({
                 <TextInput
                   value={customWatts}
                   onChangeText={(text) => {
-                    setCustomWatts(text.replace(/[^\d-]/g, ""));
+                    setCustomWatts(
+                      text.replace(/[^\d-]/g, ""),
+                    );
                     setCustomError("");
                   }}
                   placeholder="Enter wattage like 15-20"
                   placeholderTextColor={Colors.light.textSecondary}
                   style={styles.input}
+                  keyboardType="numeric"
                 />
 
-                {customError && (
-                  <AppText variant="caption" style={styles.customError}>
+                {customError ? (
+                  <AppText
+                    variant="caption"
+                    style={styles.customError}
+                  >
                     {customError}
                   </AppText>
-                )}
+                ) : null}
 
                 <View style={styles.customActions}>
                   <Pressable
@@ -321,47 +383,62 @@ export default function ApplianceModal({
                       pressed && styles.pressed,
                     ]}
                   >
-                    <AppText variant="caption" style={styles.cancelText}>
+                    <AppText
+                      variant="caption"
+                      style={styles.cancelText}
+                    >
                       Cancel
                     </AppText>
                   </Pressable>
 
                   <Pressable
                     onPress={handleCustomAdd}
-                    disabled={!customName.trim() || !customWatts.trim()}
+                    disabled={
+                      !customName.trim() ||
+                      !customWatts.trim()
+                    }
                     style={({ pressed }) => [
                       styles.customAction,
                       styles.addAction,
                       pressed && styles.pressed,
                     ]}
                   >
-                    <AppText variant="caption" style={styles.addText}>
+                    <AppText
+                      variant="caption"
+                      style={styles.addText}
+                    >
                       Add
                     </AppText>
                   </Pressable>
                 </View>
-
-                {successMessage && (
-                  <View style={styles.successPanel}>
-                    <Ionicons
-                      name="checkmark-circle-outline"
-                      size={20}
-                      color={Colors.light.primary}
-                    />
-
-                    <AppText variant="caption" style={styles.successText}>
-                      {successMessage}
-                    </AppText>
-
-                  </View>
-                )}
               </View>
             )}
+
+            {/* Success Panel */}
+            {successMessage ? (
+              <View style={styles.successPanel}>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={20}
+                  color={Colors.light.primary}
+                />
+
+                <AppText
+                  variant="caption"
+                  style={styles.successText}
+                >
+                  {successMessage}
+                </AppText>
+              </View>
+            ) : null}
 
             {/* Custom Appliances */}
             {customAppliances.length > 0 && (
               <View style={styles.section}>
-                <AppText variant="body" style={styles.sectionTitle}>
+                <AppText
+                  variant="body"
+                  style={styles.sectionTitle}
+                >
                   Custom Appliances
                 </AppText>
 
@@ -373,7 +450,9 @@ export default function ApplianceModal({
                       wattage={appliance.watts}
                       color={Colors.light.primary}
                       selected={selected.includes(appliance.id)}
-                      onPress={() => toggleAppliance(appliance.id)}
+                      onPress={() =>
+                        toggleAppliance(appliance.id)
+                      }
                     />
                   ))}
                 </View>
@@ -387,14 +466,21 @@ export default function ApplianceModal({
               );
 
               return (
-                <View key={section} style={styles.section}>
-                  <AppText variant="body" style={styles.sectionTitle}>
+                <View
+                  key={section}
+                  style={styles.section}
+                >
+                  <AppText
+                    variant="body"
+                    style={styles.sectionTitle}
+                  >
                     {section}
                   </AppText>
 
                   <View style={styles.grid}>
                     {items.map((appliance) => {
-                      const isSelected = selected.includes(appliance.id);
+                      const isSelected =
+                        selected.includes(appliance.id);
 
                       return (
                         <ApplianceBox
@@ -403,7 +489,9 @@ export default function ApplianceModal({
                           wattage={appliance.watts}
                           color={getAreaColor(appliance.area)}
                           selected={isSelected}
-                          onPress={() => toggleAppliance(appliance.id)}
+                          onPress={() =>
+                            toggleAppliance(appliance.id)
+                          }
                         />
                       );
                     })}
@@ -422,7 +510,10 @@ export default function ApplianceModal({
                 color={Colors.light.primary}
               />
 
-              <AppText variant="caption" style={styles.selectedText}>
+              <AppText
+                variant="caption"
+                style={styles.selectedText}
+              >
                 {selected.length} appliance
                 {selected.length !== 1 ? "s" : ""} selected
               </AppText>
@@ -436,7 +527,10 @@ export default function ApplianceModal({
                   pressed && styles.pressed,
                 ]}
               >
-                <AppText variant="caption" style={styles.resetText}>
+                <AppText
+                  variant="caption"
+                  style={styles.resetText}
+                >
                   Reset
                 </AppText>
               </Pressable>
@@ -448,26 +542,123 @@ export default function ApplianceModal({
                   pressed && styles.pressed,
                 ]}
               >
-                <AppText variant="caption" style={styles.actionText}>
+                <AppText
+                  variant="caption"
+                  style={styles.actionText}
+                >
                   Add
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                onPress={handleSave}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <AppText variant="caption" style={styles.actionText}>
-                  Update
                 </AppText>
               </Pressable>
             </View>
           </View>
         </View>
       </View>
+
+      {/* Custom Appliance Editor */}
+      <Modal
+        visible={!!editingCustom}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingCustom(null)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.successPanel}>
+            <AppText
+              variant="body"
+              style={styles.sectionTitle}
+            >
+              Update Custom Appliance
+            </AppText>
+
+            <TextInput
+              value={customName}
+              onChangeText={(text) => {
+                setCustomName(text);
+                setCustomError("");
+              }}
+              placeholder="Enter valid appliance name"
+              placeholderTextColor={Colors.light.textSecondary}
+              style={styles.input}
+            />
+
+            <TextInput
+              value={customWatts}
+              onChangeText={(text) => {
+                setCustomWatts(
+                  text.replace(/[^\d-]/g, ""),
+                );
+                setCustomError("");
+              }}
+              placeholder="Enter wattage like 15-20"
+              placeholderTextColor={Colors.light.textSecondary}
+              style={styles.input}
+              keyboardType="numeric"
+            />
+
+            {customError ? (
+              <AppText
+                variant="caption"
+                style={styles.customError}
+              >
+                {customError}
+              </AppText>
+            ) : null}
+
+            <View style={styles.customActions}>
+              <Pressable
+                onPress={() => {
+                  setEditingCustom(null);
+                  setCustomName("");
+                  setCustomWatts("");
+                  setCustomError("");
+                }}
+                style={styles.customAction}
+              >
+                <AppText
+                  variant="caption"
+                  style={styles.cancelText}
+                >
+                  Cancel
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={handleCustomUpdate}
+                style={styles.customAction}
+              >
+                <AppText
+                  variant="caption"
+                  style={styles.addText}
+                >
+                  Update
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  if (editingCustom) {
+                    onCustomDelete?.(
+                      editingCustom.id,
+                    );
+                    setEditingCustom(null);
+                    setCustomName("");
+                    setCustomWatts("");
+                    setCustomError("");
+                  }
+                }}
+                style={styles.customAction}
+              >
+                <AppText
+                  variant="caption"
+                  style={styles.cancelText}
+                >
+                  Delete
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -708,36 +899,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* New Styles*/
-
   infoNote: {
-  color: Colors.light.textSecondary,
-  fontSize: 12,
-  lineHeight: 17,
-  marginBottom: 2,
-},
+    color: Colors.light.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 2,
+  },
 
-customError: {
-  color: "#EF4444",
-  fontSize: 12,
-  fontWeight: "600",
-},
+  customError: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "600",
+  },
 
-successPanel: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 7,
-  backgroundColor: "#F0EAD6",
-  borderWidth: 2,
-  borderColor: Colors.light.primary,
-  borderRadius: Radius.md,
-  padding: 10,
-  marginBottom: Spacing.md,
-},
+  successPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "#F0EAD6",
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderRadius: Radius.md,
+    padding: 10,
+    marginBottom: Spacing.md,
+  },
 
-successText: {
-  flex: 1,
-  color: "#000000",
-  fontWeight: "600",
-},
+  successText: {
+    flex: 1,
+    color: "#000000",
+    fontWeight: "600",
+  },
 });
