@@ -30,6 +30,7 @@
       "favicon": "./assets/images/adlawatt-logo.png"
     },
 
+    
     "plugins": [
       "expo-router",
       [
