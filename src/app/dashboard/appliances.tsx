@@ -51,13 +51,19 @@ export default function AppliancesScreen() {
     useState<SelectedAppliance[]>([]);
 
   const handleApplianceSave = (appliances: SelectedAppliance[]) => {
-    setSelectedAppliances((prev) => [
-      ...prev,
-      ...appliances.map((appliance) => ({
-        ...appliance,
-        area: "Custom Appliances",
-      })),
-    ]);
+    setSelectedAppliances((prev) => {
+      const existingIds = new Set(prev.map(({ id }) => id));
+
+      return [
+        ...prev,
+        ...appliances
+          .filter(({ id }) => !existingIds.has(id))
+          .map((appliance) => ({
+            ...appliance,
+            area: "Custom Appliances",
+          })),
+      ];
+    });
   };
 
   const [applianceModalVisible, setApplianceModalVisible] =
@@ -409,6 +415,7 @@ export default function AppliancesScreen() {
         onClose={() => setApplianceModalVisible(false)}
         onSave={handleApplianceSave}
         customAppliances={customAppliances}
+        selectedAppliances={selectedAppliances}
         onCustomAdd={(appliance) =>
           setCustomAppliances((current) => [...current, appliance])
         }

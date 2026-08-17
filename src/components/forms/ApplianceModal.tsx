@@ -29,6 +29,7 @@ type ApplianceModalProps = {
   onCustomAdd?: (appliance: Appliance) => void;
   onCustomUpdate?: (appliance: Appliance) => void;
   onCustomDelete?: (id: string) => void;
+  selectedAppliances?: Appliance[];
 };
 
 const appliances: Appliance[] = [
@@ -91,6 +92,7 @@ export default function ApplianceModal({
   onClose,
   onSave,
   customAppliances = [],
+  selectedAppliances = [],
   onCustomAdd,
   onCustomUpdate,
   onCustomDelete,
@@ -443,18 +445,26 @@ export default function ApplianceModal({
                 </AppText>
 
                 <View style={styles.grid}>
-                  {customAppliances.map((appliance) => (
-                    <ApplianceBox
-                      key={appliance.id}
-                      name={appliance.name}
-                      wattage={appliance.watts}
-                      color={Colors.light.primary}
-                      selected={selected.includes(appliance.id)}
-                      onPress={() =>
-                        toggleAppliance(appliance.id)
-                      }
-                    />
-                  ))}
+                  {customAppliances.map((appliance) => {
+                    const alreadyAdded = selectedAppliances.some(
+                      ({ id }) => id === appliance.id,
+                    );
+
+                    return (
+                      <ApplianceBox
+                        key={appliance.id}
+                        name={appliance.name}
+                        wattage={appliance.watts}
+                        color={Colors.light.primary}
+                        selected={alreadyAdded || selected.includes(appliance.id)}
+                        onPress={() => {
+                          if (!alreadyAdded) {
+                            toggleAppliance(appliance.id);
+                          }
+                        }}
+                      />
+                    );
+                  })}
                 </View>
               </View>
             )}
