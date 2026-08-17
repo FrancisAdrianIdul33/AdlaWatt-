@@ -51,19 +51,7 @@ export default function AppliancesScreen() {
     useState<SelectedAppliance[]>([]);
 
   const handleApplianceSave = (appliances: SelectedAppliance[]) => {
-    setSelectedAppliances((prev) => {
-      const existingIds = new Set(prev.map(({ id }) => id));
-
-      return [
-        ...prev,
-        ...appliances
-          .filter(({ id }) => !existingIds.has(id))
-          .map((appliance) => ({
-            ...appliance,
-            area: "Custom Appliances",
-          })),
-      ];
-    });
+    setSelectedAppliances(appliances);
   };
 
   const [applianceModalVisible, setApplianceModalVisible] =

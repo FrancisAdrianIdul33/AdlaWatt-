@@ -107,7 +107,9 @@ export default function ApplianceModal({
     useState<Appliance | null>(null);
 
   useEffect(() => {
-    if (!visible) {
+    if (visible) {
+      setSelected(selectedAppliances.map(({ id }) => id));
+    } else {
       setSelected([]);
       setCustomVisible(false);
       setCustomName("");
@@ -116,7 +118,7 @@ export default function ApplianceModal({
       setSuccessMessage("");
       setEditingCustom(null);
     }
-  }, [visible]);
+  }, [visible, selectedAppliances]);
 
   const toggleAppliance = (id: string) => {
     setSelected((current) =>
