@@ -1,6 +1,7 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -29,45 +30,71 @@ export default function Sidebar({
     return null;
   }
 
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    const loadUsername = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+
+      if (data?.username) {
+        setUsername(data.username);
+      }
+    };
+
+    if (visible) {
+      loadUsername();
+    }
+  }, [visible]);
+
   const handleNavigation = (route: string) => {
     onClose();
     router.push(route as any);
   };
 
   const handleLogout = () => {
-  const logout = () => {
-    onClose();
-    router.replace(Routes.LOGIN);
-  };
+    const logout = () => {
+      onClose();
+      router.replace(Routes.LOGIN);
+    };
 
-  if (Platform.OS === "web") {
-    const confirmed = window.confirm(
-      "Are you sure you want to sign out?",
-    );
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Are you sure you want to sign out?",
+      );
 
-    if (confirmed) {
-      logout();
+      if (confirmed) {
+        logout();
+      }
+
+      return;
     }
 
-    return;
-  }
-
-  Alert.alert(
-    "Log Out",
-    "Are you sure you want to sign out?",
-    [
-      {
-        text: "No",
-        style: "cancel",
-      },
-      {
-        text: "Yes",
-        style: "destructive",
-        onPress: logout,
-      },
-    ],
-  );
-};
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to sign out?",
+      [
+        {
+          text: "No",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: logout,
+        },
+      ],
+    );
+  };
 
   const handleExit = () => {
     Alert.alert(
@@ -119,7 +146,15 @@ export default function Sidebar({
         </View>
 
         {/* Main navigation */}
+
+
         <View style={sidebarStyles.navigation}>
+          {username ? (
+            <Text style={sidebarStyles.username}>
+              User: {username}
+            </Text>
+          ) : null}
+
           <SidebarButton
             icon="home-outline"
             label="Dashboard"
@@ -406,4 +441,12 @@ const sidebarStyles = StyleSheet.create({
   bottomActions: {
     width: "100%",
   },
+
+  username: {
+  color: "#000000",
+  fontSize: 18,
+  fontWeight: "600",
+  marginBottom: 20,
+  paddingHorizontal: 16,
+},
 });
