@@ -26,10 +26,6 @@ export default function Sidebar({
   visible,
   onClose,
 }: SidebarProps) {
-  if (!visible) {
-    return null;
-  }
-
   const [username, setUsername] = useState("");
 
   useEffect(() => {
@@ -38,7 +34,10 @@ export default function Sidebar({
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        setUsername("");
+        return;
+      }
 
       const { data } = await supabase
         .from("users")
@@ -46,15 +45,17 @@ export default function Sidebar({
         .eq("id", user.id)
         .single();
 
-      if (data?.username) {
-        setUsername(data.username);
-      }
+      setUsername(data?.username ?? "");
     };
 
     if (visible) {
       loadUsername();
     }
   }, [visible]);
+
+  if (!visible) {
+    return null;
+  }
 
   const handleNavigation = (route: string) => {
     onClose();
