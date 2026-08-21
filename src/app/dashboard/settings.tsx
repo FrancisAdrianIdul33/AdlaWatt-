@@ -42,8 +42,10 @@ export default function SettingsScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  
+
   const [showConfirmationPassword, setShowConfirmationPassword] =
-  useState(false);
+    useState(false);
 
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
@@ -217,14 +219,14 @@ export default function SettingsScreen() {
 
         {/* ================= ACCOUNT PROFILE ================= */}
         <View style={styles.sectionContainer}>
-         <Pressable
-  onPress={() => {
-    if (accountExpanded && isEditingAccount) {
-      handleCancelUpdate();
-    }
+          <Pressable
+            onPress={() => {
+              if (accountExpanded && isEditingAccount) {
+                handleCancelUpdate();
+              }
 
-    setAccountExpanded(!accountExpanded);
-  }}
+              setAccountExpanded(!accountExpanded);
+            }}
             style={({ pressed }) => [
               styles.dropdownHeader,
               pressed && styles.pressed,
@@ -247,14 +249,14 @@ export default function SettingsScreen() {
             </View>
 
             <Ionicons
-  name={
-    accountExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+              name={
+                accountExpanded
+                  ? "chevron-up-outline"
+                  : "chevron-down-outline"
+              }
+              size={22}
+              color="#000000"
+            />
           </Pressable>
 
           {accountExpanded && (
@@ -389,22 +391,22 @@ export default function SettingsScreen() {
                         secureTextEntry={!showNewPassword}
                       />
 
-                    <Pressable
-  onPress={() =>
-    setShowNewPassword(!showNewPassword)
-  }
-  style={styles.eyeButton}
->
-  <Ionicons
-    name={
-      showNewPassword
-        ? "eye-outline"
-        : "eye-off-outline"
-    }
-    size={22}
-    color="#000000"
-  />
-</Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setShowNewPassword(!showNewPassword)
+                        }
+                        style={styles.eyeButton}
+                      >
+                        <Ionicons
+                          name={
+                            showNewPassword
+                              ? "eye-outline"
+                              : "eye-off-outline"
+                          }
+                          size={22}
+                          color="#000000"
+                        />
+                      </Pressable>
                     </View>
                   </View>
 
@@ -433,24 +435,24 @@ export default function SettingsScreen() {
                         }
                       />
 
-                    <Pressable
-  onPress={() =>
-    setShowConfirmPassword(
-      !showConfirmPassword,
-    )
-  }
-  style={styles.eyeButton}
->
-  <Ionicons
-    name={
-      showConfirmPassword
-        ? "eye-outline"
-        : "eye-off-outline"
-    }
-    size={22}
-    color="#000000"
-  />
-</Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setShowConfirmPassword(
+                            !showConfirmPassword,
+                          )
+                        }
+                        style={styles.eyeButton}
+                      >
+                        <Ionicons
+                          name={
+                            showConfirmPassword
+                              ? "eye-outline"
+                              : "eye-off-outline"
+                          }
+                          size={22}
+                          color="#000000"
+                        />
+                      </Pressable>
                     </View>
                   </View>
 
@@ -521,14 +523,14 @@ export default function SettingsScreen() {
             </View>
 
             <Ionicons
-  name={
-    accountExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+              name={
+                accountExpanded
+                  ? "chevron-up-outline"
+                  : "chevron-down-outline"
+              }
+              size={22}
+              color="#000000"
+            />
           </Pressable>
 
           {preferencesExpanded && (
@@ -614,22 +616,22 @@ export default function SettingsScreen() {
                         onPress={() =>
                           setFontSize(
                             option as
-                              | "Small"
-                              | "Medium"
-                              | "Big",
+                            | "Small"
+                            | "Medium"
+                            | "Big",
                           )
                         }
                         style={[
                           styles.optionButton,
                           fontSize === option &&
-                            styles.selectedOption,
+                          styles.selectedOption,
                         ]}
                       >
                         <AppText
                           style={[
                             styles.optionText,
                             fontSize === option &&
-                              styles.selectedOptionText,
+                            styles.selectedOptionText,
                           ]}
                         >
                           {option}
@@ -657,22 +659,22 @@ export default function SettingsScreen() {
                         onPress={() =>
                           setFontWeight(
                             option as
-                              | "Thin"
-                              | "Regular"
-                              | "Bold",
+                            | "Thin"
+                            | "Regular"
+                            | "Bold",
                           )
                         }
                         style={[
                           styles.optionButton,
                           fontWeight === option &&
-                            styles.selectedOption,
+                          styles.selectedOption,
                         ]}
                       >
                         <AppText
                           style={[
                             styles.optionText,
                             fontWeight === option &&
-                              styles.selectedOptionText,
+                            styles.selectedOptionText,
                           ]}
                         >
                           {option}
@@ -706,15 +708,15 @@ export default function SettingsScreen() {
                     {fontFamily}
                   </AppText>
 
-                 <Ionicons
-  name={
-    preferencesExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+                  <Ionicons
+                    name={
+                      preferencesExpanded
+                        ? "chevron-up-outline"
+                        : "chevron-down-outline"
+                    }
+                    size={22}
+                    color="#000000"
+                  />
                 </Pressable>
 
                 {fontFamilyOpen && (
@@ -738,7 +740,7 @@ export default function SettingsScreen() {
                           style={[
                             styles.selectionText,
                             fontFamily === font &&
-                              styles.selectedSelectionText,
+                            styles.selectedSelectionText,
                           ]}
                         >
                           {font}
@@ -770,15 +772,15 @@ export default function SettingsScreen() {
                     {language}
                   </AppText>
 
-             <Ionicons
-  name={
-    preferencesExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+                  <Ionicons
+                    name={
+                      preferencesExpanded
+                        ? "chevron-up-outline"
+                        : "chevron-down-outline"
+                    }
+                    size={22}
+                    color="#000000"
+                  />
                 </Pressable>
 
                 {languageOpen && (
@@ -800,7 +802,7 @@ export default function SettingsScreen() {
                           style={[
                             styles.selectionText,
                             language === item &&
-                              styles.selectedSelectionText,
+                            styles.selectedSelectionText,
                           ]}
                         >
                           {item}
@@ -946,23 +948,23 @@ export default function SettingsScreen() {
                 />
 
                 <Pressable
-  onPress={() =>
-    setShowConfirmPassword(
-      !showConfirmPassword,
-    )
-  }
-  style={styles.eyeButton}
->
-  <Ionicons
-    name={
-      showConfirmPassword
-        ? "eye-outline"
-        : "eye-off-outline"
-    }
-    size={22}
-    color="#000000"
-  />
-</Pressable>
+                  onPress={() =>
+                    setShowConfirmPassword(
+                      !showConfirmPassword,
+                    )
+                  }
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword
+                        ? "eye-outline"
+                        : "eye-off-outline"
+                    }
+                    size={22}
+                    color="#000000"
+                  />
+                </Pressable>
               </View>
             </View>
 
