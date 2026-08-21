@@ -4,6 +4,7 @@ import React from "react";
 import {
   Alert,
   Dimensions,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -34,25 +35,39 @@ export default function Sidebar({
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Log Out",
-      "Are you sure you want to log out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Log Out",
-          style: "destructive",
-          onPress: () => {
-            onClose();
-            router.replace(Routes.LOGIN);
-          },
-        },
-      ],
-    );
+  const logout = () => {
+    onClose();
+    router.replace(Routes.LOGIN);
   };
+
+  if (Platform.OS === "web") {
+    const confirmed = window.confirm(
+      "Are you sure you want to sign out?",
+    );
+
+    if (confirmed) {
+      logout();
+    }
+
+    return;
+  }
+
+  Alert.alert(
+    "Log Out",
+    "Are you sure you want to sign out?",
+    [
+      {
+        text: "No",
+        style: "cancel",
+      },
+      {
+        text: "Yes",
+        style: "destructive",
+        onPress: logout,
+      },
+    ],
+  );
+};
 
   const handleExit = () => {
     Alert.alert(
