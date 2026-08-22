@@ -1,7 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import AppCheckbox from "@/components/forms/AppCheckbox";
 import AppInput from "@/components/forms/AppInput";
@@ -15,8 +19,9 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { Radius, Spacing } from "@/constants/theme";
-
 import Copyright from "@/components/forms/Copyright";
+
+import { registerUser } from "@/services/auth";
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
@@ -24,16 +29,142 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [termsModalVisible, setTermsModalVisible] = useState(false);
-  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] =
+    useState(false);
 
-  const handleRegister = () => {
+  const [termsAgreed, setTermsAgreed] =
+    useState(false);
+
+  const [warning, setWarning] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const showWarning = (message: string) => {
+    setWarning(message);
+  };
+
+  const validateForm = () => {
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanUsername) {
+      showWarning("Please enter a username.");
+      return false;
+    }
+
+    if (cleanUsername.length < 3) {
+      showWarning(
+        "Username must be at least 3 characters."
+      );
+      return false;
+    }
+
+    if (cleanUsername.length > 30) {
+      showWarning(
+        "Username must not exceed 30 characters."
+      );
+      return false;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+      showWarning(
+        "Username can only contain letters, numbers, and underscores."
+      );
+      return false;
+    }
+
+    if (!cleanEmail) {
+      showWarning("Please enter your email address.");
+      return false;
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        cleanEmail
+      )
+    ) {
+      showWarning(
+        "Please enter a valid email address."
+      );
+      return false;
+    }
+
+    if (!password) {
+      showWarning("Please create a password.");
+      return false;
+    }
+
+    if (password.length < 8) {
+      showWarning(
+        "Password must be at least 8 characters."
+      );
+      return false;
+    }
+
+    if (password.length > 72) {
+      showWarning(
+        "Password must not exceed 72 characters."
+      );
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      showWarning(
+        "Passwords do not match. Please check both password fields."
+      );
+      return false;
+    }
+
     if (!termsAgreed) {
+      showWarning(
+        "Please agree to the Terms and Conditions before creating your account."
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (loading) {
       return;
     }
 
-    // Temporary navigation until authentication is connected.
-    router.replace(Routes.LOGIN);
+    setWarning("");
+
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const result = await registerUser(
+        username,
+        email,
+        password,
+        termsAgreed
+      );
+
+      if (!result.success) {
+        showWarning(result.error ?? "Unable to create your account.");
+        return;
+      }
+
+      setWarning("");
+
+      router.replace(Routes.LOGIN);
+    } catch (error) {
+      showWarning(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your account. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = () => {
@@ -42,6 +173,8 @@ export default function RegisterScreen() {
 
   const handleTermsAgree = () => {
     setTermsAgreed(true);
+    setTermsModalVisible(false);
+    setWarning("");
   };
 
   return (
@@ -61,7 +194,10 @@ export default function RegisterScreen() {
           <AppInput
             label="Username"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(text) => {
+              setUsername(text);
+              setWarning("");
+            }}
             placeholder="Enter your username"
             autoCapitalize="none"
             autoCorrect={false}
@@ -70,7 +206,10 @@ export default function RegisterScreen() {
           <AppInput
             label="Email Address"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              setWarning("");
+            }}
             placeholder="Enter your email"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -80,14 +219,20 @@ export default function RegisterScreen() {
           <PasswordInput
             label="Password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              setWarning("");
+            }}
             placeholder="Create a password"
           />
 
           <PasswordInput
             label="Confirm Password"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              setWarning("");
+            }}
             placeholder="Confirm your password"
           />
 
@@ -98,6 +243,7 @@ export default function RegisterScreen() {
               onPress={() => {
                 if (termsAgreed) {
                   setTermsAgreed(false);
+                  setWarning("");
                 } else {
                   setTermsModalVisible(true);
                 }
@@ -105,7 +251,9 @@ export default function RegisterScreen() {
             />
 
             <Pressable
-              onPress={() => setTermsModalVisible(true)}
+              onPress={() =>
+                setTermsModalVisible(true)
+              }
               style={styles.termsIconButton}
               accessibilityRole="button"
               accessibilityLabel="Open Terms and Conditions"
@@ -118,10 +266,42 @@ export default function RegisterScreen() {
             </Pressable>
           </View>
 
+          {/* Security / validation warning */}
+          {warning ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                marginBottom: Spacing.md,
+              }}
+            >
+              <Ionicons
+                name="warning-outline"
+                size={20}
+                color="#D32F2F"
+                style={{ marginRight: 8, marginTop: 1 }}
+              />
+
+              <AppText
+                variant="caption"
+                style={{
+                  flex: 1,
+                  color: "#D32F2F",
+                }}
+              >
+                {warning}
+              </AppText>
+            </View>
+          ) : null}
+
           <AppButton
-            title="Create Account"
+            title={
+              loading
+                ? "Creating Account..."
+                : "Create Account"
+            }
             onPress={handleRegister}
-            disabled={!termsAgreed}
+            disabled={loading}
           />
         </View>
 
@@ -147,7 +327,9 @@ export default function RegisterScreen() {
 
       <TermsModal
         visible={termsModalVisible}
-        onClose={() => setTermsModalVisible(false)}
+        onClose={() =>
+          setTermsModalVisible(false)
+        }
         onAgree={handleTermsAgree}
       />
     </ScreenContainer>

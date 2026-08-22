@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -15,8 +15,9 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
-import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -28,8 +29,8 @@ export default function SettingsScreen() {
   // Account states
   const [isEditingAccount, setIsEditingAccount] = useState(false);
 
-  const [username, setUsername] = useState("Francis Adrian Idul");
-  const [email, setEmail] = useState("francisadrian@example.com");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
 
   const [editUsername, setEditUsername] = useState(username);
   const [editEmail, setEditEmail] = useState(email);
@@ -43,10 +44,14 @@ export default function SettingsScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [showConfirmationPassword, setShowConfirmationPassword] =
-  useState(false);
+    useState(false);
 
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
+
+  const [warning, setWarning] = useState("");
+  const [confirmationWarning, setConfirmationWarning] = useState("");
+
 
   // Preferences
   const [darkMode, setDarkMode] = useState(false);
@@ -76,12 +81,36 @@ export default function SettingsScreen() {
   const [languageOpen, setLanguageOpen] =
     useState(false);
 
+  useEffect(() => {
+    const loadAccount = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("users")
+        .select("username, email")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setUsername(data.username ?? "");
+        setEmail(data.email ?? "");
+      }
+    };
+
+    loadAccount();
+  }, []);
+
   const handleUpdatePress = () => {
     setEditUsername(username);
     setEditEmail(email);
     setNewPassword("");
     setConfirmNewPassword("");
     setCurrentPassword("");
+    setWarning("");
     setIsEditingAccount(true);
   };
 
@@ -95,33 +124,29 @@ export default function SettingsScreen() {
   };
 
   const handleSubmitAccountUpdate = () => {
-    if (!editUsername.trim()) {
-      Alert.alert("Invalid Username", "Username cannot be empty.");
+    const cleanUsername = editUsername.trim();
+    const cleanEmail = editEmail.trim();
+
+    setWarning("");
+
+    if (cleanUsername.length < 3) {
+      setWarning("Username must be at least 3 characters.");
       return;
     }
 
-    if (!editEmail.trim()) {
-      Alert.alert("Invalid Email", "Email cannot be empty.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setWarning("Enter a valid email address.");
       return;
     }
 
-    if (
-      newPassword.length > 0 ||
-      confirmNewPassword.length > 0
-    ) {
-      if (newPassword !== confirmNewPassword) {
-        Alert.alert(
-          "Password Mismatch",
-          "New password and confirmation password do not match.",
-        );
+    if (newPassword || confirmNewPassword) {
+      if (newPassword.length < 8) {
+        setWarning("Password must be at least 8 characters.");
         return;
       }
 
-      if (newPassword.length < 6) {
-        Alert.alert(
-          "Invalid Password",
-          "New password must contain at least 6 characters.",
-        );
+      if (newPassword !== confirmNewPassword) {
+        setWarning("Passwords do not match.");
         return;
       }
     }
@@ -129,38 +154,66 @@ export default function SettingsScreen() {
     setConfirmationVisible(true);
   };
 
-  const handleConfirmChanges = () => {
-    if (!currentPassword.trim()) {
-      Alert.alert(
-        "Password Required",
-        "Enter your current password to confirm these changes.",
+  const handleConfirmChanges = async () => {
+    setConfirmationWarning("");
+
+    const password = currentPassword.trim();
+
+    if (!password) {
+      setConfirmationWarning("Enter your current password.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setConfirmationWarning(
+        "Current password must be at least 8 characters.",
       );
       return;
     }
 
-    /*
-     * Temporary static authentication.
-     *
-     * This will later be replaced with actual
-     * database/server password verification.
-     */
-    const temporaryPassword = "password";
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (currentPassword !== temporaryPassword) {
-      Alert.alert(
-        "Incorrect Password",
-        "The current password you entered is incorrect.",
-      );
+    if (!user?.email) {
+      setConfirmationWarning("No authenticated user found.");
       return;
     }
 
-    setUsername(editUsername.trim());
-    setEmail(editEmail.trim());
+    const { error: verifyError } =
+      await supabase.auth.signInWithPassword({
+        email: user.email,
+        password,
+      });
 
+    if (verifyError) {
+      setConfirmationWarning("Incorrect current password.");
+      return;
+    }
+
+    const cleanUsername = editUsername.trim();
+    const cleanEmail = editEmail.trim();
+
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        username: cleanUsername,
+        email: cleanEmail,
+      })
+      .eq("id", user.id);
+
+    if (updateError) {
+      setConfirmationWarning(updateError.message);
+      return;
+    }
+
+    setUsername(cleanUsername);
+    setEmail(cleanEmail);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
-
+    setWarning("");
+    setConfirmationWarning("");
     setConfirmationVisible(false);
     setIsEditingAccount(false);
 
@@ -217,14 +270,14 @@ export default function SettingsScreen() {
 
         {/* ================= ACCOUNT PROFILE ================= */}
         <View style={styles.sectionContainer}>
-         <Pressable
-  onPress={() => {
-    if (accountExpanded && isEditingAccount) {
-      handleCancelUpdate();
-    }
+          <Pressable
+            onPress={() => {
+              if (accountExpanded && isEditingAccount) {
+                handleCancelUpdate();
+              }
 
-    setAccountExpanded(!accountExpanded);
-  }}
+              setAccountExpanded(!accountExpanded);
+            }}
             style={({ pressed }) => [
               styles.dropdownHeader,
               pressed && styles.pressed,
@@ -247,14 +300,14 @@ export default function SettingsScreen() {
             </View>
 
             <Ionicons
-  name={
-    accountExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+              name={
+                accountExpanded
+                  ? "chevron-up-outline"
+                  : "chevron-down-outline"
+              }
+              size={22}
+              color="#000000"
+            />
           </Pressable>
 
           {accountExpanded && (
@@ -292,23 +345,6 @@ export default function SettingsScreen() {
                       style={styles.infoValue}
                     >
                       {email}
-                    </AppText>
-                  </View>
-
-                  {/* Password */}
-                  <View style={styles.infoRow}>
-                    <AppText
-                      variant="caption"
-                      style={styles.infoLabel}
-                    >
-                      Password
-                    </AppText>
-
-                    <AppText
-                      variant="body"
-                      style={styles.infoValue}
-                    >
-                      ••••••••••••
                     </AppText>
                   </View>
 
@@ -389,22 +425,22 @@ export default function SettingsScreen() {
                         secureTextEntry={!showNewPassword}
                       />
 
-                    <Pressable
-  onPress={() =>
-    setShowNewPassword(!showNewPassword)
-  }
-  style={styles.eyeButton}
->
-  <Ionicons
-    name={
-      showNewPassword
-        ? "eye-outline"
-        : "eye-off-outline"
-    }
-    size={22}
-    color="#000000"
-  />
-</Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setShowNewPassword(!showNewPassword)
+                        }
+                        style={styles.eyeButton}
+                      >
+                        <Ionicons
+                          name={
+                            showNewPassword
+                              ? "eye-outline"
+                              : "eye-off-outline"
+                          }
+                          size={22}
+                          color="#000000"
+                        />
+                      </Pressable>
                     </View>
                   </View>
 
@@ -433,28 +469,41 @@ export default function SettingsScreen() {
                         }
                       />
 
-                    <Pressable
-  onPress={() =>
-    setShowConfirmPassword(
-      !showConfirmPassword,
-    )
-  }
-  style={styles.eyeButton}
->
-  <Ionicons
-    name={
-      showConfirmPassword
-        ? "eye-outline"
-        : "eye-off-outline"
-    }
-    size={22}
-    color="#000000"
-  />
-</Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setShowConfirmPassword(
+                            !showConfirmPassword,
+                          )
+                        }
+                        style={styles.eyeButton}
+                      >
+                        <Ionicons
+                          name={
+                            showConfirmPassword
+                              ? "eye-outline"
+                              : "eye-off-outline"
+                          }
+                          size={22}
+                          color="#000000"
+                        />
+                      </Pressable>
                     </View>
                   </View>
 
                   {/* Edit Actions */}
+                  {warning ? (
+                    <View style={styles.warningContainer}>
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={18}
+                        color={Colors.light.error}
+                      />
+                      <AppText style={styles.warningText}>
+                        {warning}
+                      </AppText>
+                    </View>
+                  ) : null}
+
                   <View style={styles.actionRow}>
                     <Pressable
                       onPress={handleCancelUpdate}
@@ -521,14 +570,14 @@ export default function SettingsScreen() {
             </View>
 
             <Ionicons
-  name={
-    accountExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+              name={
+                accountExpanded
+                  ? "chevron-up-outline"
+                  : "chevron-down-outline"
+              }
+              size={22}
+              color="#000000"
+            />
           </Pressable>
 
           {preferencesExpanded && (
@@ -614,22 +663,22 @@ export default function SettingsScreen() {
                         onPress={() =>
                           setFontSize(
                             option as
-                              | "Small"
-                              | "Medium"
-                              | "Big",
+                            | "Small"
+                            | "Medium"
+                            | "Big",
                           )
                         }
                         style={[
                           styles.optionButton,
                           fontSize === option &&
-                            styles.selectedOption,
+                          styles.selectedOption,
                         ]}
                       >
                         <AppText
                           style={[
                             styles.optionText,
                             fontSize === option &&
-                              styles.selectedOptionText,
+                            styles.selectedOptionText,
                           ]}
                         >
                           {option}
@@ -657,22 +706,22 @@ export default function SettingsScreen() {
                         onPress={() =>
                           setFontWeight(
                             option as
-                              | "Thin"
-                              | "Regular"
-                              | "Bold",
+                            | "Thin"
+                            | "Regular"
+                            | "Bold",
                           )
                         }
                         style={[
                           styles.optionButton,
                           fontWeight === option &&
-                            styles.selectedOption,
+                          styles.selectedOption,
                         ]}
                       >
                         <AppText
                           style={[
                             styles.optionText,
                             fontWeight === option &&
-                              styles.selectedOptionText,
+                            styles.selectedOptionText,
                           ]}
                         >
                           {option}
@@ -706,15 +755,15 @@ export default function SettingsScreen() {
                     {fontFamily}
                   </AppText>
 
-                 <Ionicons
-  name={
-    preferencesExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+                  <Ionicons
+                    name={
+                      preferencesExpanded
+                        ? "chevron-up-outline"
+                        : "chevron-down-outline"
+                    }
+                    size={22}
+                    color="#000000"
+                  />
                 </Pressable>
 
                 {fontFamilyOpen && (
@@ -738,7 +787,7 @@ export default function SettingsScreen() {
                           style={[
                             styles.selectionText,
                             fontFamily === font &&
-                              styles.selectedSelectionText,
+                            styles.selectedSelectionText,
                           ]}
                         >
                           {font}
@@ -770,15 +819,15 @@ export default function SettingsScreen() {
                     {language}
                   </AppText>
 
-             <Ionicons
-  name={
-    preferencesExpanded
-      ? "chevron-up-outline"
-      : "chevron-down-outline"
-  }
-  size={22}
-  color="#000000"
-/>
+                  <Ionicons
+                    name={
+                      preferencesExpanded
+                        ? "chevron-up-outline"
+                        : "chevron-down-outline"
+                    }
+                    size={22}
+                    color="#000000"
+                  />
                 </Pressable>
 
                 {languageOpen && (
@@ -800,7 +849,7 @@ export default function SettingsScreen() {
                           style={[
                             styles.selectionText,
                             language === item &&
-                              styles.selectedSelectionText,
+                            styles.selectedSelectionText,
                           ]}
                         >
                           {item}
@@ -925,6 +974,19 @@ export default function SettingsScreen() {
               these account changes.
             </AppText>
 
+            {confirmationWarning ? (
+              <View style={styles.warningContainer}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={18}
+                  color={Colors.light.error}
+                />
+                <AppText style={styles.warningText}>
+                  {confirmationWarning}
+                </AppText>
+              </View>
+            ) : null}
+
             <View style={styles.inputGroup}>
               <AppText
                 variant="caption"
@@ -946,31 +1008,31 @@ export default function SettingsScreen() {
                 />
 
                 <Pressable
-  onPress={() =>
-    setShowConfirmPassword(
-      !showConfirmPassword,
-    )
-  }
-  style={styles.eyeButton}
->
-  <Ionicons
-    name={
-      showConfirmPassword
-        ? "eye-outline"
-        : "eye-off-outline"
-    }
-    size={22}
-    color="#000000"
-  />
-</Pressable>
+                  onPress={() =>
+                    setShowCurrentPassword(!showCurrentPassword)
+                  }
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={
+                      showCurrentPassword
+                        ? "eye-outline"
+                        : "eye-off-outline"
+                    }
+                    size={22}
+                    color="#000000"
+                  />
+                </Pressable>
               </View>
             </View>
 
             <View style={styles.actionRow}>
               <Pressable
-                onPress={() =>
-                  setConfirmationVisible(false)
-                }
+                onPress={() => {
+                  setCurrentPassword("");
+                  setConfirmationWarning("");
+                  setConfirmationVisible(false);
+                }}
                 style={({ pressed }) => [
                   styles.secondaryButton,
                   pressed && styles.pressed,
@@ -1417,5 +1479,17 @@ const styles = StyleSheet.create({
     marginTop: 7,
     marginBottom: 18,
     lineHeight: 20,
+  },
+
+  warningContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  warningText: {
+    color: Colors.light.error,
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
