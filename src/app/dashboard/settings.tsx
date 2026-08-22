@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -15,8 +16,8 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
-import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -28,11 +29,13 @@ export default function SettingsScreen() {
   // Account states
   const [isEditingAccount, setIsEditingAccount] = useState(false);
 
-  const [username, setUsername] = useState("Francis Adrian Idul");
-  const [email, setEmail] = useState("francisadrian@example.com");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
 
   const [editUsername, setEditUsername] = useState(username);
   const [editEmail, setEditEmail] = useState(email);
+
+  const [warning, setWarning] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -41,11 +44,6 @@ export default function SettingsScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  
-
-  const [showConfirmationPassword, setShowConfirmationPassword] =
-    useState(false);
 
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
@@ -78,33 +76,52 @@ export default function SettingsScreen() {
   const [languageOpen, setLanguageOpen] =
     useState(false);
 
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("users")
+        .select("username, email")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setUsername(data.username ?? "");
+        setEmail(data.email ?? "");
+      }
+    };
+
+    loadUser();
+  }, []);
+
   const handleUpdatePress = () => {
     setEditUsername(username);
     setEditEmail(email);
+    setWarning("");
     setNewPassword("");
-    setConfirmNewPassword("");
-    setCurrentPassword("");
-    setIsEditingAccount(true);
   };
 
   const handleCancelUpdate = () => {
     setEditUsername(username);
     setEditEmail(email);
+    setWarning("");
     setNewPassword("");
-    setConfirmNewPassword("");
-    setCurrentPassword("");
-    setIsEditingAccount(false);
   };
 
   const handleSubmitAccountUpdate = () => {
-    if (!editUsername.trim()) {
-      Alert.alert("Invalid Username", "Username cannot be empty.");
-      return;
+    setWarning("");
+
+    const cleanUsername = editUsername.trim();
+    const cleanEmail = editEmail.trim();
+
+    if (cleanUsername.length < 3) {
+      return setWarning("Username must be at least 3 characters.");
     }
 
-    if (!editEmail.trim()) {
-      Alert.alert("Invalid Email", "Email cannot be empty.");
-      return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return setWarning("Enter a valid email address.");
     }
 
     if (
@@ -457,7 +474,22 @@ export default function SettingsScreen() {
                   </View>
 
                   {/* Edit Actions */}
+
+                  {warning ? (
+                    <View style={styles.warningContainer}>
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={18}
+                        color={Colors.light.error}
+                      />
+                      <AppText style={styles.warningText}>
+                        {warning}
+                      </AppText>
+                    </View>
+                  ) : null}
+
                   <View style={styles.actionRow}>
+
                     <Pressable
                       onPress={handleCancelUpdate}
                       style={({ pressed }) => [
@@ -969,6 +1001,19 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.actionRow}>
+              {warning ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={18}
+                    color={Colors.light.error}
+                  />
+                  <AppText style={{ color: Colors.light.error }}>
+                    {warning}
+                  </AppText>
+                </View>
+              ) : null}
+
               <Pressable
                 onPress={() =>
                   setConfirmationVisible(false)
@@ -1419,5 +1464,20 @@ const styles = StyleSheet.create({
     marginTop: 7,
     marginBottom: 18,
     lineHeight: 20,
+  },
+
+  warningContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+
+  warningText: {
+    color: Colors.light.error,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
