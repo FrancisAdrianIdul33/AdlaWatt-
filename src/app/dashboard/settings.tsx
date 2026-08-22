@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabase";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -17,6 +16,7 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
@@ -35,8 +35,6 @@ export default function SettingsScreen() {
   const [editUsername, setEditUsername] = useState(username);
   const [editEmail, setEditEmail] = useState(email);
 
-  const [warning, setWarning] = useState("");
-
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
@@ -45,8 +43,14 @@ export default function SettingsScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [showConfirmationPassword, setShowConfirmationPassword] =
+    useState(false);
+
   const [confirmationVisible, setConfirmationVisible] =
     useState(false);
+
+  const [warning, setWarning] = useState("");
+
 
   // Preferences
   const [darkMode, setDarkMode] = useState(false);
@@ -77,8 +81,11 @@ export default function SettingsScreen() {
     useState(false);
 
   useEffect(() => {
-    const loadUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+    const loadAccount = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) return;
 
       const { data } = await supabase
@@ -93,62 +100,53 @@ export default function SettingsScreen() {
       }
     };
 
-    loadUser();
+    loadAccount();
   }, []);
 
   const handleUpdatePress = () => {
     setEditUsername(username);
     setEditEmail(email);
-    setWarning("");
     setNewPassword("");
+    setConfirmNewPassword("");
+    setCurrentPassword("");
+    setWarning("");
+    setIsEditingAccount(true);
   };
 
   const handleCancelUpdate = () => {
     setEditUsername(username);
     setEditEmail(email);
-    setWarning("");
     setNewPassword("");
+    setConfirmNewPassword("");
+    setCurrentPassword("");
+    setIsEditingAccount(false);
   };
 
   const handleSubmitAccountUpdate = () => {
-    setWarning("");
-
     const cleanUsername = editUsername.trim();
     const cleanEmail = editEmail.trim();
 
-    if (cleanUsername.length < 3) {
+    setWarning("");
+
+    if (cleanUsername.length < 3)
       return setWarning("Username must be at least 3 characters.");
-    }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
       return setWarning("Enter a valid email address.");
-    }
 
-    if (
-      newPassword.length > 0 ||
-      confirmNewPassword.length > 0
-    ) {
-      if (newPassword !== confirmNewPassword) {
-        Alert.alert(
-          "Password Mismatch",
-          "New password and confirmation password do not match.",
-        );
-        return;
-      }
+    if (newPassword || confirmNewPassword) {
+      if (newPassword.length < 8)
+        return setWarning("Password must be at least 8 characters.");
 
-      if (newPassword.length < 6) {
-        Alert.alert(
-          "Invalid Password",
-          "New password must contain at least 6 characters.",
-        );
-        return;
-      }
+      if (newPassword !== confirmNewPassword)
+        return setWarning("Passwords do not match.");
     }
 
     setConfirmationVisible(true);
   };
 
-  const handleConfirmChanges = () => {
+  const handleConfirmChanges = async () => {
+
     if (!currentPassword.trim()) {
       Alert.alert(
         "Password Required",
@@ -157,29 +155,34 @@ export default function SettingsScreen() {
       return;
     }
 
-    /*
-     * Temporary static authentication.
-     *
-     * This will later be replaced with actual
-     * database/server password verification.
-     */
-    const temporaryPassword = "password";
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (currentPassword !== temporaryPassword) {
-      Alert.alert(
-        "Incorrect Password",
-        "The current password you entered is incorrect.",
-      );
+    if (!user) {
+      Alert.alert("Error", "No authenticated user found.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("users")
+      .update({
+        username: editUsername.trim(),
+        email: editEmail.trim(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      Alert.alert("Update Failed", error.message);
       return;
     }
 
     setUsername(editUsername.trim());
     setEmail(editEmail.trim());
-
     setCurrentPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
-
+    setWarning("");
     setConfirmationVisible(false);
     setIsEditingAccount(false);
 
@@ -311,23 +314,6 @@ export default function SettingsScreen() {
                       style={styles.infoValue}
                     >
                       {email}
-                    </AppText>
-                  </View>
-
-                  {/* Password */}
-                  <View style={styles.infoRow}>
-                    <AppText
-                      variant="caption"
-                      style={styles.infoLabel}
-                    >
-                      Password
-                    </AppText>
-
-                    <AppText
-                      variant="body"
-                      style={styles.infoValue}
-                    >
-                      ••••••••••••
                     </AppText>
                   </View>
 
@@ -474,7 +460,6 @@ export default function SettingsScreen() {
                   </View>
 
                   {/* Edit Actions */}
-
                   {warning ? (
                     <View style={styles.warningContainer}>
                       <Ionicons
@@ -489,7 +474,6 @@ export default function SettingsScreen() {
                   ) : null}
 
                   <View style={styles.actionRow}>
-
                     <Pressable
                       onPress={handleCancelUpdate}
                       style={({ pressed }) => [
@@ -1001,19 +985,6 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              {warning ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={18}
-                    color={Colors.light.error}
-                  />
-                  <AppText style={{ color: Colors.light.error }}>
-                    {warning}
-                  </AppText>
-                </View>
-              ) : null}
-
               <Pressable
                 onPress={() =>
                   setConfirmationVisible(false)
@@ -1470,14 +1441,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 6,
     marginBottom: 8,
-    paddingHorizontal: 4,
   },
-
   warningText: {
     color: Colors.light.error,
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
