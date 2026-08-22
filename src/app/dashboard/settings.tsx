@@ -50,6 +50,7 @@ export default function SettingsScreen() {
     useState(false);
 
   const [warning, setWarning] = useState("");
+  const [confirmationWarning, setConfirmationWarning] = useState("");
 
 
   // Preferences
@@ -128,29 +129,44 @@ export default function SettingsScreen() {
 
     setWarning("");
 
-    if (cleanUsername.length < 3)
-      return setWarning("Username must be at least 3 characters.");
+    if (cleanUsername.length < 3) {
+      setWarning("Username must be at least 3 characters.");
+      return;
+    }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
-      return setWarning("Enter a valid email address.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setWarning("Enter a valid email address.");
+      return;
+    }
 
     if (newPassword || confirmNewPassword) {
-      if (newPassword.length < 8)
-        return setWarning("Password must be at least 8 characters.");
+      if (newPassword.length < 8) {
+        setWarning("Password must be at least 8 characters.");
+        return;
+      }
 
-      if (newPassword !== confirmNewPassword)
-        return setWarning("Passwords do not match.");
+      if (newPassword !== confirmNewPassword) {
+        setWarning("Passwords do not match.");
+        return;
+      }
     }
 
     setConfirmationVisible(true);
   };
 
   const handleConfirmChanges = async () => {
+    setConfirmationWarning("");
 
-    if (!currentPassword.trim()) {
-      Alert.alert(
-        "Password Required",
-        "Enter your current password to confirm these changes.",
+    const password = currentPassword.trim();
+
+    if (!password) {
+      setConfirmationWarning("Enter your current password.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setConfirmationWarning(
+        "Current password must be at least 8 characters.",
       );
       return;
     }
@@ -159,30 +175,45 @@ export default function SettingsScreen() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      Alert.alert("Error", "No authenticated user found.");
+    if (!user?.email) {
+      setConfirmationWarning("No authenticated user found.");
       return;
     }
 
-    const { error } = await supabase
+    const { error: verifyError } =
+      await supabase.auth.signInWithPassword({
+        email: user.email,
+        password,
+      });
+
+    if (verifyError) {
+      setConfirmationWarning("Incorrect current password.");
+      return;
+    }
+
+    const cleanUsername = editUsername.trim();
+    const cleanEmail = editEmail.trim();
+
+    const { error: updateError } = await supabase
       .from("users")
       .update({
-        username: editUsername.trim(),
-        email: editEmail.trim(),
+        username: cleanUsername,
+        email: cleanEmail,
       })
       .eq("id", user.id);
 
-    if (error) {
-      Alert.alert("Update Failed", error.message);
+    if (updateError) {
+      setConfirmationWarning(updateError.message);
       return;
     }
 
-    setUsername(editUsername.trim());
-    setEmail(editEmail.trim());
+    setUsername(cleanUsername);
+    setEmail(cleanEmail);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
     setWarning("");
+    setConfirmationWarning("");
     setConfirmationVisible(false);
     setIsEditingAccount(false);
 
@@ -943,6 +974,19 @@ export default function SettingsScreen() {
               these account changes.
             </AppText>
 
+            {confirmationWarning ? (
+              <View style={styles.warningContainer}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={18}
+                  color={Colors.light.error}
+                />
+                <AppText style={styles.warningText}>
+                  {confirmationWarning}
+                </AppText>
+              </View>
+            ) : null}
+
             <View style={styles.inputGroup}>
               <AppText
                 variant="caption"
@@ -965,15 +1009,13 @@ export default function SettingsScreen() {
 
                 <Pressable
                   onPress={() =>
-                    setShowConfirmPassword(
-                      !showConfirmPassword,
-                    )
+                    setShowCurrentPassword(!showCurrentPassword)
                   }
                   style={styles.eyeButton}
                 >
                   <Ionicons
                     name={
-                      showConfirmPassword
+                      showCurrentPassword
                         ? "eye-outline"
                         : "eye-off-outline"
                     }
@@ -986,9 +1028,11 @@ export default function SettingsScreen() {
 
             <View style={styles.actionRow}>
               <Pressable
-                onPress={() =>
-                  setConfirmationVisible(false)
-                }
+                onPress={() => {
+                  setCurrentPassword("");
+                  setConfirmationWarning("");
+                  setConfirmationVisible(false);
+                }}
                 style={({ pressed }) => [
                   styles.secondaryButton,
                   pressed && styles.pressed,
