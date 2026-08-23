@@ -1,9 +1,11 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React from "react";
+import { router, usePathname } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -24,6 +26,34 @@ export default function Sidebar({
   visible,
   onClose,
 }: SidebarProps) {
+  const [username, setUsername] = useState("");
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const loadUsername = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setUsername("");
+        return;
+      }
+
+      const { data } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+
+      setUsername(data?.username ?? "");
+    };
+
+    if (visible) {
+      loadUsername();
+    }
+  }, [visible]);
+
   if (!visible) {
     return null;
   }
@@ -34,21 +64,35 @@ export default function Sidebar({
   };
 
   const handleLogout = () => {
+    const logout = () => {
+      onClose();
+      router.replace(Routes.LOGIN);
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Are you sure you want to sign out?",
+      );
+
+      if (confirmed) {
+        logout();
+      }
+
+      return;
+    }
+
     Alert.alert(
       "Log Out",
-      "Are you sure you want to log out?",
+      "Are you sure you want to sign out?",
       [
         {
-          text: "Cancel",
+          text: "No",
           style: "cancel",
         },
         {
-          text: "Log Out",
+          text: "Yes",
           style: "destructive",
-          onPress: () => {
-            onClose();
-            router.replace(Routes.LOGIN);
-          },
+          onPress: logout,
         },
       ],
     );
@@ -104,10 +148,19 @@ export default function Sidebar({
         </View>
 
         {/* Main navigation */}
+
+
         <View style={sidebarStyles.navigation}>
+          {username ? (
+            <Text style={sidebarStyles.username}>
+              User: {username}
+            </Text>
+          ) : null}
+
           <SidebarButton
             icon="home-outline"
             label="Dashboard"
+            active={pathname === Routes.DASHBOARD}
             onPress={() =>
               handleNavigation(Routes.DASHBOARD)
             }
@@ -116,6 +169,7 @@ export default function Sidebar({
           <SidebarButton
             icon="flash-outline"
             label="Appliances"
+            active={pathname === Routes.APPLIANCES}
             onPress={() =>
               handleNavigation(Routes.APPLIANCES)
             }
@@ -124,6 +178,7 @@ export default function Sidebar({
           <SidebarButton
             icon="hardware-chip-outline"
             label="Components"
+            active={pathname === Routes.COMPONENTS}
             onPress={() =>
               handleNavigation(Routes.COMPONENTS)
             }
@@ -132,6 +187,7 @@ export default function Sidebar({
           <SidebarButton
             icon="list-outline"
             label="Activity Logs"
+            active={pathname === Routes.ACTIVITY_LOGS}
             onPress={() =>
               handleNavigation(Routes.ACTIVITY_LOGS)
             }
@@ -140,6 +196,7 @@ export default function Sidebar({
           <SidebarButton
             icon="information-circle-outline"
             label="About Us"
+            active={pathname === Routes.ABOUT_US}
             onPress={() =>
               handleNavigation(Routes.ABOUT_US)
             }
@@ -148,6 +205,7 @@ export default function Sidebar({
           <SidebarButton
             icon="settings-outline"
             label="Settings"
+            active={pathname === Routes.SETTINGS}
             onPress={() =>
               handleNavigation(Routes.SETTINGS)
             }
@@ -183,6 +241,7 @@ interface SidebarButtonProps {
   label: string;
   onPress: () => void;
   danger?: boolean;
+  active?: boolean;
 }
 
 function SidebarButton({
@@ -190,6 +249,7 @@ function SidebarButton({
   label,
   onPress,
   danger = false,
+  active = false,
 }: SidebarButtonProps) {
   return (
     <Pressable
@@ -199,7 +259,9 @@ function SidebarButton({
 
         danger
           ? sidebarStyles.dangerButton
-          : sidebarStyles.navigationButton,
+          : active
+            ? sidebarStyles.activeButton
+            : sidebarStyles.navigationButton,
 
         pressed && sidebarStyles.buttonPressed,
       ]}
@@ -349,7 +411,11 @@ const sidebarStyles = StyleSheet.create({
 
   navigationButton: {
     backgroundColor: Colors.light.primary,
+    borderColor: "transparent",
+  },
 
+  activeButton: {
+    backgroundColor: Colors.light.primary,
     borderColor: Colors.light.secondary,
   },
 
@@ -390,5 +456,13 @@ const sidebarStyles = StyleSheet.create({
 
   bottomActions: {
     width: "100%",
+  },
+
+  username: {
+    color: "#000000",
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 20,
+    paddingHorizontal: 16,
   },
 });

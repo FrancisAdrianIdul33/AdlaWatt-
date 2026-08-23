@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import ComponentStatusBox from "@/components/forms/ComponentStatusBox";
@@ -8,11 +8,69 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+import { supabase } from "@/lib/supabase";
 
 export default function ComponentsScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [statusFilter, setStatusFilter] =
-  useState<"All" | "Active" | "Inactive">("All");
+    useState<"All" | "Active" | "Inactive">("All");
+
+  const [components, setComponents] = useState<
+    {
+      comp_id: string;
+      component_name: string;
+      status: boolean;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel>;
+
+    const loadComponents = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("components")
+        .select("comp_id, component_name, status")
+        .eq("user_id", user.id)
+        .order("component_name", { ascending: true });
+
+      if (error) {
+        console.error("Error loading components:", error.message);
+        return;
+      }
+
+      setComponents(data ?? []);
+
+      channel = supabase
+        .channel(`components-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "components",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            loadComponents();
+          },
+        )
+        .subscribe();
+    };
+
+    loadComponents();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, []);
 
   return (
     <ScreenContainer2>
@@ -62,64 +120,35 @@ export default function ComponentsScreen() {
         </View>
 
         <View style={styles.componentGrid}>
-          {[
-            {
-              name: "ESP32",
-              status: "Connected" as const,
-              color: Colors.light.primary,
-            },
-            {
-              name: "INA226 (Input)",
-              status: "Active" as const,
-              color: Colors.light.primary,
-            },
-            {
-              name: "INA226 (Output)",
-              status: "Active" as const,
-              color: Colors.light.primary,
-            },
-            {
-              name: "DS18B20",
-              status: "Active" as const,
-              color: "#4A90E2",
-            },
-            {
-              name: "Buck Converter",
-              status: "Active" as const,
-              color: Colors.light.secondary,
-            },
-            {
-              name: "Voltage Sensor",
-              status: "Active" as const,
-              color: "#16A085",
-            },
-            {
-              name: "Relay Module 5V 1 Channel",
-              status: "Active" as const,
-              color: "#E67E22",
-            },
-            {
-              name: "LCD2004 with I2C",
-              status: "Active" as const,
-              color: "#9B59B6",
-            },
-          ]
+          {[...components]
+            .sort((a, b) =>
+              a.component_name.localeCompare(b.component_name),
+            )
             .filter((component) => {
               if (statusFilter === "All") return true;
 
-              const active =
-                component.status === "Active" ||
-                component.status === "Connected";
-
-              return statusFilter === "Active" ? active : !active;
+              return statusFilter === "Active"
+                ? component.status
+                : !component.status;
             })
-            .map((component) => (
-              <ComponentStatusBox
-                key={component.name}
-                name={component.name}
-                status={component.status}
-              />
-            ))}
+            .map((component) => {
+              const status =
+                component.component_name === "ESP32"
+                  ? component.status
+                    ? "Connected"
+                    : "Not Connected"
+                  : component.status
+                    ? "Active"
+                    : "Inactive";
+
+              return (
+                <ComponentStatusBox
+                  key={component.comp_id}
+                  name={component.component_name}
+                  status={status}
+                />
+              );
+            })}
         </View>
         <Copyright />
       </ScrollView>

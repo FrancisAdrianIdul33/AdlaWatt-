@@ -14,15 +14,89 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 
+import { loginUser } from "@/services/auth";
+
+import { Ionicons } from "@expo/vector-icons";
+
 export default function LoginScreen() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [warning, setWarning] = useState("");
 
-  const handleLogin = () => {
-    // Temporary navigation until authentication is connected.
+  const handleLogin = async () => {
+  setWarning("");
+
+  const identifier = usernameOrEmail.trim();
+  const cleanPassword = password;
+
+  if (!identifier) {
+    setWarning("Please enter your username or email.");
+    return;
+  }
+
+  if (!cleanPassword) {
+    setWarning("Please enter your password.");
+    return;
+  }
+
+  if (identifier.includes("@")) {
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(identifier)) {
+      setWarning("Please enter a valid email address.");
+      return;
+    }
+  } else if (identifier.length < 3) {
+    setWarning("Username must be at least 3 characters.");
+    return;
+  }
+
+  if (cleanPassword.length < 8) {
+    setWarning("Password must be at least 8 characters.");
+    return;
+  }
+
+  try {
+    const result = await loginUser(
+      identifier,
+      cleanPassword,
+    );
+
+    if (!result.success) {
+      const errorMessage =
+        result.error?.toLowerCase() ?? "";
+
+      if (
+        errorMessage.includes("invalid login") ||
+        errorMessage.includes("invalid username") ||
+        errorMessage.includes("invalid password")
+      ) {
+        setWarning("Incorrect username, email, or password.");
+      } else if (
+        errorMessage.includes("not found") ||
+        errorMessage.includes("account")
+      ) {
+        setWarning(
+          "Account not found. Please check your username or email.",
+        );
+      } else {
+        setWarning(
+          "We could not sign you in. Please check your information and try again.",
+        );
+      }
+
+      return;
+    }
+
     router.replace(Routes.DASHBOARD);
-  };
+  } catch {
+    setWarning(
+      "Something went wrong. Please try again.",
+    );
+  }
+};
 
   const handleRegister = () => {
     router.push(Routes.REGISTER);
@@ -71,10 +145,37 @@ export default function LoginScreen() {
             />
           </View>
 
-          <AppButton
-            title="Login"
-            onPress={handleLogin}
-          />
+         {warning ? (
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    }}
+  >
+    <Ionicons
+      name="warning-outline"
+      size={20}
+      color="#D32F2F"
+      style={{ marginRight: 8 }}
+    />
+
+    <AppText
+      variant="caption"
+      style={{
+        color: "#D32F2F",
+        flex: 1,
+      }}
+    >
+      {warning}
+    </AppText>
+  </View>
+) : null}
+
+<AppButton
+  title="Login"
+  onPress={handleLogin}
+/>
         </View>
 
         <View style={styles.registerContainer}>

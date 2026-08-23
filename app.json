@@ -4,33 +4,28 @@
     "slug": "ADLAWATT-",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/adlawatt-logo.png",
+    "icon": "./assets/images/adlawatt-icon.png",
     "scheme": "adlawatt",
     "userInterfaceStyle": "automatic",
-
     "ios": {
-      "icon": "./assets/images/adlawatt-logo.png",
+      "icon": "./assets/images/adlawatt-icon.png",
       "bundleIdentifier": "com.teamadlawatt.ADLAWATT",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/adlawatt-logo.png"
+        "foregroundImage": "./assets/images/adlawatt-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.teamadlawatt.ADLAWATT"
     },
-
     "web": {
       "output": "static",
-      "favicon": "./assets/images/adlawatt-logo.png"
+      "favicon": "./assets/images/adlawatt-icon.png"
     },
-
-    
     "plugins": [
       "expo-router",
       [
@@ -42,14 +37,14 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-web-browser"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
-
     "extra": {
       "router": {},
       "eas": {
