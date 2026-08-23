@@ -40,14 +40,6 @@ export async function registerUser(
             };
         }
 
-        // Email validation
-        if (!cleanEmail) {
-            return {
-                success: false,
-                error: "Please enter your email address.",
-            };
-        }
-
         if (!cleanEmail) {
             return {
                 success: false,
@@ -138,46 +130,43 @@ export async function loginUser(
         if (!identifier || !password) {
             return {
                 success: false,
-                error:
-                    "Please enter your username or email and password.",
+                error: "Please enter your username or email and password.",
             };
         }
 
-        let email = identifier;
+        let email: string;
 
-        /*
-         * If the user entered a username, find the
-         * corresponding email from the users table.
-         */
+        // Username login
         if (!identifier.includes("@")) {
-            const { data: user, error: userError } =
-                await supabase
-                    .from("users")
-                    .select("email")
-                    .eq("username", identifier)
-                    .maybeSingle();
+            const { data: user, error: userError } = await supabase
+                .from("users")
+                .select("email")
+                .eq("username", identifier)
+                .maybeSingle();
 
-            if (userError || !user) {
+            if (userError || !user?.email) {
                 return {
                     success: false,
                     error: "The username or password is incorrect.",
                 };
             }
 
-            email = user.email;
+            email = user.email.trim().toLowerCase();
+        } else {
+            // Email login
+            email = identifier;
         }
 
-        // Authenticate through Supabase Auth
         const { data, error } =
             await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
-        if (error) {
+        if (error || !data.user) {
             return {
                 success: false,
-                error: "The username or password is incorrect.",
+                error: "The username, email, or password is incorrect.",
             };
         }
 
@@ -191,8 +180,7 @@ export async function loginUser(
 
         return {
             success: false,
-            error:
-                "Unable to sign in right now. Please try again.",
+            error: "Unable to sign in right now. Please try again.",
         };
     }
 }

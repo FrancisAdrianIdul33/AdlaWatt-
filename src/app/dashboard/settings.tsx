@@ -43,15 +43,10 @@ export default function SettingsScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [showConfirmationPassword, setShowConfirmationPassword] =
-    useState(false);
-
-  const [confirmationVisible, setConfirmationVisible] =
-    useState(false);
+  const [confirmationVisible, setConfirmationVisible] = useState(false);
 
   const [warning, setWarning] = useState("");
   const [confirmationWarning, setConfirmationWarning] = useState("");
-
 
   // Preferences
   const [darkMode, setDarkMode] = useState(false);
@@ -1149,12 +1144,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  dropdownArrow: {
-    color: Colors.light.primary,
-    fontSize: 25,
-    fontWeight: "700",
-    marginLeft: 10,
-  },
+
 
   expandedContent: {
     paddingTop: 14,
@@ -1276,12 +1266,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  eyeText: {
-    color: Colors.light.primary,
-    fontSize: 17,
-    fontWeight: "700",
-  },
-
   /* ================= PREFERENCES ================= */
 
   sectionLabel: {
@@ -1381,12 +1365,6 @@ const styles = StyleSheet.create({
   dropdownInputText: {
     color: "#000000",
     fontWeight: "500",
-  },
-
-  dropdownInputArrow: {
-    color: Colors.light.primary,
-    fontSize: 20,
-    fontWeight: "700",
   },
 
   selectionMenu: {
