@@ -23,53 +23,54 @@ export default function ComponentsScreen() {
     }[]
   >([]);
 
- useEffect(() => {
-  let channel: ReturnType<typeof supabase.channel>;
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel>;
 
-  const loadComponents = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const loadComponents = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) return;
+      if (!user) return;
 
-    const { data, error } = await supabase
-      .from("components")
-      .select("comp_id, component_name, status")
-      .eq("user_id", user.id);
+      const { data, error } = await supabase
+        .from("components")
+        .select("comp_id, component_name, status")
+        .eq("user_id", user.id)
+        .order("component_name", { ascending: true });
 
-    if (error) {
-      console.error("Error loading components:", error.message);
-      return;
-    }
+      if (error) {
+        console.error("Error loading components:", error.message);
+        return;
+      }
 
-    setComponents(data ?? []);
+      setComponents(data ?? []);
 
-    channel = supabase
-      .channel(`components-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "components",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          loadComponents();
-        },
-      )
-      .subscribe();
-  };
+      channel = supabase
+        .channel(`components-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "components",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            loadComponents();
+          },
+        )
+        .subscribe();
+    };
 
-  loadComponents();
+    loadComponents();
 
-  return () => {
-    if (channel) {
-      supabase.removeChannel(channel);
-    }
-  };
-}, []);
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, []);
 
   return (
     <ScreenContainer2>
@@ -119,13 +120,16 @@ export default function ComponentsScreen() {
         </View>
 
         <View style={styles.componentGrid}>
-          {components
+          {[...components]
+            .sort((a, b) =>
+              a.component_name.localeCompare(b.component_name),
+            )
             .filter((component) => {
               if (statusFilter === "All") return true;
 
-              const active = component.status;
-
-              return statusFilter === "Active" ? active : !active;
+              return statusFilter === "Active"
+                ? component.status
+                : !component.status;
             })
             .map((component) => {
               const status =
