@@ -16,7 +16,12 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
-import { supabase } from "@/lib/supabase";
+
+import {
+  getCurrentUserProfile,
+  updateAccount,
+} from "@/services/auth";
+
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
@@ -78,22 +83,17 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     const loadAccount = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const result = await getCurrentUserProfile();
 
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("users")
-        .select("username, email")
-        .eq("id", user.id)
-        .single();
-
-      if (data) {
-        setUsername(data.username ?? "");
-        setEmail(data.email ?? "");
+      if (!result.success) {
+        setWarning(result.error ??"");
+        return;
       }
+
+      setUsername(result.username);
+      setEmail(result.email);
+      setEditUsername(result.username);
+      setEditEmail(result.email);
     };
 
     loadAccount();
@@ -166,44 +166,23 @@ export default function SettingsScreen() {
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const result = await updateAccount(
+      editUsername,
+      editEmail,
+      password,
+      newPassword,
+    );
 
-    if (!user?.email) {
-      setConfirmationWarning("No authenticated user found.");
+    if (!result.success) {
+      setConfirmationWarning(
+        result.error ?? "Unable to update your account.",
+      );
       return;
     }
 
-    const { error: verifyError } =
-      await supabase.auth.signInWithPassword({
-        email: user.email,
-        password,
-      });
+    setUsername(result.username ?? editUsername.trim());
+    setEmail(result.email ?? editEmail.trim());
 
-    if (verifyError) {
-      setConfirmationWarning("Incorrect current password.");
-      return;
-    }
-
-    const cleanUsername = editUsername.trim();
-    const cleanEmail = editEmail.trim();
-
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        username: cleanUsername,
-        email: cleanEmail,
-      })
-      .eq("id", user.id);
-
-    if (updateError) {
-      setConfirmationWarning(updateError.message);
-      return;
-    }
-
-    setUsername(cleanUsername);
-    setEmail(cleanEmail);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
@@ -212,10 +191,18 @@ export default function SettingsScreen() {
     setConfirmationVisible(false);
     setIsEditingAccount(false);
 
-    Alert.alert(
-      "Changes Saved",
-      "Your account information has been updated successfully.",
-    );
+    if (result.emailChangePending) {
+      Alert.alert(
+        "Username Updated",
+        result.message ??
+        "Please confirm your new email address.",
+      );
+    } else {
+      Alert.alert(
+        "Changes Saved",
+        "Your account information has been updated successfully.",
+      );
+    }
   };
 
   const renderToggle = (
