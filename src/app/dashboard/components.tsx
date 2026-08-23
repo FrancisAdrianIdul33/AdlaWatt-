@@ -23,30 +23,53 @@ export default function ComponentsScreen() {
     }[]
   >([]);
 
-  useEffect(() => {
-    const loadComponents = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+ useEffect(() => {
+  let channel: ReturnType<typeof supabase.channel>;
 
-      if (!user) return;
+  const loadComponents = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      const { data, error } = await supabase
-        .from("components")
-        .select("comp_id, component_name, status")
-        .eq("user_id", user.id)
-        .order("component_name");
+    if (!user) return;
 
-      if (error) {
-        console.error("Error loading components:", error.message);
-        return;
-      }
+    const { data, error } = await supabase
+      .from("components")
+      .select("comp_id, component_name, status")
+      .eq("user_id", user.id);
 
-      setComponents(data ?? []);
-    };
+    if (error) {
+      console.error("Error loading components:", error.message);
+      return;
+    }
 
-    loadComponents();
-  }, []);
+    setComponents(data ?? []);
+
+    channel = supabase
+      .channel(`components-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "components",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          loadComponents();
+        },
+      )
+      .subscribe();
+  };
+
+  loadComponents();
+
+  return () => {
+    if (channel) {
+      supabase.removeChannel(channel);
+    }
+  };
+}, []);
 
   return (
     <ScreenContainer2>
