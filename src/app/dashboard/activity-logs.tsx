@@ -61,29 +61,20 @@ export default function ActivityLogsScreen() {
    */
  useEffect(() => {
   const loadActivityLogs = async () => {
-    console.log("Loading activity logs...");
-
     const { data, error } = await supabase
       .from("activity_logs")
       .select(
-        "act_log_id, user_id, title, description, type, timestamp"
+        "act_log_id, user_id, title, description, type, timestamp",
       )
       .order("timestamp", {
         ascending: false,
       });
 
-    console.log("Activity logs data:", data);
-    console.log("Activity logs error:", error);
-
     if (error) {
       console.error(
-        "Activity logs fetch error:",
-        error.message,
-        error.details,
-        error.hint,
-        error.code,
+        "Error loading activity logs:",
+        error,
       );
-
       return;
     }
 
@@ -95,9 +86,9 @@ export default function ActivityLogsScreen() {
 
         return {
           id: log.act_log_id,
-          type: log.type as ActivityType,
           title: log.title,
           details: log.description,
+          type: log.type as ActivityType,
           date: dateObject.toLocaleDateString(
             "en-US",
             {
@@ -117,8 +108,6 @@ export default function ActivityLogsScreen() {
         };
       },
     );
-
-    console.log("Mapped activity logs:", logs);
 
     setActivityLogs(logs);
   };
