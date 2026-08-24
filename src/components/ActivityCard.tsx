@@ -1,8 +1,11 @@
 import React from "react";
+
 import { StyleSheet, View } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 
 import AppText from "@/components/ui/AppText";
+
 import { Colors } from "@/constants/colors";
 
 export type ActivityType =
@@ -30,24 +33,30 @@ export default function ActivityCard({
   /*
    * Safety fallback
    *
-   * This prevents the component from crashing if
+   * Prevents the component from crashing if
    * activity-logs.tsx temporarily passes undefined
    * or null.
    */
-  const safeActivity: ActivityCardData = activity ?? {
-    id: "unknown",
-    title: "Activity",
-    details: "No activity details available.",
-    date: "",
-    time: "",
-    type: "info",
-  };
+  const safeActivity: ActivityCardData =
+    activity ?? {
+      id: "unknown",
+      title: "Activity",
+      details: "No activity details available.",
+      date: "",
+      time: "",
+      type: "info",
+    };
 
   /*
    * Normalize the activity type.
    *
-   * This keeps the component safe even if the database
-   * later uses "critical" instead of "error".
+   * Supports all activity types allowed by
+   * the activity_logs Supabase table:
+   *
+   * info
+   * warning
+   * error
+   * critical
    */
   const activityType: ActivityType =
     safeActivity.type === "critical"
@@ -146,7 +155,9 @@ export default function ActivityCard({
       {/* Activity Icon */}
       <View style={styles.iconContainer}>
         <Ionicons
-          name={activityIcon}
+          name={
+            activityIcon as keyof typeof Ionicons.glyphMap
+          }
           size={17}
           color={activityColor}
         />

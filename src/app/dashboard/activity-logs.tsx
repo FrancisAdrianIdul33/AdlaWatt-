@@ -1,5 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   Pressable,
   ScrollView,
@@ -11,12 +17,15 @@ import ActivityCard, {
   ActivityCardData,
   ActivityType,
 } from "@/components/ActivityCard";
+
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
+
 import { Colors } from "@/constants/colors";
+import { supabase } from "@/lib/supabase";
 
 type TimeFilter =
   | "Last Hour"
@@ -28,108 +37,12 @@ type ActivityLog = ActivityCardData & {
   timestamp: number;
 };
 
-const activityLogs: ActivityLog[] = [
-  {
-    id: "1",
-    type: "info",
-    title: "Solar Charging Started",
-    details:
-      "The solar panel is currently charging the battery using available sunlight.",
-    date: "Aug 10, 2026",
-    time: "08:42 AM",
-    timestamp: new Date(
-      "2026-08-10T08:42:00",
-    ).getTime(),
-  },
-  {
-    id: "2",
-    type: "info",
-    title: "Appliance Connected",
-    details:
-      "An electric fan was detected and added to the current power load.",
-    date: "Aug 10, 2026",
-    time: "08:35 AM",
-    timestamp: new Date(
-      "2026-08-10T08:35:00",
-    ).getTime(),
-  },
-  {
-    id: "3",
-    type: "warning",
-    title: "Battery Level Low",
-    details:
-      "The battery level has dropped below the recommended operating level.",
-    date: "Aug 10, 2026",
-    time: "07:58 AM",
-    timestamp: new Date(
-      "2026-08-10T07:58:00",
-    ).getTime(),
-  },
-  {
-    id: "4",
-    type: "info",
-    title: "Battery Level Updated",
-    details:
-      "The battery level changed from 52% to 50%.",
-    date: "Aug 10, 2026",
-    time: "07:44 AM",
-    timestamp: new Date(
-      "2026-08-10T07:44:00",
-    ).getTime(),
-  },
-  {
-    id: "5",
-    type: "warning",
-    title: "High Power Consumption",
-    details:
-      "The current appliance load is higher than the recommended level.",
-    date: "Aug 10, 2026",
-    time: "07:20 AM",
-    timestamp: new Date(
-      "2026-08-10T07:20:00",
-    ).getTime(),
-  },
-  {
-    id: "6",
-    type: "error",
-    title: "Sensor Connection Lost",
-    details:
-      "The battery temperature sensor is no longer responding.",
-    date: "Aug 10, 2026",
-    time: "06:52 AM",
-    timestamp: new Date(
-      "2026-08-10T06:52:00",
-    ).getTime(),
-  },
-  {
-    id: "7",
-    type: "info",
-    title: "System Online",
-    details:
-      "AdlaWatt successfully connected to the monitoring system.",
-    date: "Aug 10, 2026",
-    time: "06:30 AM",
-    timestamp: new Date(
-      "2026-08-10T06:30:00",
-    ).getTime(),
-  },
-  {
-    id: "8",
-    type: "error",
-    title: "Inverter Overload Detected",
-    details:
-      "The inverter detected a load that exceeded the recommended operating level.",
-    date: "Aug 09, 2026",
-    time: "09:15 PM",
-    timestamp: new Date(
-      "2026-08-09T21:15:00",
-    ).getTime(),
-  },
-];
-
 export default function ActivityLogsScreen() {
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
+
+  const [activityLogs, setActivityLogs] =
+    useState<ActivityLog[]>([]);
 
   const [timeFilter, setTimeFilter] =
     useState<TimeFilter>("Last Hour");
@@ -143,9 +56,85 @@ export default function ActivityLogsScreen() {
   const [typeDropdownVisible, setTypeDropdownVisible] =
     useState(false);
 
+  /*
+   * Load activity logs from Supabase
+   */
+ useEffect(() => {
+  const loadActivityLogs = async () => {
+    console.log("Loading activity logs...");
+
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select(
+        "act_log_id, user_id, title, description, type, timestamp"
+      )
+      .order("timestamp", {
+        ascending: false,
+      });
+
+    console.log("Activity logs data:", data);
+    console.log("Activity logs error:", error);
+
+    if (error) {
+      console.error(
+        "Activity logs fetch error:",
+        error.message,
+        error.details,
+        error.hint,
+        error.code,
+      );
+
+      return;
+    }
+
+    const logs: ActivityLog[] = (data ?? []).map(
+      (log) => {
+        const dateObject = new Date(
+          log.timestamp,
+        );
+
+        return {
+          id: log.act_log_id,
+          type: log.type as ActivityType,
+          title: log.title,
+          details: log.description,
+          date: dateObject.toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            },
+          ),
+          time: dateObject.toLocaleTimeString(
+            "en-US",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+            },
+          ),
+          timestamp: dateObject.getTime(),
+        };
+      },
+    );
+
+    console.log("Mapped activity logs:", logs);
+
+    setActivityLogs(logs);
+  };
+
+  loadActivityLogs();
+}, []);
+
+  /*
+   * Filter activity logs
+   */
   const filteredLogs = useMemo(() => {
     let filtered = [...activityLogs];
 
+    /*
+     * Activity type filter
+     */
     if (typeFilter !== "all") {
       filtered = filtered.filter(
         (activity) =>
@@ -153,9 +142,10 @@ export default function ActivityLogsScreen() {
       );
     }
 
-    const now = new Date(
-      "2026-08-10T09:00:00",
-    ).getTime();
+    /*
+     * Time filter
+     */
+    const now = Date.now();
 
     const filterDuration: Record<
       TimeFilter,
@@ -177,8 +167,15 @@ export default function ActivityLogsScreen() {
     );
 
     return filtered;
-  }, [timeFilter, typeFilter]);
+  }, [
+    activityLogs,
+    timeFilter,
+    typeFilter,
+  ]);
 
+  /*
+   * Handle time filter
+   */
   const handleTimeFilter = (
     filter: TimeFilter,
   ) => {
@@ -186,6 +183,9 @@ export default function ActivityLogsScreen() {
     setTimeDropdownVisible(false);
   };
 
+  /*
+   * Handle activity type filter
+   */
   const handleTypeFilter = (
     filter: "all" | ActivityType,
   ) => {
@@ -193,6 +193,9 @@ export default function ActivityLogsScreen() {
     setTypeDropdownVisible(false);
   };
 
+  /*
+   * Activity type label
+   */
   const getTypeLabel = () => {
     switch (typeFilter) {
       case "info":
@@ -202,13 +205,19 @@ export default function ActivityLogsScreen() {
         return "Warning";
 
       case "error":
-        return "Critical / Error";
+        return "Error";
+
+      case "critical":
+        return "Critical";
 
       default:
         return "All";
     }
   };
 
+  /*
+   * Activity type icon
+   */
   const getTypeIcon =
     (): keyof typeof Ionicons.glyphMap => {
       switch (typeFilter) {
@@ -219,6 +228,9 @@ export default function ActivityLogsScreen() {
           return "warning-outline";
 
         case "error":
+          return "alert-circle-outline";
+
+        case "critical":
           return "alert-circle-outline";
 
         default:
@@ -381,7 +393,8 @@ export default function ActivityLogsScreen() {
                 name={getTypeIcon()}
                 size={19}
                 color={
-                  typeFilter === "error"
+                  typeFilter === "error" ||
+                  typeFilter === "critical"
                     ? Colors.light.error
                     : typeFilter === "warning"
                       ? Colors.light.secondary
@@ -506,7 +519,7 @@ export default function ActivityLogsScreen() {
                   </AppText>
                 </Pressable>
 
-                {/* Critical / Error */}
+                {/* Error */}
                 <Pressable
                   onPress={() =>
                     handleTypeFilter("error")
@@ -533,7 +546,38 @@ export default function ActivityLogsScreen() {
                         styles.selectedDropdownText,
                     ]}
                   >
-                    Critical / Error
+                    Error
+                  </AppText>
+                </Pressable>
+
+                {/* Critical */}
+                <Pressable
+                  onPress={() =>
+                    handleTypeFilter("critical")
+                  }
+                  style={({ pressed }) => [
+                    styles.dropdownItem,
+                    typeFilter === "critical" &&
+                      styles.selectedDropdownItem,
+                    pressed &&
+                      styles.dropdownItemPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={18}
+                    color={Colors.light.error}
+                  />
+
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.dropdownText,
+                      typeFilter === "critical" &&
+                        styles.selectedDropdownText,
+                    ]}
+                  >
+                    Critical
                   </AppText>
                 </Pressable>
               </View>
