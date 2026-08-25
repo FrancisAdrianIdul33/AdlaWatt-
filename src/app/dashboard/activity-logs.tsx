@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 
+import EmptyState from "@/components/ui/EmptyState";
+
 import React, {
   useEffect,
   useMemo,
@@ -59,61 +61,61 @@ export default function ActivityLogsScreen() {
   /*
    * Load activity logs from Supabase
    */
- useEffect(() => {
-  const loadActivityLogs = async () => {
-    const { data, error } = await supabase
-      .from("activity_logs")
-      .select(
-        "act_log_id, user_id, title, description, type, timestamp",
-      )
-      .order("timestamp", {
-        ascending: false,
-      });
+  useEffect(() => {
+    const loadActivityLogs = async () => {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .select(
+          "act_log_id, user_id, title, description, type, timestamp",
+        )
+        .order("timestamp", {
+          ascending: false,
+        });
 
-    if (error) {
-      console.error(
-        "Error loading activity logs:",
-        error,
-      );
-      return;
-    }
-
-    const logs: ActivityLog[] = (data ?? []).map(
-      (log) => {
-        const dateObject = new Date(
-          log.timestamp,
+      if (error) {
+        console.error(
+          "Error loading activity logs:",
+          error,
         );
+        return;
+      }
 
-        return {
-          id: log.act_log_id,
-          title: log.title,
-          details: log.description,
-          type: log.type as ActivityType,
-          date: dateObject.toLocaleDateString(
-            "en-US",
-            {
-              month: "short",
-              day: "2-digit",
-              year: "numeric",
-            },
-          ),
-          time: dateObject.toLocaleTimeString(
-            "en-US",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-            },
-          ),
-          timestamp: dateObject.getTime(),
-        };
-      },
-    );
+      const logs: ActivityLog[] = (data ?? []).map(
+        (log) => {
+          const dateObject = new Date(
+            log.timestamp,
+          );
 
-    setActivityLogs(logs);
-  };
+          return {
+            id: log.act_log_id,
+            title: log.title,
+            details: log.description,
+            type: log.type as ActivityType,
+            date: dateObject.toLocaleDateString(
+              "en-US",
+              {
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+              },
+            ),
+            time: dateObject.toLocaleTimeString(
+              "en-US",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            ),
+            timestamp: dateObject.getTime(),
+          };
+        },
+      );
 
-  loadActivityLogs();
-}, []);
+      setActivityLogs(logs);
+    };
+
+    loadActivityLogs();
+  }, []);
 
   /*
    * Filter activity logs
@@ -329,9 +331,9 @@ export default function ActivityLogsScreen() {
                     style={({ pressed }) => [
                       styles.dropdownItem,
                       timeFilter === option &&
-                        styles.selectedDropdownItem,
+                      styles.selectedDropdownItem,
                       pressed &&
-                        styles.dropdownItemPressed,
+                      styles.dropdownItemPressed,
                     ]}
                   >
                     <Ionicons
@@ -353,7 +355,7 @@ export default function ActivityLogsScreen() {
                       style={[
                         styles.dropdownText,
                         timeFilter === option &&
-                          styles.selectedDropdownText,
+                        styles.selectedDropdownText,
                       ]}
                     >
                       {option}
@@ -383,7 +385,7 @@ export default function ActivityLogsScreen() {
                 size={19}
                 color={
                   typeFilter === "error" ||
-                  typeFilter === "critical"
+                    typeFilter === "critical"
                     ? Colors.light.error
                     : typeFilter === "warning"
                       ? Colors.light.secondary
@@ -419,9 +421,9 @@ export default function ActivityLogsScreen() {
                   style={({ pressed }) => [
                     styles.dropdownItem,
                     typeFilter === "all" &&
-                      styles.selectedDropdownItem,
+                    styles.selectedDropdownItem,
                     pressed &&
-                      styles.dropdownItemPressed,
+                    styles.dropdownItemPressed,
                   ]}
                 >
                   <Ionicons
@@ -439,7 +441,7 @@ export default function ActivityLogsScreen() {
                     style={[
                       styles.dropdownText,
                       typeFilter === "all" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     All
@@ -454,9 +456,9 @@ export default function ActivityLogsScreen() {
                   style={({ pressed }) => [
                     styles.dropdownItem,
                     typeFilter === "info" &&
-                      styles.selectedDropdownItem,
+                    styles.selectedDropdownItem,
                     pressed &&
-                      styles.dropdownItemPressed,
+                    styles.dropdownItemPressed,
                   ]}
                 >
                   <Ionicons
@@ -470,7 +472,7 @@ export default function ActivityLogsScreen() {
                     style={[
                       styles.dropdownText,
                       typeFilter === "info" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     Info
@@ -485,9 +487,9 @@ export default function ActivityLogsScreen() {
                   style={({ pressed }) => [
                     styles.dropdownItem,
                     typeFilter === "warning" &&
-                      styles.selectedDropdownItem,
+                    styles.selectedDropdownItem,
                     pressed &&
-                      styles.dropdownItemPressed,
+                    styles.dropdownItemPressed,
                   ]}
                 >
                   <Ionicons
@@ -501,7 +503,7 @@ export default function ActivityLogsScreen() {
                     style={[
                       styles.dropdownText,
                       typeFilter === "warning" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     Warning
@@ -516,9 +518,9 @@ export default function ActivityLogsScreen() {
                   style={({ pressed }) => [
                     styles.dropdownItem,
                     typeFilter === "error" &&
-                      styles.selectedDropdownItem,
+                    styles.selectedDropdownItem,
                     pressed &&
-                      styles.dropdownItemPressed,
+                    styles.dropdownItemPressed,
                   ]}
                 >
                   <Ionicons
@@ -532,7 +534,7 @@ export default function ActivityLogsScreen() {
                     style={[
                       styles.dropdownText,
                       typeFilter === "error" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     Error
@@ -547,9 +549,9 @@ export default function ActivityLogsScreen() {
                   style={({ pressed }) => [
                     styles.dropdownItem,
                     typeFilter === "critical" &&
-                      styles.selectedDropdownItem,
+                    styles.selectedDropdownItem,
                     pressed &&
-                      styles.dropdownItemPressed,
+                    styles.dropdownItemPressed,
                   ]}
                 >
                   <Ionicons
@@ -563,7 +565,7 @@ export default function ActivityLogsScreen() {
                     style={[
                       styles.dropdownText,
                       typeFilter === "critical" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     Critical
@@ -584,28 +586,11 @@ export default function ActivityLogsScreen() {
               />
             ))
           ) : (
-            <View style={styles.emptyState}>
-              <Ionicons
-                name="document-text-outline"
-                size={42}
-                color={Colors.light.textSecondary}
-              />
-
-              <AppText
-                variant="body"
-                style={styles.emptyTitle}
-              >
-                No Activity Logs
-              </AppText>
-
-              <AppText
-                variant="caption"
-                style={styles.emptyDescription}
-              >
-                No activities match the selected
-                filters.
-              </AppText>
-            </View>
+            <EmptyState
+              icon="document-text-outline"
+              title="No Activity Logs"
+              description="No activities match the selected filters."
+            />
           )}
         </View>
 
@@ -831,43 +816,5 @@ const styles = StyleSheet.create({
     gap: dashboardDimensions.activityGap,
 
     zIndex: 1,
-  },
-
-  emptyState: {
-    width: "100%",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    backgroundColor:
-      Colors.glass.white,
-
-    borderWidth: 3,
-
-    borderColor: Colors.light.border,
-
-    borderRadius:
-      dashboardDimensions.cardRadius,
-
-    paddingVertical: 35,
-
-    paddingHorizontal: 20,
-  },
-
-  emptyTitle: {
-    color: "#000000",
-
-    fontWeight: "700",
-
-    marginTop: 10,
-  },
-
-  emptyDescription: {
-    color: Colors.light.textSecondary,
-
-    textAlign: "center",
-
-    marginTop: 5,
   },
 });
