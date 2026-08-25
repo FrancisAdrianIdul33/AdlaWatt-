@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
 import AppLogo from "@/components/ui/AppLogo";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
+import { supabase } from "@/lib/supabase";
 
 interface NavBarProps {
   onNotificationPress?: () => void;
@@ -21,6 +22,47 @@ export default function NavBar({
   onNotificationPress,
   onMenuPress,
 }: NavBarProps) {
+  const [hasUnreadNotifications, setHasUnreadNotifications] =
+    useState(false);
+
+  /*
+   * Check if the authenticated user has
+   * at least one unread notification.
+   */
+  useEffect(() => {
+    const checkUnreadNotifications = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setHasUnreadNotifications(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("notif_id")
+        .eq("user_id", user.id)
+        .eq("read", false)
+        .limit(1);
+
+      if (error) {
+        console.error(
+          "Error checking unread notifications:",
+          error,
+        );
+        return;
+      }
+
+      setHasUnreadNotifications(
+        (data?.length ?? 0) > 0,
+      );
+    };
+
+    checkUnreadNotifications();
+  }, []);
+
   const handleNotificationPress = () => {
     if (onNotificationPress) {
       onNotificationPress();
@@ -64,7 +106,11 @@ export default function NavBar({
               color={Colors.light.text}
             />
 
-            <View style={navBarStyles.notificationDot} />
+            {hasUnreadNotifications && (
+              <View
+                style={navBarStyles.notificationDot}
+              />
+            )}
           </Pressable>
 
           {/* Menu */}
