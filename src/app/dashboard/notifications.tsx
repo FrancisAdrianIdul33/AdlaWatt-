@@ -17,6 +17,7 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
+import EmptyState from "@/components/ui/EmptyState";
 
 import NotificationCard, {
   NotificationCardData,
@@ -631,27 +632,13 @@ export default function NotificationsScreen() {
           </View>
         )}
 
-        {/* Empty State */}
-        {currentPageNotifications.length ===
-          0 && (
-            <View style={styles.emptyState}>
-              <Ionicons
-                name="notifications-off-outline"
-                size={34}
-                color={
-                  Colors.light.textSecondary
-                }
-              />
-
-              <AppText
-                variant="caption"
-                style={styles.emptyStateText}
-              >
-                No notifications found for
-                the selected filters.
-              </AppText>
-            </View>
-          )}
+        {currentPageNotifications.length === 0 && (
+          <EmptyState
+            icon="notifications-off-outline"
+            title="No Notifications"
+            description="No notifications found for the selected filters."
+          />
+        )}
 
         {/* Pagination */}
         {filteredNotifications.length >
@@ -1000,24 +987,6 @@ const styles = StyleSheet.create({
     width: "100%",
 
     gap: 12,
-  },
-
-  /* Empty State */
-
-  emptyState: {
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    paddingVertical: 40,
-
-    gap: 8,
-  },
-
-  emptyStateText: {
-    color: Colors.light.textSecondary,
-
-    textAlign: "center",
   },
 
   /* Pagination */
