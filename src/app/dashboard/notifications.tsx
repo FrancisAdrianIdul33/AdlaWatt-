@@ -1,5 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   Pressable,
   ScrollView,
@@ -11,12 +17,15 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
+
 import NotificationCard, {
   NotificationCardData,
   NotificationType,
 } from "@/components/NotificationCard";
+
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+import { supabase } from "@/lib/supabase";
 
 type TimeFilter =
   | "Last Hour"
@@ -24,9 +33,16 @@ type TimeFilter =
   | "This Week"
   | "This Year";
 
+type NotificationData = NotificationCardData & {
+  timestamp: number;
+};
+
 export default function NotificationsScreen() {
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
+
+  const [notifications, setNotifications] =
+    useState<NotificationData[]>([]);
 
   const [timeFilter, setTimeFilter] =
     useState<TimeFilter>("Today");
@@ -43,212 +59,96 @@ export default function NotificationsScreen() {
   const [currentPage, setCurrentPage] = useState(1);
 
   /*
-   * Static notification data for development.
-   *
-   * The notifications are arranged from newest
-   * to oldest.
-   *
-   * Later, this can be replaced with data
-   * fetched from the database.
+   * Load notifications from Supabase
    */
-  const [notifications, setNotifications] =
-    useState<NotificationCardData[]>([
-      {
-        id: "1",
-        title: "Battery Level Low",
-        message:
-          "The battery level has dropped below the recommended operating level.",
-        date: "Aug 10, 2026",
-        time: "10:42 AM",
-        type: "alert",
-        isRead: false,
-      },
-      {
-        id: "2",
-        title: "Battery Temperature Warning",
-        message:
-          "The battery temperature is approaching the recommended operating limit.",
-        date: "Aug 10, 2026",
-        time: "10:35 AM",
-        type: "alert",
-        isRead: false,
-      },
-      {
-        id: "3",
-        title: "Solar Input Detected",
-        message:
-          "Solar energy is currently being received by the system.",
-        date: "Aug 10, 2026",
-        time: "10:28 AM",
-        type: "normal",
-        isRead: false,
-      },
-      {
-        id: "4",
-        title: "System Online",
-        message:
-          "AdlaWatt is connected and monitoring the system.",
-        date: "Aug 10, 2026",
-        time: "10:15 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "5",
-        title: "High Power Consumption",
-        message:
-          "The connected appliances are currently consuming more power than usual.",
-        date: "Aug 10, 2026",
-        time: "9:58 AM",
-        type: "alert",
-        isRead: true,
-      },
-      {
-        id: "6",
-        title: "Appliance Connected",
-        message:
-          "An appliance has been connected to the AdlaWatt system.",
-        date: "Aug 10, 2026",
-        time: "9:42 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "7",
-        title: "Solar Charging Started",
-        message:
-          "The solar panel has started charging the battery.",
-        date: "Aug 10, 2026",
-        time: "9:12 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "8",
-        title: "System Monitoring Active",
-        message:
-          "Real-time system monitoring is currently active.",
-        date: "Aug 10, 2026",
-        time: "8:55 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "9",
-        title: "Inverter Overload Warning",
-        message:
-          "The inverter detected a load that is approaching its operating limit.",
-        date: "Aug 10, 2026",
-        time: "8:41 AM",
-        type: "alert",
-        isRead: true,
-      },
-      {
-        id: "10",
-        title: "Battery Fully Charged",
-        message:
-          "The battery has reached its current charging capacity.",
-        date: "Aug 10, 2026",
-        time: "8:30 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "11",
-        title: "Energy Monitoring Updated",
-        message:
-          "The latest energy consumption data has been recorded.",
-        date: "Aug 10, 2026",
-        time: "8:18 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "12",
-        title: "Sensor Connection Warning",
-        message:
-          "One of the system sensors may have temporarily lost connection.",
-        date: "Aug 10, 2026",
-        time: "8:05 AM",
-        type: "alert",
-        isRead: true,
-      },
-      {
-        id: "13",
-        title: "Appliance Recommendation Updated",
-        message:
-          "The system has updated appliance recommendations based on battery capacity.",
-        date: "Aug 10, 2026",
-        time: "7:48 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "14",
-        title: "Energy Consumption Recorded",
-        message:
-          "The system successfully recorded the latest appliance energy consumption.",
-        date: "Aug 10, 2026",
-        time: "7:32 AM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "15",
-        title: "Battery Discharging",
-        message:
-          "The battery is currently supplying power to connected appliances.",
-        date: "Aug 9, 2026",
-        time: "11:42 PM",
-        type: "normal",
-        isRead: true,
-      },
-      {
-        id: "16",
-        title: "Battery Level Critical",
-        message:
-          "The battery level is critically low. Consider disconnecting non-essential appliances.",
-        date: "Aug 9, 2026",
-        time: "11:15 PM",
-        type: "alert",
-        isRead: true,
-      },
-      {
-        id: "17",
-        title: "System Backup Activated",
-        message:
-          "AdlaWatt has switched to battery backup operation.",
-        date: "Aug 9, 2026",
-        time: "10:45 PM",
-        type: "normal",
-        isRead: true,
-      },
-    ]);
+  useEffect(() => {
+    const loadNotifications = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.error("No authenticated user found.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .select(
+          "notif_id, user_id, title, description, type, read, timestamp",
+        )
+        .eq("user_id", user.id)
+        .order("timestamp", {
+          ascending: false,
+        });
+
+      if (error) {
+        console.error(
+          "Error loading notifications:",
+          error,
+        );
+        return;
+      }
+
+      const formattedNotifications: NotificationData[] =
+        (data ?? []).map((notification) => {
+          const dateObject = new Date(
+            notification.timestamp,
+          );
+
+          return {
+            id: notification.notif_id,
+            title: notification.title,
+            message: notification.description,
+
+            date: dateObject.toLocaleDateString(
+              "en-US",
+              {
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+              },
+            ),
+
+            time: dateObject.toLocaleTimeString(
+              "en-US",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            ),
+
+            type:
+              notification.type as NotificationType,
+
+            isRead: notification.read,
+
+            timestamp: dateObject.getTime(),
+          };
+        });
+
+      setNotifications(formattedNotifications);
+    };
+
+    loadNotifications();
+  }, []);
 
   /*
-   * Total notification count.
-   *
-   * This represents ALL notifications and is
-   * independent of the active filters.
-   *
-   * When connected to the database, this value
-   * should come from the database count.
+   * Total notification count
    */
-  const totalNotifications = notifications.length;
+  const totalNotifications =
+    notifications.length;
 
   const notificationsPerPage = 15;
 
   /*
-   * Apply filters.
-   *
-   * Filtering does not affect the total
-   * notification count above.
+   * Apply filters
    */
   const filteredNotifications = useMemo(() => {
     let result = [...notifications];
 
     /*
-     * Notification type
+     * Notification type filter
      */
     if (typeFilter !== "All") {
       result = result.filter(
@@ -259,35 +159,59 @@ export default function NotificationsScreen() {
 
     /*
      * Time filter
-     *
-     * This is temporary development logic.
-     * When connected to the database, the
-     * actual notification timestamps should
-     * be used.
      */
-    if (timeFilter === "Last Hour") {
-      result = result.slice(0, 4);
-    } else if (timeFilter === "Today") {
+    const now = new Date();
+
+    if (timeFilter === "Today") {
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+
       result = result.filter(
         (notification) =>
-          notification.date === "Aug 10, 2026",
+          notification.timestamp >=
+          startOfDay.getTime(),
+      );
+    } else if (timeFilter === "Last Hour") {
+      result = result.filter(
+        (notification) =>
+          notification.timestamp >=
+          now.getTime() - 60 * 60 * 1000,
       );
     } else if (timeFilter === "This Week") {
-      result = result;
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(
+        now.getDate() - now.getDay(),
+      );
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      result = result.filter(
+        (notification) =>
+          notification.timestamp >=
+          startOfWeek.getTime(),
+      );
     } else if (timeFilter === "This Year") {
-      result = result;
+      const startOfYear = new Date(
+        now.getFullYear(),
+        0,
+        1,
+      );
+
+      result = result.filter(
+        (notification) =>
+          notification.timestamp >=
+          startOfYear.getTime(),
+      );
     }
 
     /*
-     * Newest first.
-     *
-     * The current static data is already ordered
-     * this way.
-     *
-     * Database implementation should eventually
-     * sort using the notification timestamp.
+     * Newest first
      */
-    return result;
+    return result.sort(
+      (a, b) => b.timestamp - a.timestamp,
+    );
   }, [
     notifications,
     timeFilter,
@@ -301,7 +225,7 @@ export default function NotificationsScreen() {
     1,
     Math.ceil(
       filteredNotifications.length /
-        notificationsPerPage,
+      notificationsPerPage,
     ),
   );
 
@@ -319,8 +243,8 @@ export default function NotificationsScreen() {
     );
 
   /*
-   * Divide the current page into Recent
-   * and Earlier notifications.
+   * Divide notifications into Recent
+   * and Earlier
    */
   const recentNotifications =
     currentPageNotifications.filter(
@@ -357,11 +281,36 @@ export default function NotificationsScreen() {
   };
 
   /*
-   * Mark all notifications as read.
-   *
-   * Later this should also update the database.
+   * Mark all notifications as read
    */
-  const handleMarkAsRead = () => {
+  const handleMarkAsRead = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error("No authenticated user found.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+
+    if (error) {
+      console.error(
+        "Error marking notifications as read:",
+        error,
+      );
+      return;
+    }
+
+    /*
+     * Update local state after successful
+     * database update.
+     */
     setNotifications((current) =>
       current.map((notification) => ({
         ...notification,
@@ -474,7 +423,7 @@ export default function NotificationsScreen() {
                       style={[
                         styles.dropdownItemText,
                         timeFilter === option &&
-                          styles.selectedDropdownText,
+                        styles.selectedDropdownText,
                       ]}
                     >
                       {option}
@@ -546,7 +495,7 @@ export default function NotificationsScreen() {
                     style={[
                       styles.dropdownItemText,
                       typeFilter === "All" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     All
@@ -571,7 +520,7 @@ export default function NotificationsScreen() {
                     style={[
                       styles.dropdownItemText,
                       typeFilter === "normal" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     Normal
@@ -596,7 +545,7 @@ export default function NotificationsScreen() {
                     style={[
                       styles.dropdownItemText,
                       typeFilter === "alert" &&
-                        styles.selectedDropdownText,
+                      styles.selectedDropdownText,
                     ]}
                   >
                     Alert
@@ -655,7 +604,7 @@ export default function NotificationsScreen() {
             style={[
               styles.section,
               recentNotifications.length > 0 &&
-                styles.earlierSection,
+              styles.earlierSection,
             ]}
           >
             <AppText
@@ -681,111 +630,111 @@ export default function NotificationsScreen() {
         {/* Empty State */}
         {currentPageNotifications.length ===
           0 && (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="notifications-off-outline"
-              size={34}
-              color={
-                Colors.light.textSecondary
-              }
-            />
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="notifications-off-outline"
+                size={34}
+                color={
+                  Colors.light.textSecondary
+                }
+              />
 
-            <AppText
-              variant="caption"
-              style={styles.emptyStateText}
-            >
-              No notifications found for
-              the selected filters.
-            </AppText>
-          </View>
-        )}
+              <AppText
+                variant="caption"
+                style={styles.emptyStateText}
+              >
+                No notifications found for
+                the selected filters.
+              </AppText>
+            </View>
+          )}
 
         {/* Pagination */}
         {filteredNotifications.length >
           notificationsPerPage && (
-          <View style={styles.pagination}>
-            {/* Previous */}
-            <Pressable
-              style={[
-                styles.pageButton,
-                currentPage === 1 &&
-                  styles.disabledPageButton,
-              ]}
-              disabled={currentPage === 1}
-              onPress={() =>
-                setCurrentPage(
-                  currentPage - 1,
-                )
-              }
-            >
-              <Ionicons
-                name="chevron-back-outline"
-                size={18}
-                color={
-                  currentPage === 1
-                    ? Colors.light.textSecondary
-                    : Colors.light.primary
-                }
-              />
-            </Pressable>
-
-            {/* Page Numbers */}
-            {Array.from(
-              { length: totalPages },
-              (_, index) => index + 1,
-            ).map((page) => (
+            <View style={styles.pagination}>
+              {/* Previous */}
               <Pressable
-                key={page}
                 style={[
-                  styles.pageNumber,
-                  currentPage === page &&
-                    styles.activePageNumber,
+                  styles.pageButton,
+                  currentPage === 1 &&
+                  styles.disabledPageButton,
                 ]}
+                disabled={currentPage === 1}
                 onPress={() =>
-                  setCurrentPage(page)
+                  setCurrentPage(
+                    currentPage - 1,
+                  )
                 }
               >
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.pageNumberText,
-                    currentPage === page &&
-                      styles.activePageNumberText,
-                  ]}
-                >
-                  {page}
-                </AppText>
+                <Ionicons
+                  name="chevron-back-outline"
+                  size={18}
+                  color={
+                    currentPage === 1
+                      ? Colors.light.textSecondary
+                      : Colors.light.primary
+                  }
+                />
               </Pressable>
-            ))}
 
-            {/* Next */}
-            <Pressable
-              style={[
-                styles.pageButton,
-                currentPage === totalPages &&
+              {/* Page Numbers */}
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1,
+              ).map((page) => (
+                <Pressable
+                  key={page}
+                  style={[
+                    styles.pageNumber,
+                    currentPage === page &&
+                    styles.activePageNumber,
+                  ]}
+                  onPress={() =>
+                    setCurrentPage(page)
+                  }
+                >
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.pageNumberText,
+                      currentPage === page &&
+                      styles.activePageNumberText,
+                    ]}
+                  >
+                    {page}
+                  </AppText>
+                </Pressable>
+              ))}
+
+              {/* Next */}
+              <Pressable
+                style={[
+                  styles.pageButton,
+                  currentPage === totalPages &&
                   styles.disabledPageButton,
-              ]}
-              disabled={
-                currentPage === totalPages
-              }
-              onPress={() =>
-                setCurrentPage(
-                  currentPage + 1,
-                )
-              }
-            >
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color={
+                ]}
+                disabled={
                   currentPage === totalPages
-                    ? Colors.light.textSecondary
-                    : Colors.light.primary
                 }
-              />
-            </Pressable>
-          </View>
-        )}
+                onPress={() =>
+                  setCurrentPage(
+                    currentPage + 1,
+                  )
+                }
+              >
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={18}
+                  color={
+                    currentPage === totalPages
+                      ? Colors.light.textSecondary
+                      : Colors.light.primary
+                  }
+                />
+              </Pressable>
+            </View>
+          )}
 
         <Copyright />
       </ScrollView>
