@@ -30,6 +30,7 @@ import { Colors } from "@/constants/colors";
 import { supabase } from "@/lib/supabase";
 
 type TimeFilter =
+  | "All"
   | "Last Hour"
   | "Today"
   | "This Week"
@@ -47,7 +48,7 @@ export default function ActivityLogsScreen() {
     useState<ActivityLog[]>([]);
 
   const [timeFilter, setTimeFilter] =
-    useState<TimeFilter>("Last Hour");
+    useState<TimeFilter>("All");
 
   const [typeFilter, setTypeFilter] =
     useState<"all" | ActivityType>("all");
@@ -58,15 +59,19 @@ export default function ActivityLogsScreen() {
   const [typeDropdownVisible, setTypeDropdownVisible] =
     useState(false);
 
+  const [totalActivityLogs, setTotalActivityLogs] =
+    useState(0);
+
   /*
    * Load activity logs from Supabase
    */
   useEffect(() => {
     const loadActivityLogs = async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("activity_logs")
         .select(
           "act_log_id, user_id, title, description, type, timestamp",
+          { count: "exact" },
         )
         .order("timestamp", {
           ascending: false,
@@ -79,6 +84,8 @@ export default function ActivityLogsScreen() {
         );
         return;
       }
+
+      setTotalActivityLogs(count ?? 0);
 
       const logs: ActivityLog[] = (data ?? []).map(
         (log) => {
@@ -120,26 +127,22 @@ export default function ActivityLogsScreen() {
   /*
    * Filter activity logs
    */
-  const filteredLogs = useMemo(() => {
-    let filtered = [...activityLogs];
+const filteredLogs = useMemo<ActivityLog[]>(() => {
+  let filtered = [...activityLogs];
 
-    /*
-     * Activity type filter
-     */
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(
-        (activity) =>
-          activity.type === typeFilter,
-      );
-    }
+  // Activity type filter
+  if (typeFilter !== "all") {
+    filtered = filtered.filter(
+      (activity) => activity.type === typeFilter,
+    );
+  }
 
-    /*
-     * Time filter
-     */
-    const now = Date.now();
+  // Time filter
+  const now = Date.now();
 
+  if (timeFilter !== "All") {
     const filterDuration: Record<
-      TimeFilter,
+      Exclude<TimeFilter, "All">,
       number
     > = {
       "Last Hour": 60 * 60 * 1000,
@@ -156,195 +159,277 @@ export default function ActivityLogsScreen() {
         activity.timestamp >= minimumTimestamp &&
         activity.timestamp <= now,
     );
+  }
 
-    return filtered;
-  }, [
-    activityLogs,
-    timeFilter,
-    typeFilter,
-  ]);
+  return filtered;
+}, [activityLogs, timeFilter, typeFilter]);
+    /*
+     * Handle time filter
+     */
+    const handleTimeFilter = (
+      filter: TimeFilter,
+    ) => {
+      setTimeFilter(filter);
+      setTimeDropdownVisible(false);
+    };
 
-  /*
-   * Handle time filter
-   */
-  const handleTimeFilter = (
-    filter: TimeFilter,
-  ) => {
-    setTimeFilter(filter);
-    setTimeDropdownVisible(false);
-  };
+    /*
+     * Handle activity type filter
+     */
+    const handleTypeFilter = (
+      filter: "all" | ActivityType,
+    ) => {
+      setTypeFilter(filter);
+      setTypeDropdownVisible(false);
+    };
 
-  /*
-   * Handle activity type filter
-   */
-  const handleTypeFilter = (
-    filter: "all" | ActivityType,
-  ) => {
-    setTypeFilter(filter);
-    setTypeDropdownVisible(false);
-  };
-
-  /*
-   * Activity type label
-   */
-  const getTypeLabel = () => {
-    switch (typeFilter) {
-      case "info":
-        return "Info";
-
-      case "warning":
-        return "Warning";
-
-      case "error":
-        return "Error";
-
-      case "critical":
-        return "Critical";
-
-      default:
-        return "All";
-    }
-  };
-
-  /*
-   * Activity type icon
-   */
-  const getTypeIcon =
-    (): keyof typeof Ionicons.glyphMap => {
+    /*
+     * Activity type label
+     */
+    const getTypeLabel = () => {
       switch (typeFilter) {
         case "info":
-          return "information-circle-outline";
+          return "Info";
 
         case "warning":
-          return "warning-outline";
+          return "Warning";
 
         case "error":
-          return "alert-circle-outline";
+          return "Error";
 
         case "critical":
-          return "alert-circle-outline";
+          return "Critical";
 
         default:
-          return "list-outline";
+          return "All";
       }
     };
 
-  return (
-    <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
+    /*
+     * Activity type icon
+     */
+    const getTypeIcon =
+      (): keyof typeof Ionicons.glyphMap => {
+        switch (typeFilter) {
+          case "info":
+            return "information-circle-outline";
+
+          case "warning":
+            return "warning-outline";
+
+          case "error":
+            return "alert-circle-outline";
+
+          case "critical":
+            return "alert-circle-outline";
+
+          default:
+            return "list-outline";
         }
-      />
+      };
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.headerCard}>
-          <AppText
-            variant="heading"
-            style={styles.title}
-          >
-            Activity Logs
-          </AppText>
+    return (
+      <ScreenContainer2>
+        <NavBar
+          onMenuPress={() =>
+            setSidebarVisible(true)
+          }
+        />
 
-          <AppText
-            variant="caption"
-            style={styles.subtitle}
-          >
-            System activity and appliance events will
-            appear here.
-          </AppText>
-        </View>
-
-        {/* Total Activity Logs */}
-        <View style={styles.totalContainer}>
-          <AppText
-            variant="caption"
-            style={styles.totalLabel}
-          >
-            Total Activity Logs:{" "}
-            <AppText style={styles.totalValue}>
-              {filteredLogs.length}
-            </AppText>
-          </AppText>
-        </View>
-
-        {/* Filters */}
-        <View style={styles.filterRow}>
-          {/* Time Filter */}
-          <View style={styles.filterWrapper}>
-            <Pressable
-              onPress={() => {
-                setTimeDropdownVisible(
-                  !timeDropdownVisible,
-                );
-                setTypeDropdownVisible(false);
-              }}
-              style={({ pressed }) => [
-                styles.filterButton,
-                pressed && styles.buttonPressed,
-              ]}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerCard}>
+            <AppText
+              variant="heading"
+              style={styles.title}
             >
-              <Ionicons
-                name="time-outline"
-                size={19}
-                color={Colors.light.primary}
-              />
+              Activity Logs
+            </AppText>
 
-              <AppText
-                variant="caption"
-                style={styles.filterText}
-              >
-                {timeFilter}
+            <AppText
+              variant="caption"
+              style={styles.subtitle}
+            >
+              System activity and appliance events will
+              appear here.
+            </AppText>
+          </View>
+
+          {/* Total Activity Logs */}
+          <View style={styles.totalContainer}>
+            <AppText
+              variant="caption"
+              style={styles.totalLabel}
+            >
+              Total Activity Logs:{" "}
+              <AppText style={styles.totalValue}>
+                {totalActivityLogs}
               </AppText>
+            </AppText>
+          </View>
 
-              <Ionicons
-                name={
-                  timeDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
-                size={18}
-                color={Colors.light.text}
-              />
-            </Pressable>
+          {/* Filters */}
+          <View style={styles.filterRow}>
+            {/* Time Filter */}
+            <View style={styles.filterWrapper}>
+              <Pressable
+                onPress={() => {
+                  setTimeDropdownVisible(
+                    !timeDropdownVisible,
+                  );
+                  setTypeDropdownVisible(false);
+                }}
+                style={({ pressed }) => [
+                  styles.filterButton,
+                  pressed && styles.buttonPressed,
+                ]}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={19}
+                  color={Colors.light.primary}
+                />
 
-            {timeDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "Last Hour",
-                    "Today",
-                    "This Week",
-                    "This Year",
-                  ] as TimeFilter[]
-                ).map((option) => (
+                <AppText
+                  variant="caption"
+                  style={styles.filterText}
+                >
+                  {timeFilter}
+                </AppText>
+
+                <Ionicons
+                  name={
+                    timeDropdownVisible
+                      ? "chevron-up-outline"
+                      : "chevron-down-outline"
+                  }
+                  size={18}
+                  color={Colors.light.text}
+                />
+              </Pressable>
+
+              {timeDropdownVisible && (
+                <View style={styles.dropdown}>
+                  {(
+                    [
+                      "Last Hour",
+                      "Today",
+                      "This Week",
+                      "This Year",
+                    ] as TimeFilter[]
+                  ).map((option) => (
+                    <Pressable
+                      key={option}
+                      onPress={() =>
+                        handleTimeFilter(option)
+                      }
+                      style={({ pressed }) => [
+                        styles.dropdownItem,
+                        timeFilter === option &&
+                        styles.selectedDropdownItem,
+                        pressed &&
+                        styles.dropdownItemPressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          option === "Last Hour"
+                            ? "time-outline"
+                            : "calendar-outline"
+                        }
+                        size={18}
+                        color={
+                          timeFilter === option
+                            ? Colors.light.primary
+                            : Colors.light.textSecondary
+                        }
+                      />
+
+                      <AppText
+                        variant="caption"
+                        style={[
+                          styles.dropdownText,
+                          timeFilter === option &&
+                          styles.selectedDropdownText,
+                        ]}
+                      >
+                        {option}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* Activity Type Filter */}
+            <View style={styles.filterWrapper}>
+              <Pressable
+                onPress={() => {
+                  setTypeDropdownVisible(
+                    !typeDropdownVisible,
+                  );
+                  setTimeDropdownVisible(false);
+                }}
+                style={({ pressed }) => [
+                  styles.filterButton,
+                  pressed && styles.buttonPressed,
+                ]}
+              >
+                <Ionicons
+                  name={getTypeIcon()}
+                  size={19}
+                  color={
+                    typeFilter === "error" ||
+                      typeFilter === "critical"
+                      ? Colors.light.error
+                      : typeFilter === "warning"
+                        ? Colors.light.secondary
+                        : Colors.light.primary
+                  }
+                />
+
+                <AppText
+                  variant="caption"
+                  style={styles.filterText}
+                >
+                  {getTypeLabel()}
+                </AppText>
+
+                <Ionicons
+                  name={
+                    typeDropdownVisible
+                      ? "chevron-up-outline"
+                      : "chevron-down-outline"
+                  }
+                  size={18}
+                  color={Colors.light.text}
+                />
+              </Pressable>
+
+              {typeDropdownVisible && (
+                <View style={styles.dropdown}>
+                  {/* All */}
                   <Pressable
-                    key={option}
                     onPress={() =>
-                      handleTimeFilter(option)
+                      handleTypeFilter("all")
                     }
                     style={({ pressed }) => [
                       styles.dropdownItem,
-                      timeFilter === option &&
+                      typeFilter === "all" &&
                       styles.selectedDropdownItem,
                       pressed &&
                       styles.dropdownItemPressed,
                     ]}
                   >
                     <Ionicons
-                      name={
-                        option === "Last Hour"
-                          ? "time-outline"
-                          : "calendar-outline"
-                      }
+                      name="list-outline"
                       size={18}
                       color={
-                        timeFilter === option
+                        typeFilter === "all"
                           ? Colors.light.primary
                           : Colors.light.textSecondary
                       }
@@ -354,467 +439,382 @@ export default function ActivityLogsScreen() {
                       variant="caption"
                       style={[
                         styles.dropdownText,
-                        timeFilter === option &&
+                        typeFilter === "all" &&
                         styles.selectedDropdownText,
                       ]}
                     >
-                      {option}
+                      All
                     </AppText>
                   </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
 
-          {/* Activity Type Filter */}
-          <View style={styles.filterWrapper}>
-            <Pressable
-              onPress={() => {
-                setTypeDropdownVisible(
-                  !typeDropdownVisible,
-                );
-                setTimeDropdownVisible(false);
-              }}
-              style={({ pressed }) => [
-                styles.filterButton,
-                pressed && styles.buttonPressed,
-              ]}
-            >
-              <Ionicons
-                name={getTypeIcon()}
-                size={19}
-                color={
-                  typeFilter === "error" ||
-                    typeFilter === "critical"
-                    ? Colors.light.error
-                    : typeFilter === "warning"
-                      ? Colors.light.secondary
-                      : Colors.light.primary
-                }
-              />
-
-              <AppText
-                variant="caption"
-                style={styles.filterText}
-              >
-                {getTypeLabel()}
-              </AppText>
-
-              <Ionicons
-                name={
-                  typeDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
-                size={18}
-                color={Colors.light.text}
-              />
-            </Pressable>
-
-            {typeDropdownVisible && (
-              <View style={styles.dropdown}>
-                {/* All */}
-                <Pressable
-                  onPress={() =>
-                    handleTypeFilter("all")
-                  }
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    typeFilter === "all" &&
-                    styles.selectedDropdownItem,
-                    pressed &&
-                    styles.dropdownItemPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="list-outline"
-                    size={18}
-                    color={
-                      typeFilter === "all"
-                        ? Colors.light.primary
-                        : Colors.light.textSecondary
+                  {/* Info */}
+                  <Pressable
+                    onPress={() =>
+                      handleTypeFilter("info")
                     }
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownText,
-                      typeFilter === "all" &&
-                      styles.selectedDropdownText,
-                    ]}
-                  >
-                    All
-                  </AppText>
-                </Pressable>
-
-                {/* Info */}
-                <Pressable
-                  onPress={() =>
-                    handleTypeFilter("info")
-                  }
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    typeFilter === "info" &&
-                    styles.selectedDropdownItem,
-                    pressed &&
-                    styles.dropdownItemPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={18}
-                    color={Colors.light.primary}
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownText,
+                    style={({ pressed }) => [
+                      styles.dropdownItem,
                       typeFilter === "info" &&
-                      styles.selectedDropdownText,
+                      styles.selectedDropdownItem,
+                      pressed &&
+                      styles.dropdownItemPressed,
                     ]}
                   >
-                    Info
-                  </AppText>
-                </Pressable>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={18}
+                      color={Colors.light.primary}
+                    />
 
-                {/* Warning */}
-                <Pressable
-                  onPress={() =>
-                    handleTypeFilter("warning")
-                  }
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    typeFilter === "warning" &&
-                    styles.selectedDropdownItem,
-                    pressed &&
-                    styles.dropdownItemPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="warning-outline"
-                    size={18}
-                    color={Colors.light.secondary}
-                  />
+                    <AppText
+                      variant="caption"
+                      style={[
+                        styles.dropdownText,
+                        typeFilter === "info" &&
+                        styles.selectedDropdownText,
+                      ]}
+                    >
+                      Info
+                    </AppText>
+                  </Pressable>
 
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownText,
+                  {/* Warning */}
+                  <Pressable
+                    onPress={() =>
+                      handleTypeFilter("warning")
+                    }
+                    style={({ pressed }) => [
+                      styles.dropdownItem,
                       typeFilter === "warning" &&
-                      styles.selectedDropdownText,
+                      styles.selectedDropdownItem,
+                      pressed &&
+                      styles.dropdownItemPressed,
                     ]}
                   >
-                    Warning
-                  </AppText>
-                </Pressable>
+                    <Ionicons
+                      name="warning-outline"
+                      size={18}
+                      color={Colors.light.secondary}
+                    />
 
-                {/* Error */}
-                <Pressable
-                  onPress={() =>
-                    handleTypeFilter("error")
-                  }
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    typeFilter === "error" &&
-                    styles.selectedDropdownItem,
-                    pressed &&
-                    styles.dropdownItemPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={18}
-                    color={Colors.light.error}
-                  />
+                    <AppText
+                      variant="caption"
+                      style={[
+                        styles.dropdownText,
+                        typeFilter === "warning" &&
+                        styles.selectedDropdownText,
+                      ]}
+                    >
+                      Warning
+                    </AppText>
+                  </Pressable>
 
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownText,
+                  {/* Error */}
+                  <Pressable
+                    onPress={() =>
+                      handleTypeFilter("error")
+                    }
+                    style={({ pressed }) => [
+                      styles.dropdownItem,
                       typeFilter === "error" &&
-                      styles.selectedDropdownText,
+                      styles.selectedDropdownItem,
+                      pressed &&
+                      styles.dropdownItemPressed,
                     ]}
                   >
-                    Error
-                  </AppText>
-                </Pressable>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={18}
+                      color={Colors.light.error}
+                    />
 
-                {/* Critical */}
-                <Pressable
-                  onPress={() =>
-                    handleTypeFilter("critical")
-                  }
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    typeFilter === "critical" &&
-                    styles.selectedDropdownItem,
-                    pressed &&
-                    styles.dropdownItemPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={18}
-                    color={Colors.light.error}
-                  />
+                    <AppText
+                      variant="caption"
+                      style={[
+                        styles.dropdownText,
+                        typeFilter === "error" &&
+                        styles.selectedDropdownText,
+                      ]}
+                    >
+                      Error
+                    </AppText>
+                  </Pressable>
 
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownText,
+                  {/* Critical */}
+                  <Pressable
+                    onPress={() =>
+                      handleTypeFilter("critical")
+                    }
+                    style={({ pressed }) => [
+                      styles.dropdownItem,
                       typeFilter === "critical" &&
-                      styles.selectedDropdownText,
+                      styles.selectedDropdownItem,
+                      pressed &&
+                      styles.dropdownItemPressed,
                     ]}
                   >
-                    Critical
-                  </AppText>
-                </Pressable>
-              </View>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={18}
+                      color={Colors.light.error}
+                    />
+
+                    <AppText
+                      variant="caption"
+                      style={[
+                        styles.dropdownText,
+                        typeFilter === "critical" &&
+                        styles.selectedDropdownText,
+                      ]}
+                    >
+                      Critical
+                    </AppText>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Activity Cards */}
+          <View style={styles.activityList}>
+            {filteredLogs.length > 0 ? (
+              filteredLogs.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                />
+              ))
+            ) : (
+              <EmptyState
+                icon="document-text-outline"
+                title="No Activity Logs"
+                description="No activities match the selected filters."
+              />
             )}
           </View>
-        </View>
 
-        {/* Activity Cards */}
-        <View style={styles.activityList}>
-          {filteredLogs.length > 0 ? (
-            filteredLogs.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                activity={activity}
-              />
-            ))
-          ) : (
-            <EmptyState
-              icon="document-text-outline"
-              title="No Activity Logs"
-              description="No activities match the selected filters."
-            />
-          )}
-        </View>
+          <Copyright />
+        </ScrollView>
 
-        <Copyright />
-      </ScrollView>
+        <Sidebar
+          visible={sidebarVisible}
+          onClose={() =>
+            setSidebarVisible(false)
+          }
+        />
+      </ScreenContainer2>
+    );
+  }
 
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
-    </ScreenContainer2>
-  );
-}
 
 const dashboardDimensions = {
-  horizontalPadding: 16,
-  sectionSpacing: 14,
-  cardRadius: 16,
-  cardPadding: 18,
+    horizontalPadding: 16,
+    sectionSpacing: 14,
+    cardRadius: 16,
+    cardPadding: 18,
 
-  filterGap: 10,
-  filterHeight: 48,
-  filterRadius: 14,
+    filterGap: 10,
+    filterHeight: 48,
+    filterRadius: 14,
 
-  dropdownRadius: 14,
-  dropdownItemHeight: 44,
+    dropdownRadius: 14,
+    dropdownItemHeight: 44,
 
-  activityGap: 12,
-};
+    activityGap: 12,
+  };
 
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-
-  content: {
-    paddingHorizontal:
-      dashboardDimensions.horizontalPadding,
-
-    paddingTop:
-      dashboardDimensions.sectionSpacing,
-
-    paddingBottom: 20,
-  },
-
-  /* Header */
-
-  headerCard: {
-    backgroundColor: Colors.glass.white,
-
-    borderWidth: 3,
-    borderColor: Colors.light.primary,
-
-    borderRadius:
-      dashboardDimensions.cardRadius,
-
-    padding:
-      dashboardDimensions.cardPadding,
-
-    marginBottom: 12,
-  },
-
-  title: {
-    color: "#000000",
-    fontWeight: "700",
-  },
-
-  subtitle: {
-    color: Colors.light.textSecondary,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-
-  /* Total */
-
-  totalContainer: {
-    width: "100%",
-    alignItems: "flex-end",
-    marginBottom: 10,
-  },
-
-  totalLabel: {
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-  },
-
-  totalValue: {
-    color: "#000000",
-    fontWeight: "700",
-  },
-
-  /* Filters */
-
-  filterRow: {
-    width: "100%",
-
-    flexDirection: "row",
-
-    gap: dashboardDimensions.filterGap,
-
-    marginBottom: 14,
-
-    zIndex: 10,
-  },
-
-  filterWrapper: {
-    flex: 1,
-    position: "relative",
-  },
-
-  filterButton: {
-    height:
-      dashboardDimensions.filterHeight,
-
-    width: "100%",
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    paddingHorizontal: 13,
-
-    gap: 8,
-
-    backgroundColor: Colors.glass.white,
-
-    borderWidth: 3,
-
-    borderColor: Colors.light.primary,
-
-    borderRadius:
-      dashboardDimensions.filterRadius,
-  },
-
-  filterText: {
-    flex: 1,
-
-    color: "#000000",
-
-    fontWeight: "600",
-  },
-
-  buttonPressed: {
-    opacity: 0.75,
-  },
-
-  /* Dropdown */
-
-  dropdown: {
-    position: "absolute",
-
-    top:
-      dashboardDimensions.filterHeight + 6,
-
-    left: 0,
-    right: 0,
-
-    backgroundColor: "#FFFFFF",
-
-    borderWidth: 2,
-
-    borderColor: Colors.light.primary,
-
-    borderRadius:
-      dashboardDimensions.dropdownRadius,
-
-    paddingVertical: 5,
-
-    zIndex: 100,
-
-    elevation: 10,
-
-    shadowColor: "#000",
-
-    shadowOffset: {
-      width: 0,
-      height: 4,
+  const styles = StyleSheet.create({
+    scrollView: {
+      flex: 1,
+      backgroundColor: Colors.light.background,
     },
 
-    shadowOpacity: 0.12,
+    content: {
+      paddingHorizontal:
+        dashboardDimensions.horizontalPadding,
 
-    shadowRadius: 8,
-  },
+      paddingTop:
+        dashboardDimensions.sectionSpacing,
 
-  dropdownItem: {
-    minHeight:
-      dashboardDimensions.dropdownItemHeight,
+      paddingBottom: 20,
+    },
 
-    flexDirection: "row",
+    /* Header */
 
-    alignItems: "center",
+    headerCard: {
+      backgroundColor: Colors.glass.white,
 
-    paddingHorizontal: 13,
+      borderWidth: 3,
+      borderColor: Colors.light.primary,
 
-    gap: 10,
-  },
+      borderRadius:
+        dashboardDimensions.cardRadius,
 
-  selectedDropdownItem: {
-    backgroundColor:
-      "rgba(0, 168, 107, 0.10)",
-  },
+      padding:
+        dashboardDimensions.cardPadding,
 
-  dropdownItemPressed: {
-    opacity: 0.7,
-  },
+      marginBottom: 12,
+    },
 
-  dropdownText: {
-    color: "#000000",
-  },
+    title: {
+      color: "#000000",
+      fontWeight: "700",
+    },
 
-  selectedDropdownText: {
-    fontWeight: "700",
-  },
+    subtitle: {
+      color: Colors.light.textSecondary,
+      marginTop: 6,
+      lineHeight: 20,
+    },
 
-  /* Activity List */
+    /* Total */
 
-  activityList: {
-    width: "100%",
+    totalContainer: {
+      width: "100%",
+      alignItems: "flex-end",
+      marginBottom: 10,
+    },
 
-    gap: dashboardDimensions.activityGap,
+    totalLabel: {
+      color: Colors.light.textSecondary,
+      textAlign: "right",
+    },
 
-    zIndex: 1,
-  },
-});
+    totalValue: {
+      color: "#000000",
+      fontWeight: "700",
+    },
+
+    /* Filters */
+
+    filterRow: {
+      width: "100%",
+
+      flexDirection: "row",
+
+      gap: dashboardDimensions.filterGap,
+
+      marginBottom: 14,
+
+      zIndex: 10,
+    },
+
+    filterWrapper: {
+      flex: 1,
+      position: "relative",
+    },
+
+    filterButton: {
+      height:
+        dashboardDimensions.filterHeight,
+
+      width: "100%",
+
+      flexDirection: "row",
+
+      alignItems: "center",
+
+      paddingHorizontal: 13,
+
+      gap: 8,
+
+      backgroundColor: Colors.glass.white,
+
+      borderWidth: 3,
+
+      borderColor: Colors.light.primary,
+
+      borderRadius:
+        dashboardDimensions.filterRadius,
+    },
+
+    filterText: {
+      flex: 1,
+
+      color: "#000000",
+
+      fontWeight: "600",
+    },
+
+    buttonPressed: {
+      opacity: 0.75,
+    },
+
+    /* Dropdown */
+
+    dropdown: {
+      position: "absolute",
+
+      top:
+        dashboardDimensions.filterHeight + 6,
+
+      left: 0,
+      right: 0,
+
+      backgroundColor: "#FFFFFF",
+
+      borderWidth: 2,
+
+      borderColor: Colors.light.primary,
+
+      borderRadius:
+        dashboardDimensions.dropdownRadius,
+
+      paddingVertical: 5,
+
+      zIndex: 100,
+
+      elevation: 10,
+
+      shadowColor: "#000",
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 8,
+    },
+
+    dropdownItem: {
+      minHeight:
+        dashboardDimensions.dropdownItemHeight,
+
+      flexDirection: "row",
+
+      alignItems: "center",
+
+      paddingHorizontal: 13,
+
+      gap: 10,
+    },
+
+    selectedDropdownItem: {
+      backgroundColor:
+        "rgba(0, 168, 107, 0.10)",
+    },
+
+    dropdownItemPressed: {
+      opacity: 0.7,
+    },
+
+    dropdownText: {
+      color: "#000000",
+    },
+
+    selectedDropdownText: {
+      fontWeight: "700",
+    },
+
+    /* Activity List */
+
+    activityList: {
+      width: "100%",
+
+      gap: dashboardDimensions.activityGap,
+
+      zIndex: 1,
+    },
+  });
