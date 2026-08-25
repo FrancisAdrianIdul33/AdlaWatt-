@@ -28,6 +28,7 @@ import { Colors } from "@/constants/colors";
 import { supabase } from "@/lib/supabase";
 
 type TimeFilter =
+  | "All"
   | "Last Hour"
   | "Today"
   | "This Week"
@@ -162,7 +163,9 @@ export default function NotificationsScreen() {
      */
     const now = new Date();
 
-    if (timeFilter === "Today") {
+    if (timeFilter === "All") {
+      // Show all notifications
+    } else if (timeFilter === "Today") {
       const startOfDay = new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -404,6 +407,7 @@ export default function NotificationsScreen() {
             {timeDropdownVisible && (
               <View style={styles.dropdown}>
                 {[
+                  "All",
                   "Last Hour",
                   "Today",
                   "This Week",
