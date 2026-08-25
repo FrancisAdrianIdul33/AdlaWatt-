@@ -316,6 +316,7 @@ const filteredLogs = useMemo<ActivityLog[]>(() => {
                 <View style={styles.dropdown}>
                   {(
                     [
+                      "All",
                       "Last Hour",
                       "Today",
                       "This Week",
@@ -337,7 +338,7 @@ const filteredLogs = useMemo<ActivityLog[]>(() => {
                     >
                       <Ionicons
                         name={
-                          option === "Last Hour"
+                          option === "All"
                             ? "time-outline"
                             : "calendar-outline"
                         }
