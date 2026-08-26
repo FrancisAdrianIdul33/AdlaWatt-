@@ -110,6 +110,7 @@ export async function registerUser(
             success: true,
             user: authData.user,
         };
+
     } catch (error) {
         console.error("Registration error:", error);
 
@@ -119,6 +120,8 @@ export async function registerUser(
         };
     }
 }
+
+
 
 export async function getCurrentUserProfile() {
     try {
@@ -149,7 +152,7 @@ export async function getCurrentUserProfile() {
         const { data: profile, error: profileError } =
             await supabase
                 .from("users")
-                .select("username, email")
+                .select("id, username, email, terms_agreed, created_at")
                 .eq("id", user.id)
                 .single();
 
@@ -168,8 +171,11 @@ export async function getCurrentUserProfile() {
         return {
             success: true,
             user,
+            userId: profile?.id ?? user.id,
             username: profile?.username ?? "",
             email: profile?.email ?? user.email ?? "",
+            termsAgreed: profile?.terms_agreed ?? false,
+            createdAt: profile?.created_at ?? null,
         };
     } catch (error) {
         console.error(
@@ -204,12 +210,13 @@ export async function loginUser(
 
         // Username login
         if (!identifier.includes("@")) {
-            const { data: profile, error: profileError } =
-                await supabase
-                    .from("users")
-                    .select("email")
-                    .eq("username", identifier)
-                    .maybeSingle();
+            const { data: profileEmail, error: profileError } =
+                await supabase.rpc(
+                    "get_email_by_username",
+                    {
+                        lookup_username: identifier,
+                    },
+                );
 
             if (profileError) {
                 console.error(
@@ -223,14 +230,14 @@ export async function loginUser(
                 };
             }
 
-            if (!profile?.email) {
+            if (!profileEmail) {
                 return {
                     success: false,
                     error: "The username or password is incorrect.",
                 };
             }
 
-            email = profile.email.trim().toLowerCase();
+            email = profileEmail.trim().toLowerCase();
         }
 
         // Supabase authentication
@@ -271,6 +278,7 @@ export async function loginUser(
         };
     }
 }
+
 
 export async function updateAccount(
     username: string,
@@ -424,6 +432,37 @@ export async function updateAccount(
         }
 
         // =========================
+        // CHECK EMAIL AVAILABILITY
+        // =========================
+
+        const { data: existingEmail, error: emailError } =
+            await supabase
+                .from("users")
+                .select("id")
+                .eq("email", cleanEmail)
+                .neq("id", user.id)
+                .maybeSingle();
+
+        if (emailError) {
+            console.error(
+                "Email availability error:",
+                emailError.message,
+            );
+
+            return {
+                success: false,
+                error: "Unable to verify email availability.",
+            };
+        }
+
+        if (existingEmail) {
+            return {
+                success: false,
+                error: "That email address is already registered.",
+            };
+        }
+
+        // =========================
         // UPDATE SUPABASE AUTH
         // =========================
 
@@ -467,7 +506,7 @@ export async function updateAccount(
             if (
                 emailChanged &&
                 authData.user?.email?.trim().toLowerCase() !==
-                    cleanEmail
+                cleanEmail
             ) {
                 // Username can still be updated.
                 const { error: usernameUpdateError } =

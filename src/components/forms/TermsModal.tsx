@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import AppText from "@/components/ui/AppText";
@@ -29,7 +29,7 @@ export default function TermsModal({
 
   useEffect(() => {
     if (!visible) {
-      setSecondsRemaining(10);
+      setSecondsRemaining(5);
       setCanAgree(false);
       return;
     }

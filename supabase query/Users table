@@ -1,0 +1,281 @@
+-- ============================================
+-- ADLAWATT USERS TABLE + AUTH SYNCHRONIZATION
+-- ============================================
+-- auth.users:
+--     Handles authentication and password security.
+--
+-- public.users:
+--     Stores the AdlaWatt application profile.
+--
+-- auth.users.id = public.users.id
+--
+-- Password is NEVER stored in public.users.
+-- ============================================
+
+
+-- ============================================
+-- 1. REMOVE EXISTING TRIGGER
+-- ============================================
+
+drop trigger if exists on_auth_user_created
+on auth.users;
+
+
+-- ============================================
+-- 2. REMOVE EXISTING FUNCTION
+-- ============================================
+
+drop function if exists public.handle_new_user();
+
+
+-- ============================================
+-- 3. REMOVE EXISTING PUBLIC USERS TABLE
+-- ============================================
+-- WARNING:
+-- This removes the existing public.users table
+-- and its data.
+-- ============================================
+
+drop table if exists public.users cascade;
+
+
+-- ============================================
+-- 4. CREATE PUBLIC USERS TABLE
+-- ============================================
+
+create table public.users (
+
+    -- Same UUID as auth.users.id
+    id uuid primary key
+        references auth.users(id)
+        on delete cascade,
+
+    -- Application username
+    username text not null,
+
+    -- User email address
+    email text not null,
+
+    -- Terms and Conditions agreement
+    terms_agreed boolean not null default false,
+
+    -- Account creation timestamp
+    created_at timestamptz not null default now()
+);
+
+
+-- ============================================
+-- 5. UNIQUE CONSTRAINTS
+-- ============================================
+
+-- Username must be unique
+alter table public.users
+    add constraint users_username_unique
+    unique (username);
+
+
+-- Email must be unique
+alter table public.users
+    add constraint users_email_unique
+    unique (email);
+
+
+-- ============================================
+-- 6. VALIDATION CONSTRAINTS
+-- ============================================
+
+-- Username must be 3 to 30 characters
+alter table public.users
+    add constraint users_username_length
+    check (
+        char_length(username) between 3 and 30
+    );
+
+
+-- Username can only contain:
+-- letters, numbers, and underscores
+alter table public.users
+    add constraint users_username_format
+    check (
+        username ~ '^[a-zA-Z0-9_]+$'
+    );
+
+
+-- Basic email validation
+alter table public.users
+    add constraint users_email_format
+    check (
+        email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    );
+
+
+-- Terms and Conditions must be accepted
+alter table public.users
+    add constraint users_terms_agreed
+    check (
+        terms_agreed = true
+    );
+
+
+-- ============================================
+-- 7. ENABLE ROW LEVEL SECURITY
+-- ============================================
+
+alter table public.users
+    enable row level security;
+
+
+-- ============================================
+-- 8. RLS POLICIES
+-- ============================================
+
+-- Users can create their own profile
+create policy "Users can create own profile"
+on public.users
+for insert
+to authenticated
+with check (
+    auth.uid() = id
+);
+
+
+-- Users can view their own profile
+create policy "Users can view own profile"
+on public.users
+for select
+to authenticated
+using (
+    auth.uid() = id
+);
+
+
+-- Users can update their own profile
+create policy "Users can update own profile"
+on public.users
+for update
+to authenticated
+using (
+    auth.uid() = id
+)
+with check (
+    auth.uid() = id
+);
+
+
+-- ============================================
+-- 9. CREATE NEW USER FUNCTION
+-- ============================================
+-- This function receives the newly created
+-- auth.users record and creates its matching
+-- public.users profile.
+-- ============================================
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    new_username text;
+    new_terms_agreed boolean;
+begin
+
+    -- Get username from Auth metadata
+    new_username := nullif(
+        trim(new.raw_user_meta_data->>'username'),
+        ''
+    );
+
+
+    -- Get Terms and Conditions agreement
+    new_terms_agreed := coalesce(
+        (new.raw_user_meta_data->>'terms_agreed')::boolean,
+        false
+    );
+
+
+    -- Validate username
+    if new_username is null then
+        raise exception 'Username is required.';
+    end if;
+
+
+    if char_length(new_username) < 3
+       or char_length(new_username) > 30 then
+
+        raise exception
+            'Username must be between 3 and 30 characters.';
+    end if;
+
+
+    -- Validate username format
+    if new_username !~ '^[a-zA-Z0-9_]+$' then
+
+        raise exception
+            'Username can only contain letters, numbers, and underscores.';
+    end if;
+
+
+    -- Validate Terms and Conditions
+    if new_terms_agreed is not true then
+
+        raise exception
+            'Terms and Conditions must be accepted.';
+    end if;
+
+
+    -- Create matching public.users record
+    insert into public.users (
+        id,
+        username,
+        email,
+        terms_agreed
+    )
+    values (
+        new.id,
+        new_username,
+        lower(trim(new.email)),
+        new_terms_agreed
+    );
+
+
+    return new;
+
+end;
+$$;
+
+
+-- ============================================
+-- 10. CREATE AUTH -> PUBLIC TRIGGER
+-- ============================================
+-- Runs automatically after a new account is
+-- inserted into auth.users.
+-- ============================================
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row
+execute function public.handle_new_user();
+
+
+-- ============================================
+-- 11. VERIFY TABLE
+-- ============================================
+
+select
+    id,
+    username,
+    email,
+    terms_agreed,
+    created_at
+from public.users
+order by created_at desc;
+
+
+-- ============================================
+-- 12. CHECK USER COUNT
+-- ============================================
+
+select count(*) as users_count
+from public.users;

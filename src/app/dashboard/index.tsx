@@ -1,10 +1,7 @@
-import { router } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-import ActivityCard, {
-  ActivityCardData,
-} from "@/components/ActivityCard";
+import ActivityCard from "@/components/ActivityCard";
 import AppRecCard from "@/components/AppRecCard";
 import ChartCard from "@/components/ChartCard";
 import Copyright from "@/components/forms/Copyright";
@@ -13,86 +10,9 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
-import { Routes } from "@/constants/routes";
 
 export default function DashboardScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
-
-  const activities: ActivityCardData[] = [
-    {
-      id: "1",
-      type: "info",
-      title: "Solar Charging Started",
-      details:
-        "The solar panel is currently charging the battery using available sunlight.",
-      date: "Aug 10, 2026",
-      time: "08:42 AM",
-    },
-    {
-      id: "2",
-      type: "info",
-      title: "Appliance Connected",
-      details:
-        "An electric fan was detected and added to the current power load.",
-      date: "Aug 10, 2026",
-      time: "08:35 AM",
-    },
-    {
-      id: "3",
-      type: "warning",
-      title: "Battery Level Low",
-      details:
-        "The battery level has dropped below the recommended operating level.",
-      date: "Aug 10, 2026",
-      time: "07:58 AM",
-    },
-    {
-      id: "4",
-      type: "info",
-      title: "Battery Level Updated",
-      details: "The battery level changed from 52% to 50%.",
-      date: "Aug 10, 2026",
-      time: "07:44 AM",
-    },
-    {
-      id: "5",
-      type: "warning",
-      title: "High Power Consumption",
-      details:
-        "The current appliance load is higher than the recommended level.",
-      date: "Aug 10, 2026",
-      time: "07:20 AM",
-    },
-    {
-      id: "6",
-      type: "error",
-      title: "Sensor Connection Lost",
-      details:
-        "The battery temperature sensor is no longer responding.",
-      date: "Aug 10, 2026",
-      time: "06:52 AM",
-    },
-    {
-      id: "7",
-      type: "info",
-      title: "System Online",
-      details:
-        "AdlaWatt successfully connected to the monitoring system.",
-      date: "Aug 10, 2026",
-      time: "06:30 AM",
-    },
-    {
-      id: "8",
-      type: "error",
-      title: "Inverter Overload Detected",
-      details:
-        "The inverter detected a load that exceeded the recommended operating level.",
-      date: "Aug 09, 2026",
-      time: "09:15 PM",
-    },
-  ];
-
-  const recentActivities = activities.slice(0, 5);
 
   const dashboardData = {
     batteryLevel: 50,
@@ -136,7 +56,7 @@ export default function DashboardScreen() {
           </AppText>
         </View>
 
-        
+
         {/* Real-Time Monitoring */}
         <View style={styles.section}>
           <AppText
@@ -187,52 +107,23 @@ export default function DashboardScreen() {
             Appliance Recommendation
           </AppText>
 
-     <AppRecCard />
+          <AppRecCard />
         </View>
 
         {/* Recent Activity */}
         <View style={styles.section}>
-          <View style={styles.activityHeader}>
-            <AppText
-              variant="body"
-              style={styles.sectionTitle}
-            >
-              Recent Activity
-            </AppText>
-
-            <Pressable
-              onPress={() =>
-                router.push(Routes.ACTIVITY_LOGS)
-              }
-            >
-              <AppText
-                variant="caption"
-                style={styles.viewAll}
-              >
-                View All
-              </AppText>
-            </Pressable>
-          </View>
-
-          <View style={styles.activityList}>
-            {recentActivities.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                activity={activity}
-              />
-            ))}
-          </View>
+          <ActivityCard />
         </View>
 
-        <Copyright />
-      </ScrollView>
+      <Copyright />
+    </ScrollView>
 
-      {/* Sidebar */}
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
-      />
-    </ScreenContainer2>
+      {/* Sidebar */ }
+  <Sidebar
+    visible={sidebarVisible}
+    onClose={() => setSidebarVisible(false)}
+  />
+    </ScreenContainer2 >
   );
 }
 
@@ -291,26 +182,4 @@ const styles = StyleSheet.create({
     gap: dashboardDimensions.monitorGap,
   },
 
-  activityHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  viewAll: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    backgroundColor: Colors.light.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    fontSize: 12,
-    marginTop: -14,
-    marginRight: 2,
-  },
-
-  activityList: {
-    width: "100%",
-    gap: 5,
-  },
 });
