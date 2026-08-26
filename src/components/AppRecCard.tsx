@@ -429,6 +429,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary,
     borderRadius: Radius.md,
     marginTop: 8,
+    marginBottom: 15,
   },
 
   viewAllText: {
