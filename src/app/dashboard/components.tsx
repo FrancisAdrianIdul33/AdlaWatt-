@@ -25,54 +25,61 @@ export default function ComponentsScreen() {
     }[]
   >([]);
 
-  useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel>;
+useEffect(() => {
+  let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const loadComponents = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  const loadComponents = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("components")
+      .select("component_id, component_name, status")
+      .eq("user_id", userId)
+      .order("component_name", { ascending: true });
 
-      if (!user) return;
+    if (error) {
+      console.error("Error loading components:", error.message);
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from("components")
-        .select("component_id, component_name, status")
-        .eq("user_id", user.id)
-        .order("component_name", { ascending: true });
+    setComponents(data ?? []);
+  };
 
-      if (error) {
-        console.error("Error loading components:", error.message);
-        return;
-      }
+  const setup = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      setComponents(data ?? []);
+    if (!user) {
+      setComponents([]);
+      return;
+    }
 
-      channel = supabase
-        .channel(`components-${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "components",
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            loadComponents();
-          },
-        )
-        .subscribe();
-    };
+    await loadComponents(user.id);
 
-    loadComponents();
+    channel = supabase
+      .channel(`components-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "components",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          loadComponents(user.id);
+        },
+      )
+      .subscribe();
+  };
 
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, []);
+  setup();
+
+  return () => {
+    if (channel) {
+      supabase.removeChannel(channel);
+    }
+  };
+}, []);
 
   return (
     <ScreenContainer2>
