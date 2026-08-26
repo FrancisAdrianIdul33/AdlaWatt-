@@ -210,12 +210,13 @@ export async function loginUser(
 
         // Username login
         if (!identifier.includes("@")) {
-            const { data: profile, error: profileError } =
-                await supabase
-                    .from("users")
-                    .select("email")
-                    .eq("username", identifier)
-                    .maybeSingle();
+            const { data: profileEmail, error: profileError } =
+                await supabase.rpc(
+                    "get_email_by_username",
+                    {
+                        lookup_username: identifier,
+                    },
+                );
 
             if (profileError) {
                 console.error(
@@ -229,14 +230,14 @@ export async function loginUser(
                 };
             }
 
-            if (!profile?.email) {
+            if (!profileEmail) {
                 return {
                     success: false,
                     error: "The username or password is incorrect.",
                 };
             }
 
-            email = profile.email.trim().toLowerCase();
+            email = profileEmail.trim().toLowerCase();
         }
 
         // Supabase authentication
