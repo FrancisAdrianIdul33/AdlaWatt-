@@ -1,16 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import {
-    StyleSheet,
-    View,
-} from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
-export type NotificationType =
-  | "normal"
-  | "alert";
+export type NotificationType = "normal" | "alert";
 
 export interface NotificationCardData {
   id: string;
@@ -23,46 +18,61 @@ export interface NotificationCardData {
 }
 
 interface NotificationCardProps {
-  notification: NotificationCardData;
+  notification?: NotificationCardData | null;
 }
 
 export default function NotificationCard({
   notification,
 }: NotificationCardProps) {
-  const isRecent = !notification.isRead;
-  const isAlert = notification.type === "alert";
+  /*
+   * Safety fallback
+   */
+  const safeNotification: NotificationCardData =
+    notification ?? {
+      id: "unknown",
+      title: "Notification",
+      message: "No notification details available.",
+      date: "",
+      time: "",
+      type: "normal",
+      isRead: true,
+    };
+
+  /*
+   * Normalize notification type
+   */
+  const notificationType: NotificationType =
+    safeNotification.type === "alert"
+      ? "alert"
+      : "normal";
+
+  const isRecent = !safeNotification.isRead;
+  const isAlert = notificationType === "alert";
 
   return (
     <View
       style={[
         styles.notificationCard,
 
-        /*
-         * Recent notifications use a subtle
-         * light-gray background.
-         *
-         * Earlier notifications use the
-         * normal glass background.
-         */
         isRecent
           ? styles.recentNotification
           : styles.earlierNotification,
 
-        /*
-         * Notification type determines
-         * the border color.
-         */
         isAlert
           ? styles.alertNotification
           : styles.normalNotification,
       ]}
     >
-      {/* Recent / Unread Indicator */}
+      {/*
+       * Unread indicator
+       */}
       {isRecent && (
         <View style={styles.unreadIndicator} />
       )}
 
-      {/* Notification Icon */}
+      {/*
+       * Notification icon
+       */}
       <View
         style={styles.notificationIconContainer}
       >
@@ -81,39 +91,42 @@ export default function NotificationCard({
         />
       </View>
 
-      {/* Notification Content */}
+      {/*
+       * Notification content
+       */}
       <View style={styles.notificationContent}>
-        {/* Title */}
         <AppText
           variant="body"
           style={styles.notificationTitle}
         >
-          {notification.title}
+          {safeNotification.title}
         </AppText>
 
-        {/* Details */}
         <AppText
           variant="caption"
           style={styles.notificationMessage}
         >
-          {notification.message}
+          {safeNotification.message}
         </AppText>
 
-        {/* Date and Time */}
         <View style={styles.dateTimeRow}>
-          <AppText
-            variant="caption"
-            style={styles.dateText}
-          >
-            {notification.date}
-          </AppText>
+          {safeNotification.date ? (
+            <AppText
+              variant="caption"
+              style={styles.dateText}
+            >
+              {safeNotification.date}
+            </AppText>
+          ) : null}
 
-          <AppText
-            variant="caption"
-            style={styles.timeText}
-          >
-            {notification.time}
-          </AppText>
+          {safeNotification.time ? (
+            <AppText
+              variant="caption"
+              style={styles.timeText}
+            >
+              {safeNotification.time}
+            </AppText>
+          ) : null}
         </View>
       </View>
     </View>
