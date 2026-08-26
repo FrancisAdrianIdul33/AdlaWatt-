@@ -13,6 +13,8 @@ import { Routes } from "@/constants/routes";
 import { Radius } from "@/constants/theme";
 import { router } from "expo-router";
 
+import { supabase } from "@/lib/supabase";
+
 type Status = "advisable" | "notAdvisable";
 
 type Appliance = {
@@ -28,17 +30,6 @@ type AppRecCardProps = {
 
 const defaultImage = require("@/assets/images/developers/avatar.jpg");
 
-const appliances: Appliance[] = [
-  { id: "1", name: "Stand Fan / Desk Fan", watts: "35–75W", status: "advisable" },
-  { id: "2", name: '32" to 43" LED Smart TV', watts: "30–80W", status: "advisable" },
-  { id: "3", name: "Wi-Fi Router / Fiber Modem", watts: "10–20W", status: "advisable" },
-  { id: "4", name: "LED Bulb / Ceiling Light", watts: "7–15W", status: "advisable" },
-  { id: "5", name: "Laptop Power Adapter", watts: "45–65W", status: "advisable" },
-  { id: "6", name: "Small Inverter Refrigerator", watts: "60–120W", status: "notAdvisable" },
-  { id: "7", name: "Small Rice Cooker", watts: "300–500W", status: "notAdvisable" },
-  { id: "8", name: "Basic Kitchen Blender", watts: "200–350W", status: "notAdvisable" },
-];
-
 const tips = [
   "Use lower-wattage appliances first to extend the available battery energy.",
   "Avoid using several high-power appliances at the same time.",
@@ -52,16 +43,25 @@ export default function AppRecCard({
   const [mode, setMode] = useState<Status>("advisable");
   const [index, setIndex] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
+  const [appliances, setAppliances] = useState<Appliance[]>([]);
 
   const filteredAppliances = useMemo(
     () => appliances.filter((item) => item.status === mode),
-    [mode],
+    [appliances, mode],
   );
 
-  const currentAppliances = [
-  filteredAppliances[index % filteredAppliances.length],
-  filteredAppliances[(index + 1) % filteredAppliances.length],
-].filter(Boolean);
+ const currentAppliances =
+  filteredAppliances.length > 0
+    ? Array.from(
+        {
+          length: Math.min(2, filteredAppliances.length),
+        },
+        (_, offset) =>
+          filteredAppliances[
+            (index + offset) % filteredAppliances.length
+          ],
+      )
+    : [];
 
   const isAdvisable = mode === "advisable";
   const statusColor = isAdvisable
@@ -70,6 +70,10 @@ export default function AppRecCard({
 
   // Appliance changes every 5 seconds
   useEffect(() => {
+    loadAppliances();
+  }, []);
+
+  useEffect(() => {
     setIndex(0);
 
     const timer = setInterval(() => {
@@ -77,7 +81,7 @@ export default function AppRecCard({
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [mode]);
+  }, [mode, filteredAppliances.length]);
 
   // Tip changes every 10 seconds
   useEffect(() => {
@@ -88,11 +92,40 @@ export default function AppRecCard({
     return () => clearInterval(timer);
   }, []);
 
- if (!currentAppliances.length) return null;
+  const loadAppliances = async () => {
+    const { data, error } = await supabase
+      .from("appliances")
+      .select("app_id, appliance_name, wattage, selection")
+      .eq("selection", true)
+      .eq("status", true)
+      .order("appliance_name");
+
+    if (error) {
+      console.error("Failed to load selected appliances:", error.message);
+      setAppliances([]);
+      return;
+    }
+
+    const mapped: Appliance[] = (data ?? []).map((item) => {
+      const values = item.wattage.match(/\d+/g)?.map(Number) ?? [];
+      const maxWatts = Math.max(...values, 0);
+
+      return {
+        id: item.app_id,
+        name: item.appliance_name,
+        watts: item.wattage,
+        status: maxWatts > 300 ? "notAdvisable" : "advisable",
+      };
+    });
+
+    setAppliances(mapped);
+  };
+
+  if (!currentAppliances.length) return null;
 
   return (
     <View style={styles.wrapper}>
-         {/* Rotating Tip */}
+      {/* Rotating Tip */}
       <View style={styles.tip}>
         <Ionicons
           name="bulb-outline"
@@ -117,70 +150,70 @@ export default function AppRecCard({
         </View>
       </View>
 
-     {/* Appliance Carousel */}
-<View style={styles.applianceRow}>
-  {currentAppliances.map((appliance) => (
-    <View
-      key={appliance.id}
-      style={[
-        styles.applianceBox,
-        { borderColor: statusColor },
-      ]}
-    >
-      <View
-        style={[
-          styles.imageContainer,
-          { borderColor: statusColor },
-        ]}
-      >
-        <Image
-          source={defaultImage}
-          style={styles.image}
-          resizeMode="cover"
-        />
+      {/* Appliance Carousel */}
+      <View style={styles.applianceRow}>
+        {currentAppliances.map((appliance) => (
+          <View
+            key={appliance.id}
+            style={[
+              styles.applianceBox,
+              { borderColor: statusColor },
+            ]}
+          >
+            <View
+              style={[
+                styles.imageContainer,
+                { borderColor: statusColor },
+              ]}
+            >
+              <Image
+                source={defaultImage}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </View>
+
+            <AppText
+              variant="caption"
+              style={styles.name}
+              numberOfLines={2}
+            >
+              {appliance.name}
+            </AppText>
+
+            <AppText
+              variant="caption"
+              style={styles.watts}
+            >
+              {appliance.watts}
+            </AppText>
+
+            <View
+              style={[
+                styles.status,
+                { backgroundColor: statusColor },
+              ]}
+            >
+              <Ionicons
+                name={
+                  isAdvisable
+                    ? "checkmark-circle-outline"
+                    : "alert-circle-outline"
+                }
+                size={13}
+                color="#FFFFFF"
+              />
+
+              <AppText
+                variant="caption"
+                style={styles.statusText}
+              >
+                {isAdvisable ? "OK to use" : "Not advisable"}
+              </AppText>
+            </View>
+          </View>
+        ))}
       </View>
-
-      <AppText
-        variant="caption"
-        style={styles.name}
-        numberOfLines={2}
-      >
-        {appliance.name}
-      </AppText>
-
-      <AppText
-        variant="caption"
-        style={styles.watts}
-      >
-        {appliance.watts}
-      </AppText>
-
-      <View
-        style={[
-          styles.status,
-          { backgroundColor: statusColor },
-        ]}
-      >
-        <Ionicons
-          name={
-            isAdvisable
-              ? "checkmark-circle-outline"
-              : "alert-circle-outline"
-          }
-          size={13}
-          color="#FFFFFF"
-        />
-
-        <AppText
-          variant="caption"
-          style={styles.statusText}
-        >
-          {isAdvisable ? "OK to use" : "Not advisable"}
-        </AppText>
-      </View>
-    </View>
-  ))}
-</View>
 
       {/* Carousel Indicator */}
       <View style={styles.indicator}>
@@ -238,7 +271,7 @@ export default function AppRecCard({
             style={[
               styles.toggleText,
               mode === "notAdvisable" &&
-                styles.activeToggleText,
+              styles.activeToggleText,
             ]}
           >
             Not Advisable
@@ -248,7 +281,7 @@ export default function AppRecCard({
 
       {/* View All */}
       <Pressable
-    onPress={() => router.push(Routes.APPLIANCES)}
+        onPress={() => router.push(Routes.APPLIANCES)}
         style={({ pressed }) => [
           styles.viewAll,
           pressed && styles.pressed,
@@ -268,7 +301,7 @@ export default function AppRecCard({
         />
       </Pressable>
 
-     
+
     </View>
   );
 }
@@ -280,11 +313,11 @@ const styles = StyleSheet.create({
   },
 
   applianceRow: {
-  width: "100%",
-  flexDirection: "row",
-  justifyContent: "center",
-  gap: 20,
-},
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 20,
+  },
 
   applianceBox: {
     width: "45%",
@@ -404,19 +437,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
- tip: {
-  width: "100%",
-  height: 72,
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "rgba(255, 165, 0, 0.08)",
-  borderWidth: 1,
-  borderColor: Colors.light.secondary,
-  borderRadius: Radius.md,
-  padding: 10,
-  marginTop: 5,
-  marginBottom: 14,
-},
+  tip: {
+    width: "100%",
+    height: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 165, 0, 0.08)",
+    borderWidth: 1,
+    borderColor: Colors.light.secondary,
+    borderRadius: Radius.md,
+    padding: 10,
+    marginTop: 5,
+    marginBottom: 14,
+  },
 
   tipContent: {
     flex: 1,
@@ -431,11 +464,11 @@ const styles = StyleSheet.create({
   },
 
   tipText: {
-  color: Colors.light.textSecondary,
-  fontSize: 14,
-  lineHeight: 17,
-  flexShrink: 1,
-},
+    color: Colors.light.textSecondary,
+    fontSize: 14,
+    lineHeight: 17,
+    flexShrink: 1,
+  },
 
   pressed: {
     opacity: 0.7,
