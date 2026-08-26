@@ -1,14 +1,18 @@
 import { router } from "expo-router";
+
 import React from "react";
+
 import { Pressable, StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
+
 import { Colors } from "@/constants/colors";
+
 import { Routes } from "@/constants/routes";
 
 export type ActivityCardData = {
   id: string;
-  type: "info" | "warning" | "error";
+  type: "info" | "warning" | "error" | "critical";
   title: string;
   details: string;
   date: string;
@@ -36,7 +40,7 @@ const activities: ActivityCardData[] = [
   },
   {
     id: "3",
-    type: "warning",
+    type: "critical",
     title: "Battery Level Low",
     details:
       "The battery level has dropped below the recommended operating level.",
@@ -53,7 +57,7 @@ const activities: ActivityCardData[] = [
   },
   {
     id: "5",
-    type: "warning",
+    type: "error",
     title: "High Power Consumption",
     details:
       "The current appliance load is higher than the recommended level.",
@@ -80,7 +84,7 @@ const activities: ActivityCardData[] = [
   },
   {
     id: "8",
-    type: "error",
+    type: "critical",
     title: "Inverter Overload Detected",
     details:
       "The inverter detected a load that exceeded the recommended operating level.",
@@ -93,7 +97,7 @@ const recentActivities = activities.slice(0, 5);
 
 export default function ActivityCard() {
   return (
-    <View>
+    <View style={styles.wrapper}>
       <View style={styles.header}>
         <AppText variant="body" style={styles.title}>
           Recent Activity
@@ -129,15 +133,24 @@ export default function ActivityCard() {
             />
 
             <View style={styles.content}>
-              <AppText variant="caption" style={styles.activityTitle}>
+              <AppText
+                variant="caption"
+                style={styles.activityTitle}
+              >
                 {activity.title}
               </AppText>
 
-              <AppText variant="caption" style={styles.details}>
+              <AppText
+                variant="caption"
+                style={styles.details}
+              >
                 {activity.details}
               </AppText>
 
-              <AppText variant="caption" style={styles.timestamp}>
+              <AppText
+                variant="caption"
+                style={styles.timestamp}
+              >
                 {activity.date} • {activity.time}
               </AppText>
             </View>
@@ -153,6 +166,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+
+  wrapper: {
+    marginTop: 20,
   },
 
   title: {
@@ -175,7 +192,7 @@ const styles = StyleSheet.create({
 
   list: {
     width: "100%",
-    gap: 5,
+    gap: 10,
   },
 
   item: {
@@ -189,8 +206,8 @@ const styles = StyleSheet.create({
   },
 
   indicator: {
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: 4,
     marginTop: 5,
     marginRight: 10,
@@ -212,7 +229,7 @@ const styles = StyleSheet.create({
 
   timestamp: {
     color: Colors.light.textSecondary,
-    marginTop: 5,
+    marginTop: 10,
     fontSize: 11,
   },
 });
