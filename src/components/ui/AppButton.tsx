@@ -1,8 +1,8 @@
 import React from "react";
 import {
-    Pressable,
-    StyleSheet,
-    ViewStyle,
+  Pressable,
+  StyleSheet,
+  ViewStyle,
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
@@ -42,6 +42,7 @@ export default function AppButton({
 const styles = StyleSheet.create({
   button: {
     backgroundColor: Colors.light.primary,
+    marginTop: 15,
     borderRadius: 12,
     paddingVertical: 16,
     justifyContent: "center",

@@ -2,9 +2,8 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import Copyright from "@/components/forms/Copyright";
-import AppCheckbox from "@/components/forms/AppCheckbox";
 import AppInput from "@/components/forms/AppInput";
+import Copyright from "@/components/forms/Copyright";
 import PasswordInput from "@/components/forms/PasswordInput";
 import AuthHeader from "@/components/layout/AuthHeader";
 import ScreenContainer from "@/components/layout/ScreenContainer";
@@ -21,7 +20,6 @@ import { Ionicons } from "@expo/vector-icons";
 export default function LoginScreen() {
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [warning, setWarning] = useState("");
 
   const handleLogin = async () => {
@@ -65,30 +63,12 @@ export default function LoginScreen() {
     );
 
     if (!result.success) {
-      const errorMessage =
-        result.error?.toLowerCase() ?? "";
-
-      if (
-        errorMessage.includes("invalid login") ||
-        errorMessage.includes("invalid username") ||
-        errorMessage.includes("invalid password")
-      ) {
-        setWarning("Incorrect username, email, or password.");
-      } else if (
-        errorMessage.includes("not found") ||
-        errorMessage.includes("account")
-      ) {
-        setWarning(
-          "Account not found. Please check your username or email.",
-        );
-      } else {
-        setWarning(
-          "We could not sign you in. Please check your information and try again.",
-        );
-      }
-
-      return;
-    }
+  setWarning(
+    result.error ??
+      "We could not sign you in. Please check your information and try again.",
+  );
+  return;
+}
 
     router.replace(Routes.DASHBOARD);
   } catch {
@@ -134,16 +114,6 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             placeholder="Enter your password"
           />
-
-          <View style={styles.options}>
-            <AppCheckbox
-              label="Remember Me"
-              checked={rememberMe}
-              onPress={() =>
-                setRememberMe((previous) => !previous)
-              }
-            />
-          </View>
 
          {warning ? (
   <View
@@ -213,11 +183,6 @@ const styles = StyleSheet.create({
 
   form: {
     width: "100%",
-  },
-
-  options: {
-    width: "100%",
-    marginBottom: 12,
   },
 
   registerContainer: {
