@@ -10,6 +10,8 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { supabase } from "@/lib/supabase";
 
+import EmptyState from "@/components/ui/EmptyState";
+
 export default function ComponentsScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [statusFilter, setStatusFilter] =
@@ -17,7 +19,7 @@ export default function ComponentsScreen() {
 
   const [components, setComponents] = useState<
     {
-      comp_id: string;
+      component_id: string;
       component_name: string;
       status: boolean;
     }[]
@@ -35,7 +37,7 @@ export default function ComponentsScreen() {
 
       const { data, error } = await supabase
         .from("components")
-        .select("comp_id, component_name, status")
+        .select("component_id, component_name, status")
         .eq("user_id", user.id)
         .order("component_name", { ascending: true });
 
@@ -120,18 +122,42 @@ export default function ComponentsScreen() {
         </View>
 
         <View style={styles.componentGrid}>
-          {[...components]
-            .sort((a, b) =>
-              a.component_name.localeCompare(b.component_name),
-            )
-            .filter((component) => {
-              if (statusFilter === "All") return true;
+          {(() => {
+            const filteredComponents = [...components]
+              .sort((a, b) =>
+                a.component_name.localeCompare(b.component_name),
+              )
+              .filter((component) => {
+                if (statusFilter === "All") return true;
 
-              return statusFilter === "Active"
-                ? component.status
-                : !component.status;
-            })
-            .map((component) => {
+                return statusFilter === "Active"
+                  ? component.status
+                  : !component.status;
+              });
+
+            if (filteredComponents.length === 0) {
+              return (
+                <EmptyState
+                  title={
+                    statusFilter === "All"
+                      ? "No Components"
+                      : statusFilter === "Active"
+                        ? "No Active Components"
+                        : "No Inactive Components"
+                  }
+                  description={
+                    statusFilter === "All"
+                      ? "No components are available for this account."
+                      : statusFilter === "Active"
+                        ? "No components are currently active."
+                        : "No components are currently inactive."
+                  }
+                  icon="hardware-chip-outline"
+                />
+              );
+            }
+
+            return filteredComponents.map((component) => {
               const status =
                 component.component_name === "ESP32"
                   ? component.status
@@ -143,12 +169,13 @@ export default function ComponentsScreen() {
 
               return (
                 <ComponentStatusBox
-                  key={component.comp_id}
+                  key={component.component_id}
                   name={component.component_name}
                   status={status}
                 />
               );
-            })}
+            });
+          })()}
         </View>
         <Copyright />
       </ScrollView>
