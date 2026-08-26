@@ -1,285 +1,218 @@
+import { router } from "expo-router";
 import React from "react";
-
-import { StyleSheet, View } from "react-native";
-
-import { Ionicons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-
 import { Colors } from "@/constants/colors";
-
-export type ActivityType =
-  | "info"
-  | "warning"
-  | "error"
-  | "critical";
+import { Routes } from "@/constants/routes";
 
 export type ActivityCardData = {
   id: string;
+  type: "info" | "warning" | "error";
   title: string;
   details: string;
   date: string;
   time: string;
-  type: ActivityType;
 };
 
-type ActivityCardProps = {
-  activity?: ActivityCardData | null;
-};
+const activities: ActivityCardData[] = [
+  {
+    id: "1",
+    type: "info",
+    title: "Solar Charging Started",
+    details:
+      "The solar panel is currently charging the battery using available sunlight.",
+    date: "Aug 10, 2026",
+    time: "08:42 AM",
+  },
+  {
+    id: "2",
+    type: "info",
+    title: "Appliance Connected",
+    details:
+      "An electric fan was detected and added to the current power load.",
+    date: "Aug 10, 2026",
+    time: "08:35 AM",
+  },
+  {
+    id: "3",
+    type: "warning",
+    title: "Battery Level Low",
+    details:
+      "The battery level has dropped below the recommended operating level.",
+    date: "Aug 10, 2026",
+    time: "07:58 AM",
+  },
+  {
+    id: "4",
+    type: "info",
+    title: "Battery Level Updated",
+    details: "The battery level changed from 52% to 50%.",
+    date: "Aug 10, 2026",
+    time: "07:44 AM",
+  },
+  {
+    id: "5",
+    type: "warning",
+    title: "High Power Consumption",
+    details:
+      "The current appliance load is higher than the recommended level.",
+    date: "Aug 10, 2026",
+    time: "07:20 AM",
+  },
+  {
+    id: "6",
+    type: "error",
+    title: "Sensor Connection Lost",
+    details:
+      "The battery temperature sensor is no longer responding.",
+    date: "Aug 10, 2026",
+    time: "06:52 AM",
+  },
+  {
+    id: "7",
+    type: "info",
+    title: "System Online",
+    details:
+      "AdlaWatt successfully connected to the monitoring system.",
+    date: "Aug 10, 2026",
+    time: "06:30 AM",
+  },
+  {
+    id: "8",
+    type: "error",
+    title: "Inverter Overload Detected",
+    details:
+      "The inverter detected a load that exceeded the recommended operating level.",
+    date: "Aug 09, 2026",
+    time: "09:15 PM",
+  },
+];
 
-export default function ActivityCard({
-  activity,
-}: ActivityCardProps) {
-  /*
-   * Safety fallback
-   *
-   * Prevents the component from crashing if
-   * activity-logs.tsx temporarily passes undefined
-   * or null.
-   */
-  const safeActivity: ActivityCardData =
-    activity ?? {
-      id: "unknown",
-      title: "Activity",
-      details: "No activity details available.",
-      date: "",
-      time: "",
-      type: "info",
-    };
+const recentActivities = activities.slice(0, 5);
 
-  /*
-   * Normalize the activity type.
-   *
-   * Supports all activity types allowed by
-   * the activity_logs Supabase table:
-   *
-   * info
-   * warning
-   * error
-   * critical
-   */
-  const activityType: ActivityType =
-    safeActivity.type === "critical"
-      ? "critical"
-      : safeActivity.type === "error"
-        ? "error"
-        : safeActivity.type === "warning"
-          ? "warning"
-          : "info";
-
-  /*
-   * Activity border, indicator, and icon color.
-   */
-  const activityColor =
-    activityType === "warning"
-      ? Colors.light.secondary
-      : activityType === "error" ||
-          activityType === "critical"
-        ? Colors.light.error
-        : Colors.light.primary;
-
-  /*
-   * Activity icon.
-   */
-  const activityIcon =
-    activityType === "warning"
-      ? "warning-outline"
-      : activityType === "error" ||
-          activityType === "critical"
-        ? "alert-circle-outline"
-        : "information-circle-outline";
-
+export default function ActivityCard() {
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          borderColor: activityColor,
-        },
-      ]}
-    >
-      {/* Activity Type Indicator */}
-      <View
-        style={[
-          styles.indicator,
-          {
-            backgroundColor: activityColor,
-          },
-        ]}
-      />
+    <View>
+      <View style={styles.header}>
+        <AppText variant="body" style={styles.title}>
+          Recent Activity
+        </AppText>
 
-      {/* Activity Information */}
-      <View style={styles.content}>
-        <View style={styles.mainRow}>
-          {/* Title and Details */}
-          <View style={styles.textContainer}>
-            <AppText
-              variant="caption"
-              style={styles.title}
-              numberOfLines={2}
-            >
-              {safeActivity.title}
-            </AppText>
-
-            <AppText
-              variant="caption"
-              style={styles.details}
-            >
-              {safeActivity.details}
-            </AppText>
-          </View>
-
-          {/* Date and Time */}
-          <View style={styles.dateTimeContainer}>
-            {safeActivity.date ? (
-              <AppText
-                variant="caption"
-                style={styles.date}
-              >
-                {safeActivity.date}
-              </AppText>
-            ) : null}
-
-            {safeActivity.time ? (
-              <AppText
-                variant="caption"
-                style={styles.time}
-              >
-                {safeActivity.time}
-              </AppText>
-            ) : null}
-          </View>
-        </View>
+        <Pressable
+          onPress={() => router.push(Routes.ACTIVITY_LOGS)}
+        >
+          <AppText variant="caption" style={styles.viewAll}>
+            View All
+          </AppText>
+        </Pressable>
       </View>
 
-      {/* Activity Icon */}
-      <View style={styles.iconContainer}>
-        <Ionicons
-          name={
-            activityIcon as keyof typeof Ionicons.glyphMap
-          }
-          size={17}
-          color={activityColor}
-        />
+      <View style={styles.list}>
+        {recentActivities.map((activity) => (
+          <View
+            key={activity.id}
+            style={styles.item}
+          >
+            <View
+              style={[
+                styles.indicator,
+                {
+                  backgroundColor:
+                    activity.type === "info"
+                      ? Colors.light.primary
+                      : activity.type === "warning"
+                        ? Colors.light.secondary
+                        : "#EF4444",
+                },
+              ]}
+            />
+
+            <View style={styles.content}>
+              <AppText variant="caption" style={styles.activityTitle}>
+                {activity.title}
+              </AppText>
+
+              <AppText variant="caption" style={styles.details}>
+                {activity.details}
+              </AppText>
+
+              <AppText variant="caption" style={styles.timestamp}>
+                {activity.date} • {activity.time}
+              </AppText>
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: "100%",
-
-    minHeight: 90,
-
+  header: {
     flexDirection: "row",
-
     alignItems: "center",
-
-    backgroundColor: Colors.glass.white,
-
-    borderWidth: 3,
-
-    borderRadius: 16,
-
-    paddingVertical: 13,
-
-    paddingHorizontal: 13,
-
-    marginBottom: 9,
-  },
-
-  indicator: {
-    width: 11,
-
-    height: 11,
-
-    borderRadius: 5.5,
-
-    marginRight: 11,
-  },
-
-  content: {
-    flex: 1,
-
-    minWidth: 0,
-  },
-
-  mainRow: {
-    width: "100%",
-
-    flexDirection: "row",
-
-    alignItems: "flex-start",
-
     justifyContent: "space-between",
-  },
-
-  textContainer: {
-    flex: 1,
-
-    minWidth: 0,
-
-    paddingRight: 10,
   },
 
   title: {
     color: "#000000",
-
     fontWeight: "700",
+    marginBottom: 10,
+  },
 
-    marginBottom: 3,
+  viewAll: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    fontSize: 12,
+    marginTop: -14,
+    marginRight: 2,
+  },
+
+  list: {
+    width: "100%",
+    gap: 5,
+  },
+
+  item: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: Colors.glass.white,
+    borderWidth: 2,
+    borderColor: Colors.light.border,
+    borderRadius: 16,
+    padding: 12,
+  },
+
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 5,
+    marginRight: 10,
+  },
+
+  content: {
+    flex: 1,
+  },
+
+  activityTitle: {
+    color: "#000000",
+    fontWeight: "700",
   },
 
   details: {
     color: Colors.light.textSecondary,
-
-    lineHeight: 18,
-
-    fontWeight: "400",
+    marginTop: 3,
   },
 
-  dateTimeContainer: {
-    minWidth: 78,
-
-    alignItems: "flex-end",
-
-    justifyContent: "flex-start",
-
-    marginLeft: 5,
-  },
-
-  date: {
+  timestamp: {
     color: Colors.light.textSecondary,
-
-    fontSize: 10,
-
-    fontWeight: "400",
-
-    textAlign: "right",
-  },
-
-  time: {
-    color: Colors.light.textSecondary,
-
-    fontSize: 10,
-
-    fontWeight: "400",
-
-    marginTop: 2,
-
-    textAlign: "right",
-  },
-
-  iconContainer: {
-    width: 24,
-
-    height: 24,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    marginLeft: 4,
+    marginTop: 5,
+    fontSize: 11,
   },
 });
