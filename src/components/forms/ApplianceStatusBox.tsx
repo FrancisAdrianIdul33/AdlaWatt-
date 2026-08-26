@@ -81,7 +81,7 @@ export default function ApplianceStatusBox({
 const styles = StyleSheet.create({
   container: {
     width: "48%",
-    backgroundColor: "#e6e3e3",
+    backgroundColor: Colors.glass.white,
     borderWidth: 2,
     borderRadius: Radius.md,
     padding: 14,

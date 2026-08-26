@@ -113,7 +113,27 @@ export default function ApplianceModal({
     );
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setCustomError("You must be signed in.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("appliances")
+      .update({ selection: false })
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Reset appliance selection error:", error.message);
+      setCustomError("Unable to reset appliance selection.");
+      return;
+    }
+
     setSelected([]);
     setCustomName("");
     setCustomWatts("");
@@ -123,13 +143,25 @@ export default function ApplianceModal({
   };
 
   const handleSave = async () => {
-    const { error } = await supabase
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error("No authenticated user.");
+      return;
+    }
+
+    const { error: resetError } = await supabase
       .from("appliances")
       .update({ selection: false })
-      .neq("app_id", "");
+      .eq("user_id", user.id);
 
-    if (error) {
-      console.error("Reset appliance selection error:", error.message);
+    if (resetError) {
+      console.error(
+        "Reset appliance selection error:",
+        resetError.message,
+      );
       return;
     }
 
@@ -137,6 +169,7 @@ export default function ApplianceModal({
       const { error: selectionError } = await supabase
         .from("appliances")
         .update({ selection: true })
+        .eq("user_id", user.id)
         .in("app_id", selected);
 
       if (selectionError) {
@@ -167,19 +200,93 @@ export default function ApplianceModal({
     const name = customName.trim();
     const watts = customWatts.trim();
 
+    // Validate appliance name
     if (!/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(name)) {
-      setCustomError("Enter a valid appliance name.");
+      setCustomError(
+        "Appliance name must be valid and readable.",
+      );
       return;
     }
 
+    // Validate wattage format
     if (!/^\d+-\d+$/.test(watts)) {
-      setCustomError("Enter wattage like 15-25.");
+      setCustomError(
+        "Enter valid wattage intervals, for example 15-25.",
+      );
       return;
     }
 
+    const [minWatts, maxWatts] = watts
+      .split("-")
+      .map(Number);
+
+    // Validate wattage range
+    if (
+      minWatts < 1 ||
+      maxWatts < 1 ||
+      minWatts > 720 ||
+      maxWatts > 720
+    ) {
+      setCustomError(
+        "Appliance wattage must not exceed 720W.",
+      );
+      return;
+    }
+
+    // Validate interval
+    if (minWatts > maxWatts) {
+      setCustomError(
+        "Enter a valid wattage interval.",
+      );
+      return;
+    }
+
+    // Get authenticated user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setCustomError(
+        "You must be signed in to add an appliance.",
+      );
+      return;
+    }
+
+    // Prevent duplicate custom appliances
+    const { data: duplicate, error: duplicateError } =
+      await supabase
+        .from("appliances")
+        .select("app_id")
+        .eq("user_id", user.id)
+        .eq("type", "custom")
+        .ilike("appliance_name", name)
+        .maybeSingle();
+
+    if (duplicateError) {
+      console.error(
+        "Duplicate appliance check error:",
+        duplicateError.message,
+      );
+      setCustomError(
+        "Unable to check appliance name.",
+      );
+      return;
+    }
+
+    if (duplicate) {
+      setCustomError(
+        "This appliance already exists.",
+      );
+      return;
+    }
+
+    // Insert custom appliance
     const { data, error } = await supabase
       .from("appliances")
       .insert({
+        user_id: user.id,
         appliance_name: name,
         wattage: `${watts}W`,
         area: "Custom Appliances",
@@ -187,15 +294,23 @@ export default function ApplianceModal({
         selection: false,
         status: true,
       })
-      .select("app_id, appliance_name, wattage, area")
+      .select(
+        "app_id, appliance_name, wattage, area",
+      )
       .single();
 
     if (error) {
-      console.error("Custom appliance error:", error.message);
-      setCustomError("Unable to add appliance. Please try again.");
+      console.error(
+        "Custom appliance error:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to add appliance. Please try again.",
+      );
       return;
     }
 
+    // IMPORTANT: use the database-generated app_id
     const appliance: Appliance = {
       id: data.app_id,
       name: data.appliance_name,
@@ -205,14 +320,19 @@ export default function ApplianceModal({
 
     onCustomAdd?.(appliance);
 
-    setAppliances((current) => [...current, appliance]);
+    setAppliances((current) => [
+      ...current,
+      appliance,
+    ]);
 
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
     setCustomVisible(false);
 
-    setSuccessMessage(`${name} successfully added!`);
+    setSuccessMessage(
+      `${name} successfully added!`,
+    );
 
     setTimeout(() => {
       setSuccessMessage("");
@@ -385,9 +505,8 @@ export default function ApplianceModal({
                 <TextInput
                   value={customWatts}
                   onChangeText={(text) => {
-                    setCustomWatts(
-                      text.replace(/[^\d-]/g, ""),
-                    );
+                    const value = text.replace(/[^\d-]/g, "");
+                    setCustomWatts(value);
                     setCustomError("");
                   }}
                   placeholder="Enter wattage like 15-20"
@@ -475,11 +594,12 @@ export default function ApplianceModal({
 
                 <View style={styles.grid}>
                   {appliances
-                    .filter((item) => item.area === "Custom Appliances")
+                    .filter(
+                      (item) => item.area === "Custom Appliances",
+                    )
                     .map((appliance) => {
-
-                      const alreadyAdded = selectedAppliances.some(
-                        ({ id }) => id === appliance.id,
+                      const isSelected = selected.includes(
+                        appliance.id,
                       );
 
                       return (
@@ -488,12 +608,10 @@ export default function ApplianceModal({
                           name={appliance.name}
                           wattage={appliance.watts}
                           color={Colors.light.primary}
-                          selected={alreadyAdded || selected.includes(appliance.id)}
-                          onPress={() => {
-                            if (!alreadyAdded) {
-                              toggleAppliance(appliance.id);
-                            }
-                          }}
+                          selected={isSelected}
+                          onPress={() =>
+                            toggleAppliance(appliance.id)
+                          }
                         />
                       );
                     })}
@@ -958,17 +1076,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    backgroundColor: "#F0EAD6",
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: Radius.md,
-    padding: 10,
     marginBottom: Spacing.md,
   },
 
   successText: {
     flex: 1,
-    color: "#000000",
+    color: Colors.light.primary,
     fontWeight: "600",
   },
 });
