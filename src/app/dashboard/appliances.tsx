@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -15,6 +15,8 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+
+import { supabase } from "@/lib/supabase";
 
 
 type PowerLevel =
@@ -50,9 +52,49 @@ export default function AppliancesScreen() {
   const [selectedAppliances, setSelectedAppliances] =
     useState<SelectedAppliance[]>([]);
 
-  const handleApplianceSave = (appliances: SelectedAppliance[]) => {
-    setSelectedAppliances(appliances);
+  const loadSelectedAppliances = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setSelectedAppliances([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("appliances")
+      .select("app_id, appliance_name, wattage, area")
+      .eq("user_id", user.id)
+      .eq("selection", true)
+      .order("area")
+      .order("appliance_name");
+
+    if (error) {
+      console.error(
+        "Failed to load selected appliances:",
+        error.message,
+      );
+      return;
+    }
+
+    setSelectedAppliances(
+      (data ?? []).map((item) => ({
+        id: item.app_id,
+        name: item.appliance_name,
+        watts: item.wattage,
+        area: item.area,
+      })),
+    );
   };
+
+  const handleApplianceSave = async () => {
+    await loadSelectedAppliances();
+  };
+
+  useEffect(() => {
+    loadSelectedAppliances();
+  }, []);
 
   const [applianceModalVisible, setApplianceModalVisible] =
     useState(false);
@@ -81,9 +123,6 @@ export default function AppliancesScreen() {
     setAreaFilter(filter);
     setAreaDropdownVisible(false);
   };
-
-  const [customAppliances, setCustomAppliances] =
-    useState<SelectedAppliance[]>([]);
 
   return (
     <ScreenContainer2>
@@ -335,22 +374,23 @@ export default function AppliancesScreen() {
         <View style={styles.applianceGrid}>
           {selectedAppliances
             .filter((appliance) => {
-              const power = parseInt(
-                appliance.watts.match(/\d+/)?.[0] ?? "0",
-              );
+              const watts = appliance.watts.match(/\d+/g)?.map(Number) ?? [];
+              const maxWatts = Math.max(...watts, 0);
 
               const matchesPower =
                 powerFilter === "All" ||
-                (powerFilter === "Highest" && power >= 50) ||
-                (powerFilter === "Moderate" && power >= 20 && power < 50) ||
-                (powerFilter === "Low" && power < 20);
+                (powerFilter === "Highest" && maxWatts >= 50) ||
+                (powerFilter === "Moderate" &&
+                  maxWatts >= 20 &&
+                  maxWatts < 50) ||
+                (powerFilter === "Low" && maxWatts < 20);
 
               const matchesArea =
                 areaFilter === "All Areas" ||
                 appliance.area === areaFilter;
 
               const status =
-                power <= 100 ? "Advisable" : "notAdvisable";
+                maxWatts >= 300 ? "notAdvisable" : "Advisable";
 
               const matchesStatus =
                 statusFilter === "All" ||
@@ -358,6 +398,7 @@ export default function AppliancesScreen() {
 
               return matchesPower && matchesArea && matchesStatus;
             })
+
             .map((appliance) => {
               const color =
                 appliance.area === "Living Area"
@@ -376,12 +417,11 @@ export default function AppliancesScreen() {
                               ? Colors.light.secondary
                               : Colors.light.border;
 
-              const power = parseInt(
-                appliance.watts.match(/\d+/)?.[0] ?? "0",
-              );
+              const watts = appliance.watts.match(/\d+/g)?.map(Number) ?? [];
+              const maxWatts = Math.max(...watts, 0);
 
               const status =
-                power <= 100 ? "OK to use" : "Not advised";
+                maxWatts >= 300 ? "Not advised" : "OK to use";
 
               return (
                 <ApplianceStatusBox
@@ -402,11 +442,7 @@ export default function AppliancesScreen() {
         visible={applianceModalVisible}
         onClose={() => setApplianceModalVisible(false)}
         onSave={handleApplianceSave}
-        customAppliances={customAppliances}
         selectedAppliances={selectedAppliances}
-        onCustomAdd={(appliance) =>
-          setCustomAppliances((current) => [...current, appliance])
-        }
       />
 
       <Sidebar
