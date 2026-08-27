@@ -1,21 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
+
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import {
+  Animated,
   Image,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
 
+import ApplianceModal from "@/components/forms/ApplianceModal";
 import AppText from "@/components/ui/AppText";
+import EmptyState from "@/components/ui/EmptyState";
+
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { Radius } from "@/constants/theme";
-import { router } from "expo-router";
-
 import { supabase } from "@/lib/supabase";
 
-type Status = "advisable" | "notAdvisable";
+type Status =
+  | "advisable"
+  | "notAdvisable";
 
 type Appliance = {
   id: string;
@@ -28,7 +40,9 @@ type AppRecCardProps = {
   onViewAll?: () => void;
 };
 
-const defaultImage = require("@/assets/images/developers/avatar.jpg");
+const defaultImage = require(
+  "@/assets/images/developers/avatar.jpg",
+);
 
 const tips = [
   "Use lower-wattage appliances first to extend the available battery energy.",
@@ -40,269 +54,540 @@ const tips = [
 export default function AppRecCard({
   onViewAll,
 }: AppRecCardProps) {
-  const [mode, setMode] = useState<Status>("advisable");
-  const [index, setIndex] = useState(0);
-  const [tipIndex, setTipIndex] = useState(0);
-  const [appliances, setAppliances] = useState<Appliance[]>([]);
+  const [mode, setMode] =
+    useState<Status>("advisable");
+
+  const [index, setIndex] =
+    useState(0);
+
+  const [tipIndex, setTipIndex] =
+    useState(0);
+
+  const [appliances, setAppliances] =
+    useState<Appliance[]>([]);
+
+  const [hasSelectedAppliances, setHasSelectedAppliances] =
+    useState(false);
+
+  const [modalVisible, setModalVisible] =
+    useState(false);
+
+  const buttonScale =
+    useRef(new Animated.Value(1)).current;
+
+  // ============================================
+  // FILTER BY RECOMMENDATION STATUS
+  // ============================================
 
   const filteredAppliances = useMemo(
-    () => appliances.filter((item) => item.status === mode),
+    () =>
+      appliances.filter(
+        (item) => item.status === mode,
+      ),
     [appliances, mode],
   );
 
- const currentAppliances =
-  filteredAppliances.length > 0
-    ? Array.from(
-        {
-          length: Math.min(2, filteredAppliances.length),
-        },
-        (_, offset) =>
-          filteredAppliances[
-            (index + offset) % filteredAppliances.length
-          ],
-      )
-    : [];
+  // Show a maximum of two appliances
+  // without creating invalid indexes.
+  const currentAppliances = useMemo(() => {
+    if (!filteredAppliances.length) {
+      return [];
+    }
 
-  const isAdvisable = mode === "advisable";
+    const count = Math.min(
+      2,
+      filteredAppliances.length,
+    );
+
+    return Array.from(
+      { length: count },
+      (_, offset) =>
+        filteredAppliances[
+          (index + offset) %
+            filteredAppliances.length
+        ],
+    );
+  }, [filteredAppliances, index]);
+
+  const isAdvisable =
+    mode === "advisable";
+
   const statusColor = isAdvisable
     ? Colors.light.primary
     : "#EF4444";
 
-  // Appliance changes every 5 seconds
-  useEffect(() => {
-    loadAppliances();
-  }, []);
-
-  useEffect(() => {
-    setIndex(0);
-
-    const timer = setInterval(() => {
-      setIndex((currentIndex) => currentIndex + 1);
-    }, 5000);
-
-    return () => clearInterval(timer);
-  }, [mode, filteredAppliances.length]);
-
-  // Tip changes every 10 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTipIndex((currentIndex) => (currentIndex + 1) % tips.length);
-    }, 10000);
-
-    return () => clearInterval(timer);
-  }, []);
+  // ============================================
+  // LOAD USER'S SELECTED APPLIANCES
+  // ============================================
 
   const loadAppliances = async () => {
-    const { data, error } = await supabase
-      .from("appliances")
-      .select("app_id, appliance_name, wattage, selection")
-      .eq("selection", true)
-      .eq("status", true)
-      .order("appliance_name");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (error) {
-      console.error("Failed to load selected appliances:", error.message);
+    if (!user) {
       setAppliances([]);
+      setHasSelectedAppliances(false);
       return;
     }
 
-    const mapped: Appliance[] = (data ?? []).map((item) => {
-      const values = item.wattage.match(/\d+/g)?.map(Number) ?? [];
-      const maxWatts = Math.max(...values, 0);
+    const { data, error } =
+      await supabase
+        .from("appliances")
+        .select(
+          "app_id, appliance_name, wattage, selection",
+        )
+        .eq("user_id", user.id)
+        .order("appliance_name");
 
-      return {
-        id: item.app_id,
-        name: item.appliance_name,
-        watts: item.wattage,
-        status: maxWatts > 300 ? "notAdvisable" : "advisable",
-      };
-    });
+    if (error) {
+      console.error(
+        "Failed to load appliances:",
+        error.message,
+      );
+
+      setAppliances([]);
+      setHasSelectedAppliances(false);
+      return;
+    }
+
+    const selectedRows =
+      (data ?? []).filter(
+        (item) => item.selection === true,
+      );
+
+    setHasSelectedAppliances(
+      selectedRows.length > 0,
+    );
+
+    const mapped: Appliance[] =
+      selectedRows.map((item) => {
+        const values =
+          String(item.wattage)
+            .match(/\d+/g)
+            ?.map(Number) ?? [];
+
+        const maxWatts = Math.max(
+          ...values,
+          0,
+        );
+
+        return {
+          id: item.app_id,
+          name: item.appliance_name,
+          watts: item.wattage,
+          status:
+            maxWatts > 300
+              ? "notAdvisable"
+              : "advisable",
+        };
+      });
 
     setAppliances(mapped);
   };
 
-  if (!currentAppliances.length) return null;
+  // ============================================
+  // INITIAL LOAD
+  // ============================================
+
+  useEffect(() => {
+    loadAppliances();
+  }, []);
+
+  // ============================================
+  // RESET CAROUSEL WHEN MODE CHANGES
+  // ============================================
+
+  useEffect(() => {
+    setIndex(0);
+  }, [mode]);
+
+  // ============================================
+  // APPLIANCE CAROUSEL
+  // ============================================
+
+  useEffect(() => {
+    if (filteredAppliances.length <= 1) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setIndex(
+        (currentIndex) =>
+          currentIndex + 1,
+      );
+    }, 5000);
+
+    return () =>
+      clearInterval(timer);
+  }, [filteredAppliances.length]);
+
+  // ============================================
+  // ROTATING TIP
+  // ============================================
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTipIndex(
+        (currentIndex) =>
+          (currentIndex + 1) %
+          tips.length,
+      );
+    }, 10000);
+
+    return () =>
+      clearInterval(timer);
+  }, []);
+
+  // ============================================
+  // APPLIANCE MODAL
+  // ============================================
+
+  const openApplianceModal = () => {
+    setModalVisible(true);
+  };
+
+  const closeApplianceModal = () => {
+    setModalVisible(false);
+    loadAppliances();
+  };
+
+  // ============================================
+  // GET STARTED BUTTON ANIMATION
+  // ============================================
+
+  const animateButton = (
+    scale: number,
+  ) => {
+    Animated.spring(buttonScale, {
+      toValue: scale,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+  };
+
+  // ============================================
+  // MODE 1: NO SELECTED APPLIANCES
+  // ============================================
+
+  if (!hasSelectedAppliances) {
+    return (
+      <>
+        <View style={styles.wrapper}>
+          <View style={styles.getStartedBox}>
+            <AppText
+              variant="body"
+              style={styles.getStartedTitle}
+            >
+              Welcome to AdlaWatt, Get started!
+            </AppText>
+
+            <Pressable
+              onPress={openApplianceModal}
+              onPressIn={() =>
+                animateButton(0.95)
+              }
+              onPressOut={() =>
+                animateButton(1)
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Add Appliances"
+            >
+              <Animated.View
+                style={[
+                  styles.addAppliancesButton,
+                  {
+                    transform: [
+                      {
+                        scale: buttonScale,
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="add"
+                  size={21}
+                  color="#FFFFFF"
+                />
+
+                <AppText
+                  variant="caption"
+                  style={
+                    styles.addAppliancesButtonText
+                  }
+                >
+                  Add Appliances
+                </AppText>
+              </Animated.View>
+            </Pressable>
+          </View>
+        </View>
+
+        <ApplianceModal
+          visible={modalVisible}
+          onClose={closeApplianceModal}
+        />
+      </>
+    );
+  }
+
+  // ============================================
+  // MODE 2: SELECTED APPLIANCES EXIST
+  // ============================================
 
   return (
-    <View style={styles.wrapper}>
-      {/* Rotating Tip */}
-      <View style={styles.tip}>
-        <Ionicons
-          name="bulb-outline"
-          size={19}
-          color={Colors.light.secondary}
-        />
-
-        <View style={styles.tipContent}>
-          <AppText
-            variant="caption"
-            style={styles.tipTitle}
-          >
-            Tip
-          </AppText>
-
-          <AppText
-            variant="caption"
-            style={styles.tipText}
-          >
-            {tips[tipIndex]}
-          </AppText>
-        </View>
-      </View>
-
-      {/* Appliance Carousel */}
-      <View style={styles.applianceRow}>
-        {currentAppliances.map((appliance) => (
-          <View
-            key={appliance.id}
-            style={[
-              styles.applianceBox,
-              { borderColor: statusColor },
-            ]}
-          >
-            <View
-              style={[
-                styles.imageContainer,
-                { borderColor: statusColor },
-              ]}
-            >
-              <Image
-                source={defaultImage}
-                style={styles.image}
-                resizeMode="cover"
-              />
-            </View>
-
-            <AppText
-              variant="caption"
-              style={styles.name}
-              numberOfLines={2}
-            >
-              {appliance.name}
-            </AppText>
-
-            <AppText
-              variant="caption"
-              style={styles.watts}
-            >
-              {appliance.watts}
-            </AppText>
-
-            <View
-              style={[
-                styles.status,
-                { backgroundColor: statusColor },
-              ]}
-            >
-              <Ionicons
-                name={
-                  isAdvisable
-                    ? "checkmark-circle-outline"
-                    : "alert-circle-outline"
-                }
-                size={13}
-                color="#FFFFFF"
-              />
-
-              <AppText
-                variant="caption"
-                style={styles.statusText}
-              >
-                {isAdvisable ? "OK to use" : "Not advisable"}
-              </AppText>
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {/* Carousel Indicator */}
-      <View style={styles.indicator}>
-        {filteredAppliances.map((item, itemIndex) => (
-          <View
-            key={item.id}
-            style={[
-              styles.dot,
-              {
-                backgroundColor:
-                  itemIndex === index % filteredAppliances.length
-                    ? statusColor
-                    : Colors.light.border,
-              },
-            ]}
+    <>
+      <View style={styles.wrapper}>
+        {/* Rotating Tip */}
+        <View style={styles.tip}>
+          <Ionicons
+            name="bulb-outline"
+            size={19}
+            color={Colors.light.secondary}
           />
-        ))}
-      </View>
 
-      {/* Status Toggle */}
-      <View style={styles.toggle}>
+          <View style={styles.tipContent}>
+            <AppText
+              variant="caption"
+              style={styles.tipTitle}
+            >
+              Tip
+            </AppText>
+
+            <AppText
+              variant="caption"
+              style={styles.tipText}
+            >
+              {tips[tipIndex]}
+            </AppText>
+          </View>
+        </View>
+
+        {/* Appliances / Empty State */}
+        {filteredAppliances.length > 0 ? (
+          <>
+            <View style={styles.applianceRow}>
+              {currentAppliances.map(
+                (appliance) => (
+                  <View
+                    key={appliance.id}
+                    style={[
+                      styles.applianceBox,
+                      {
+                        borderColor:
+                          statusColor,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.imageContainer,
+                        {
+                          borderColor:
+                            statusColor,
+                        },
+                      ]}
+                    >
+                      <Image
+                        source={defaultImage}
+                        style={styles.image}
+                        resizeMode="cover"
+                      />
+                    </View>
+
+                    <AppText
+                      variant="caption"
+                      style={styles.name}
+                      numberOfLines={2}
+                    >
+                      {appliance.name}
+                    </AppText>
+
+                    <AppText
+                      variant="caption"
+                      style={styles.watts}
+                    >
+                      {appliance.watts}
+                    </AppText>
+
+                    <View
+                      style={[
+                        styles.status,
+                        {
+                          backgroundColor:
+                            statusColor,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          isAdvisable
+                            ? "checkmark-circle-outline"
+                            : "alert-circle-outline"
+                        }
+                        size={13}
+                        color="#FFFFFF"
+                      />
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.statusText
+                        }
+                      >
+                        {isAdvisable
+                          ? "OK to use"
+                          : "Not advisable"}
+                      </AppText>
+                    </View>
+                  </View>
+                ),
+              )}
+            </View>
+
+            {/* Carousel Indicator */}
+            {filteredAppliances.length > 1 && (
+              <View style={styles.indicator}>
+                {filteredAppliances.map(
+                  (item, itemIndex) => (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.dot,
+                        {
+                          backgroundColor:
+                            itemIndex ===
+                            index %
+                              filteredAppliances.length
+                              ? statusColor
+                              : Colors.light.border,
+                        },
+                      ]}
+                    />
+                  ),
+                )}
+              </View>
+            )}
+          </>
+        ) : (
+          <View
+            style={
+              styles.recommendationEmptyState
+            }
+          >
+            <EmptyState
+              icon="hardware-chip-outline"
+              title={
+                isAdvisable
+                  ? "No Advisable Appliances"
+                  : "No Not Advisable Appliances"
+              }
+              description={
+                isAdvisable
+                  ? "No selected appliances are currently advisable to use."
+                  : "No selected appliances are currently not advisable to use."
+              }
+            />
+          </View>
+        )}
+
+        {/* Status Toggle */}
+        <View style={styles.toggle}>
+          <Pressable
+            onPress={() =>
+              setMode("advisable")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Show advisable appliances"
+            style={({ pressed }) => [
+              styles.toggleButton,
+              mode === "advisable" && {
+                backgroundColor:
+                  Colors.light.primary,
+              },
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              style={[
+                styles.toggleText,
+                mode === "advisable" &&
+                  styles.activeToggleText,
+              ]}
+            >
+              Advisable
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              setMode("notAdvisable")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Show not advisable appliances"
+            style={({ pressed }) => [
+              styles.toggleButton,
+              mode === "notAdvisable" && {
+                backgroundColor:
+                  "#EF4444",
+              },
+              pressed &&
+                styles.pressed,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              style={[
+                styles.toggleText,
+                mode === "notAdvisable" &&
+                  styles.activeToggleText,
+              ]}
+            >
+              Not Advisable
+            </AppText>
+          </Pressable>
+        </View>
+
+        {/* View All */}
         <Pressable
-          onPress={() => setMode("advisable")}
+          onPress={() =>
+            onViewAll
+              ? onViewAll()
+              : router.push(
+                  Routes.APPLIANCES,
+                )
+          }
+          accessibilityRole="button"
+          accessibilityLabel="View all appliances"
           style={({ pressed }) => [
-            styles.toggleButton,
-            mode === "advisable" && {
-              backgroundColor: Colors.light.primary,
-            },
+            styles.viewAll,
             pressed && styles.pressed,
           ]}
         >
           <AppText
             variant="caption"
-            style={[
-              styles.toggleText,
-              mode === "advisable" && styles.activeToggleText,
-            ]}
+            style={styles.viewAllText}
           >
-            Advisable
+            View All
           </AppText>
-        </Pressable>
 
-        <Pressable
-          onPress={() => setMode("notAdvisable")}
-          style={({ pressed }) => [
-            styles.toggleButton,
-            mode === "notAdvisable" && {
-              backgroundColor: "#EF4444",
-            },
-            pressed && styles.pressed,
-          ]}
-        >
-          <AppText
-            variant="caption"
-            style={[
-              styles.toggleText,
-              mode === "notAdvisable" &&
-              styles.activeToggleText,
-            ]}
-          >
-            Not Advisable
-          </AppText>
+          <Ionicons
+            name="arrow-forward"
+            size={16}
+            color="#FFFFFF"
+          />
         </Pressable>
       </View>
 
-      {/* View All */}
-      <Pressable
-        onPress={() => router.push(Routes.APPLIANCES)}
-        style={({ pressed }) => [
-          styles.viewAll,
-          pressed && styles.pressed,
-        ]}
-      >
-        <AppText
-          variant="caption"
-          style={styles.viewAllText}
-        >
-          View All
-        </AppText>
-
-        <Ionicons
-          name="arrow-forward"
-          size={16}
-          color="#FFFFFF"
-        />
-      </Pressable>
-
-
-    </View>
+      <ApplianceModal
+        visible={modalVisible}
+        onClose={closeApplianceModal}
+      />
+    </>
   );
 }
 
@@ -320,14 +605,14 @@ const styles = StyleSheet.create({
   },
 
   applianceBox: {
-    width: "45%",
-    maxWidth: 150,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    padding: 12,
-    alignItems: "center",
-  },
+  flex: 1,
+  maxWidth: 160,
+  backgroundColor: "#FFFFFF",
+  borderWidth: 2,
+  borderRadius: Radius.md,
+  padding: 12,
+  alignItems: "center",
+},
 
   imageContainer: {
     width: "100%",
@@ -474,4 +759,46 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
+
+  // Space between the EmptyState and status controls
+recommendationEmptyState: {
+  width: "100%",
+  marginBottom: 14,
+},
+
+// Mode 1: appliance-box-style Get Started UI
+getStartedBox: {
+  width: "100%",
+  backgroundColor: "#FFFFFF",
+  borderWidth: 2,
+  borderColor: Colors.light.border,
+  borderRadius: Radius.md,
+  paddingVertical: 22,
+  paddingHorizontal: 16,
+  alignItems: "center",
+},
+
+getStartedTitle: {
+  color: "#000000",
+  fontWeight: "700",
+  textAlign: "center",
+  marginBottom: 16,
+},
+
+addAppliancesButton: {
+  minHeight: 46,
+  width: "100%",
+  paddingHorizontal: 18,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  backgroundColor: Colors.light.primary,
+  borderRadius: Radius.md,
+},
+
+addAppliancesButtonText: {
+  color: "#FFFFFF",
+  fontWeight: "700",
+},
 });
