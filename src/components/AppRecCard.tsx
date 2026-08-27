@@ -17,8 +17,8 @@ import {
 } from "react-native";
 
 import ApplianceModal from "@/components/forms/ApplianceModal";
-import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
+import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
@@ -57,11 +57,9 @@ export default function AppRecCard({
   const [mode, setMode] =
     useState<Status>("advisable");
 
-  const [index, setIndex] =
-    useState(0);
+  const [index, setIndex] = useState(0);
 
-  const [tipIndex, setTipIndex] =
-    useState(0);
+  const [tipIndex, setTipIndex] = useState(0);
 
   const [appliances, setAppliances] =
     useState<Appliance[]>([]);
@@ -76,7 +74,7 @@ export default function AppRecCard({
     useRef(new Animated.Value(1)).current;
 
   // ============================================
-  // FILTER BY RECOMMENDATION STATUS
+  // FILTER APPLIANCES BY STATUS
   // ============================================
 
   const filteredAppliances = useMemo(
@@ -87,10 +85,12 @@ export default function AppRecCard({
     [appliances, mode],
   );
 
-  // Show a maximum of two appliances
-  // without creating invalid indexes.
+  // ============================================
+  // CAROUSEL ITEMS
+  // ============================================
+
   const currentAppliances = useMemo(() => {
-    if (!filteredAppliances.length) {
+    if (filteredAppliances.length === 0) {
       return [];
     }
 
@@ -117,7 +117,7 @@ export default function AppRecCard({
     : "#EF4444";
 
   // ============================================
-  // LOAD USER'S SELECTED APPLIANCES
+  // LOAD USER APPLIANCES
   // ============================================
 
   const loadAppliances = async () => {
@@ -195,7 +195,7 @@ export default function AppRecCard({
   }, []);
 
   // ============================================
-  // RESET CAROUSEL WHEN MODE CHANGES
+  // RESET CAROUSEL
   // ============================================
 
   useEffect(() => {
@@ -240,7 +240,7 @@ export default function AppRecCard({
   }, []);
 
   // ============================================
-  // APPLIANCE MODAL
+  // OPEN / CLOSE APPLIANCE MODAL
   // ============================================
 
   const openApplianceModal = () => {
@@ -381,6 +381,7 @@ export default function AppRecCard({
                       },
                     ]}
                   >
+                    {/* Fixed Image Area */}
                     <View
                       style={[
                         styles.imageContainer,
@@ -397,6 +398,7 @@ export default function AppRecCard({
                       />
                     </View>
 
+                    {/* Bounded Appliance Name */}
                     <AppText
                       variant="caption"
                       style={styles.name}
@@ -405,13 +407,16 @@ export default function AppRecCard({
                       {appliance.name}
                     </AppText>
 
+                    {/* Wattage */}
                     <AppText
                       variant="caption"
                       style={styles.watts}
+                      numberOfLines={1}
                     >
                       {appliance.watts}
                     </AppText>
 
+                    {/* Status */}
                     <View
                       style={[
                         styles.status,
@@ -436,6 +441,7 @@ export default function AppRecCard({
                         style={
                           styles.statusText
                         }
+                        numberOfLines={1}
                       >
                         {isAdvisable
                           ? "OK to use"
@@ -448,28 +454,26 @@ export default function AppRecCard({
             </View>
 
             {/* Carousel Indicator */}
-            {filteredAppliances.length > 1 && (
-              <View style={styles.indicator}>
-                {filteredAppliances.map(
-                  (item, itemIndex) => (
-                    <View
-                      key={item.id}
-                      style={[
-                        styles.dot,
-                        {
-                          backgroundColor:
-                            itemIndex ===
-                            index %
-                              filteredAppliances.length
-                              ? statusColor
-                              : Colors.light.border,
-                        },
-                      ]}
-                    />
-                  ),
-                )}
-              </View>
-            )}
+            <View style={styles.indicator}>
+              {filteredAppliances.map(
+                (item, itemIndex) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.dot,
+                      {
+                        backgroundColor:
+                          itemIndex ===
+                          index %
+                            filteredAppliances.length
+                            ? statusColor
+                            : Colors.light.border,
+                      },
+                    ]}
+                  />
+                ),
+              )}
+            </View>
           </>
         ) : (
           <View
@@ -595,28 +599,39 @@ const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
     alignItems: "center",
+    gap: 2,
   },
+
+  // ============================================
+  // FIXED APPLIANCE CAROUSEL
+  // ============================================
 
   applianceRow: {
     width: "100%",
     flexDirection: "row",
     justifyContent: "center",
-    gap: 20,
+    alignItems: "flex-start",
+    gap: 12,
+    minHeight: 220,
   },
 
   applianceBox: {
-  flex: 1,
-  maxWidth: 160,
-  backgroundColor: "#FFFFFF",
-  borderWidth: 2,
-  borderRadius: Radius.md,
-  padding: 12,
-  alignItems: "center",
-},
+    width: "46%",
+    maxWidth: 150,
+    height: 220,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderRadius: Radius.md,
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    overflow: "hidden",
+  },
 
   imageContainer: {
-    width: "100%",
-    aspectRatio: 1,
+    width: 110,
+    height: 110,
+    flexShrink: 0,
     backgroundColor: "#dfdfdf",
     borderWidth: 2,
     borderRadius: Radius.md,
@@ -630,42 +645,59 @@ const styles = StyleSheet.create({
 
   name: {
     width: "100%",
+    height: 40,
+    flexShrink: 0,
     color: "#000000",
     fontSize: 16,
     fontWeight: "600",
     lineHeight: 20,
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 8,
   },
 
   watts: {
+    width: "100%",
+    height: 18,
+    flexShrink: 0,
     color: Colors.light.textSecondary,
     fontSize: 13,
-    marginTop: 3,
+    textAlign: "center",
+    marginTop: 2,
   },
 
   status: {
+    maxWidth: "100%",
+    minHeight: 28,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     borderRadius: Radius.md,
     paddingHorizontal: 9,
     paddingVertical: 5,
-    marginTop: 8,
+    marginTop: 6,
+    flexShrink: 0,
   },
 
   statusText: {
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
+    flexShrink: 1,
   },
+
+  // ============================================
+  // CAROUSEL INDICATOR
+  // ============================================
 
   indicator: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    marginVertical: 10,
+    minHeight: 7,
+    marginTop: 10,
+    marginBottom: 16,
   },
 
   dot: {
@@ -674,15 +706,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
+  // ============================================
+  // STATUS TOGGLE
+  // ============================================
+
   toggle: {
     width: "100%",
     maxWidth: 360,
+    minHeight: 46,
     flexDirection: "row",
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
     borderColor: Colors.light.border,
     borderRadius: Radius.md,
     padding: 3,
+    marginTop: 2,
   },
 
   toggleButton: {
@@ -703,17 +741,21 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
+  // ============================================
+  // VIEW ALL
+  // ============================================
+
   viewAll: {
     width: "100%",
     maxWidth: 360,
-    minHeight: 42,
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     backgroundColor: Colors.light.primary,
     borderRadius: Radius.md,
-    marginTop: 8,
+    marginTop: 12,
     marginBottom: 15,
   },
 
@@ -723,12 +765,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // ============================================
+  // TIP
+  // ============================================
+
   tip: {
     width: "100%",
-    height: 72,
+    minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 165, 0, 0.08)",
+    backgroundColor:
+      "rgba(255, 165, 0, 0.08)",
     borderWidth: 1,
     borderColor: Colors.light.secondary,
     borderRadius: Radius.md,
@@ -756,49 +803,59 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
+  // ============================================
+  // EMPTY STATE
+  // ============================================
+
+  recommendationEmptyState: {
+    width: "100%",
+    marginBottom: 14,
+  },
+
+  // ============================================
+  // MODE 1 - GET STARTED
+  // ============================================
+
+  getStartedBox: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: Colors.light.border,
+    borderRadius: Radius.md,
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+
+  getStartedTitle: {
+    color: "#000000",
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+
+  addAppliancesButton: {
+    minHeight: 46,
+    width: "100%",
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.light.primary,
+    borderRadius: Radius.md,
+  },
+
+  addAppliancesButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  // ============================================
+  // PRESS FEEDBACK
+  // ============================================
+
   pressed: {
     opacity: 0.7,
   },
-
-  // Space between the EmptyState and status controls
-recommendationEmptyState: {
-  width: "100%",
-  marginBottom: 14,
-},
-
-// Mode 1: appliance-box-style Get Started UI
-getStartedBox: {
-  width: "100%",
-  backgroundColor: "#FFFFFF",
-  borderWidth: 2,
-  borderColor: Colors.light.border,
-  borderRadius: Radius.md,
-  paddingVertical: 22,
-  paddingHorizontal: 16,
-  alignItems: "center",
-},
-
-getStartedTitle: {
-  color: "#000000",
-  fontWeight: "700",
-  textAlign: "center",
-  marginBottom: 16,
-},
-
-addAppliancesButton: {
-  minHeight: 46,
-  width: "100%",
-  paddingHorizontal: 18,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
-  backgroundColor: Colors.light.primary,
-  borderRadius: Radius.md,
-},
-
-addAppliancesButtonText: {
-  color: "#FFFFFF",
-  fontWeight: "700",
-},
 });
