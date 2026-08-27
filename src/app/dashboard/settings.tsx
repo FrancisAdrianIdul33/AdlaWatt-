@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import {
   Alert,
   Modal,
@@ -15,6 +16,7 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
+
 import { Colors } from "@/constants/colors";
 
 import {
@@ -25,37 +27,80 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
-  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarVisible, setSidebarVisible] =
+    useState(false);
 
-  // Dropdown states
-  const [accountExpanded, setAccountExpanded] = useState(false);
-  const [preferencesExpanded, setPreferencesExpanded] = useState(false);
+  // ============================================
+  // DROPDOWN STATES
+  // ============================================
 
-  // Account states
-  const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [accountExpanded, setAccountExpanded] =
+    useState(false);
 
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [preferencesExpanded, setPreferencesExpanded] =
+    useState(false);
 
-  const [editUsername, setEditUsername] = useState(username);
-  const [editEmail, setEditEmail] = useState(email);
+  // ============================================
+  // ACCOUNT STATES
+  // ============================================
 
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isEditingAccount, setIsEditingAccount] =
+    useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [username, setUsername] =
+    useState("");
 
-  const [confirmationVisible, setConfirmationVisible] = useState(false);
+  const [email, setEmail] =
+    useState("");
 
-  const [warning, setWarning] = useState("");
-  const [confirmationWarning, setConfirmationWarning] = useState("");
+  const [editUsername, setEditUsername] =
+    useState("");
 
-  // Preferences
-  const [darkMode, setDarkMode] = useState(false);
-  const [colorBlindMode, setColorBlindMode] = useState(false);
+  const [editEmail, setEditEmail] =
+    useState("");
+
+  const [newPassword, setNewPassword] =
+    useState("");
+
+  const [confirmNewPassword, setConfirmNewPassword] =
+    useState("");
+
+  const [currentPassword, setCurrentPassword] =
+    useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] =
+    useState(false);
+
+  const [showNewPassword, setShowNewPassword] =
+    useState(false);
+
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
+
+  const [confirmationVisible, setConfirmationVisible] =
+    useState(false);
+
+  const [warning, setWarning] =
+    useState("");
+
+  const [confirmationWarning, setConfirmationWarning] =
+    useState("");
+
+  const [loadingAccount, setLoadingAccount] =
+    useState(false);
+
+  const [confirmingAccountUpdate, setConfirmingAccountUpdate] =
+    useState(false);
+
+  // ============================================
+  // PREFERENCES
+  // ============================================
+
+  const [darkMode, setDarkMode] =
+    useState(false);
+
+  const [colorBlindMode, setColorBlindMode] =
+    useState(false);
 
   const [fontSize, setFontSize] = useState<
     "Small" | "Medium" | "Big"
@@ -68,94 +113,265 @@ export default function SettingsScreen() {
   const [fontFamily, setFontFamily] =
     useState("System Default");
 
-  const [language, setLanguage] = useState("English");
+  const [language, setLanguage] =
+    useState("English");
 
-  const [vibration, setVibration] = useState(true);
+  const [vibration, setVibration] =
+    useState(true);
+
   const [emailNotifications, setEmailNotifications] =
     useState(false);
 
-  // Dropdown states
+  // ============================================
+  // PREFERENCE DROPDOWNS
+  // ============================================
+
   const [fontFamilyOpen, setFontFamilyOpen] =
     useState(false);
 
   const [languageOpen, setLanguageOpen] =
     useState(false);
 
+  // ============================================
+  // LOAD ACCOUNT PROFILE
+  // ============================================
+
   useEffect(() => {
     const loadAccount = async () => {
-      const result = await getCurrentUserProfile();
+      setLoadingAccount(true);
+
+      const result =
+        await getCurrentUserProfile();
 
       if (!result.success) {
-        setWarning(result.error ??"");
+        setWarning(result.error ?? "");
+        setLoadingAccount(false);
         return;
       }
 
-      setUsername(result.username);
-      setEmail(result.email);
-      setEditUsername(result.username);
-      setEditEmail(result.email);
+      const loadedUsername =
+        result.username ?? "";
+
+      const loadedEmail =
+        result.email ?? "";
+
+      setUsername(loadedUsername);
+      setEmail(loadedEmail);
+
+      setEditUsername(loadedUsername);
+      setEditEmail(loadedEmail);
+
+      setLoadingAccount(false);
     };
 
     loadAccount();
   }, []);
 
+  // ============================================
+  // OPEN ACCOUNT EDITING
+  // ============================================
+
   const handleUpdatePress = () => {
     setEditUsername(username);
     setEditEmail(email);
+
     setNewPassword("");
     setConfirmNewPassword("");
     setCurrentPassword("");
+
     setWarning("");
+    setConfirmationWarning("");
+
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+
     setIsEditingAccount(true);
   };
+
+  // ============================================
+  // CANCEL ACCOUNT UPDATE
+  // ============================================
 
   const handleCancelUpdate = () => {
     setEditUsername(username);
     setEditEmail(email);
+
     setNewPassword("");
     setConfirmNewPassword("");
     setCurrentPassword("");
+
+    setWarning("");
+    setConfirmationWarning("");
+
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+
+    setConfirmationVisible(false);
     setIsEditingAccount(false);
   };
 
+  // ============================================
+  // SUBMIT ACCOUNT UPDATE
+  // ============================================
+
   const handleSubmitAccountUpdate = () => {
-    const cleanUsername = editUsername.trim();
-    const cleanEmail = editEmail.trim();
+    if (confirmingAccountUpdate) {
+      return;
+    }
 
     setWarning("");
 
+    const cleanUsername =
+      editUsername.trim().toLowerCase();
+
+    const cleanEmail =
+      editEmail.trim().toLowerCase();
+
+    // --------------------------------------------
+    // USERNAME VALIDATION
+    // --------------------------------------------
+
+    if (!cleanUsername) {
+      setWarning("Please enter a username.");
+      return;
+    }
+
     if (cleanUsername.length < 3) {
-      setWarning("Username must be at least 3 characters.");
+      setWarning(
+        "Username must be at least 3 characters.",
+      );
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setWarning("Enter a valid email address.");
+    if (cleanUsername.length > 30) {
+      setWarning(
+        "Username must not exceed 30 characters.",
+      );
       return;
     }
 
-    if (newPassword || confirmNewPassword) {
+    if (
+      !/^[a-zA-Z0-9_]+$/.test(
+        cleanUsername,
+      )
+    ) {
+      setWarning(
+        "Username can only contain letters, numbers, and underscores.",
+      );
+      return;
+    }
+
+    // --------------------------------------------
+    // EMAIL VALIDATION
+    // --------------------------------------------
+
+    if (!cleanEmail) {
+      setWarning(
+        "Please enter your email address.",
+      );
+      return;
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        cleanEmail,
+      )
+    ) {
+      setWarning(
+        "Enter a valid email address.",
+      );
+      return;
+    }
+
+    // --------------------------------------------
+    // PASSWORD VALIDATION
+    // --------------------------------------------
+
+    if (
+      newPassword ||
+      confirmNewPassword
+    ) {
       if (newPassword.length < 8) {
-        setWarning("Password must be at least 8 characters.");
+        setWarning(
+          "Password must be at least 8 characters.",
+        );
         return;
       }
 
-      if (newPassword !== confirmNewPassword) {
-        setWarning("Passwords do not match.");
+      if (newPassword.length > 72) {
+        setWarning(
+          "Password must not exceed 72 characters.",
+        );
+        return;
+      }
+
+      if (
+        newPassword !==
+        confirmNewPassword
+      ) {
+        setWarning(
+          "Passwords do not match.",
+        );
         return;
       }
     }
 
+    // --------------------------------------------
+    // CHECK IF ANYTHING CHANGED
+    // --------------------------------------------
+
+    const usernameChanged =
+      cleanUsername !== username;
+
+    const emailChanged =
+      cleanEmail !== email;
+
+    const passwordChanged =
+      newPassword.length > 0;
+
+    if (
+      !usernameChanged &&
+      !emailChanged &&
+      !passwordChanged
+    ) {
+      setWarning(
+        "No account changes were made.",
+      );
+      return;
+    }
+
+    // --------------------------------------------
+    // OPEN PASSWORD CONFIRMATION
+    // --------------------------------------------
+
+    setEditUsername(cleanUsername);
+    setEditEmail(cleanEmail);
+
+    setCurrentPassword("");
+    setConfirmationWarning("");
     setConfirmationVisible(true);
   };
 
+  // ============================================
+  // CONFIRM ACCOUNT UPDATE
+  // ============================================
+
   const handleConfirmChanges = async () => {
+    if (confirmingAccountUpdate) {
+      return;
+    }
+
     setConfirmationWarning("");
 
-    const password = currentPassword.trim();
+    const password =
+      currentPassword;
 
     if (!password) {
-      setConfirmationWarning("Enter your current password.");
+      setConfirmationWarning(
+        "Enter your current password.",
+      );
       return;
     }
 
@@ -166,48 +382,88 @@ export default function SettingsScreen() {
       return;
     }
 
-    const result = await updateAccount(
-      editUsername,
-      editEmail,
-      password,
-      newPassword,
-    );
+    try {
+      setConfirmingAccountUpdate(true);
 
-    if (!result.success) {
+      const result =
+        await updateAccount(
+          editUsername,
+          editEmail,
+          password,
+          newPassword || undefined,
+        );
+
+      if (!result.success) {
+        setConfirmationWarning(
+          result.error ??
+            "Unable to update your account.",
+        );
+        return;
+      }
+
+      const updatedUsername =
+        result.username ??
+        editUsername.trim().toLowerCase();
+
+      const updatedEmail =
+        result.email ??
+        editEmail.trim().toLowerCase();
+
+      setUsername(updatedUsername);
+      setEmail(updatedEmail);
+
+      setEditUsername(updatedUsername);
+      setEditEmail(updatedEmail);
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+
+      setWarning("");
+      setConfirmationWarning("");
+
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+
+      setConfirmationVisible(false);
+      setIsEditingAccount(false);
+
+      if (result.emailChangePending) {
+        Alert.alert(
+          "Account Updated",
+          result.message ??
+            "Your username was updated. Please confirm your new email address.",
+        );
+      } else {
+        Alert.alert(
+          "Changes Saved",
+          "Your account information has been updated successfully.",
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Account update error:",
+        error,
+      );
+
       setConfirmationWarning(
-        result.error ?? "Unable to update your account.",
+        "Unable to update your account. Please try again.",
       );
-      return;
-    }
-
-    setUsername(result.username ?? editUsername.trim());
-    setEmail(result.email ?? editEmail.trim());
-
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setWarning("");
-    setConfirmationWarning("");
-    setConfirmationVisible(false);
-    setIsEditingAccount(false);
-
-    if (result.emailChangePending) {
-      Alert.alert(
-        "Username Updated",
-        result.message ??
-        "Please confirm your new email address.",
-      );
-    } else {
-      Alert.alert(
-        "Changes Saved",
-        "Your account information has been updated successfully.",
-      );
+    } finally {
+      setConfirmingAccountUpdate(false);
     }
   };
 
+  // ============================================
+  // TOGGLE
+  // ============================================
+
   const renderToggle = (
     value: boolean,
-    onValueChange: (value: boolean) => void,
+    onValueChange: (
+      value: boolean,
+    ) => void,
   ) => (
     <Switch
       value={value}
@@ -217,14 +473,18 @@ export default function SettingsScreen() {
         true: Colors.light.primary,
       }}
       thumbColor="#FFFFFF"
-      ios_backgroundColor={Colors.light.border}
+      ios_backgroundColor={
+        Colors.light.border
+      }
     />
   );
 
   return (
     <ScreenContainer2>
       <NavBar
-        onMenuPress={() => setSidebarVisible(true)}
+        onMenuPress={() =>
+          setSidebarVisible(true)
+        }
       />
 
       <ScrollView
@@ -251,21 +511,29 @@ export default function SettingsScreen() {
         </View>
 
         {/* ================= ACCOUNT PROFILE ================= */}
+
         <View style={styles.sectionContainer}>
           <Pressable
             onPress={() => {
-              if (accountExpanded && isEditingAccount) {
+              if (
+                accountExpanded &&
+                isEditingAccount
+              ) {
                 handleCancelUpdate();
               }
 
-              setAccountExpanded(!accountExpanded);
+              setAccountExpanded(
+                (current) => !current,
+              );
             }}
             style={({ pressed }) => [
               styles.dropdownHeader,
               pressed && styles.pressed,
             ]}
           >
-            <View style={styles.dropdownHeaderText}>
+            <View
+              style={styles.dropdownHeaderText}
+            >
               <AppText
                 variant="body"
                 style={styles.dropdownTitle}
@@ -293,8 +561,17 @@ export default function SettingsScreen() {
           </Pressable>
 
           {accountExpanded && (
-            <View style={styles.expandedContent}>
-              {!isEditingAccount ? (
+            <View
+              style={styles.expandedContent}
+            >
+              {loadingAccount ? (
+                <AppText
+                  variant="caption"
+                  style={styles.infoValue}
+                >
+                  Loading account information...
+                </AppText>
+              ) : !isEditingAccount ? (
                 <>
                   {/* Username */}
                   <View style={styles.infoRow}>
@@ -334,10 +611,15 @@ export default function SettingsScreen() {
                     onPress={handleUpdatePress}
                     style={({ pressed }) => [
                       styles.primaryButton,
-                      pressed && styles.pressed,
+                      pressed &&
+                        styles.pressed,
                     ]}
                   >
-                    <AppText style={styles.primaryButtonText}>
+                    <AppText
+                      style={
+                        styles.primaryButtonText
+                      }
+                    >
                       Update
                     </AppText>
                   </Pressable>
@@ -355,12 +637,17 @@ export default function SettingsScreen() {
 
                     <TextInput
                       value={editUsername}
-                      onChangeText={setEditUsername}
+                      onChangeText={(text) => {
+                        setEditUsername(text);
+                        setWarning("");
+                      }}
                       style={styles.input}
                       placeholder="Enter username"
                       placeholderTextColor={
                         Colors.light.textSecondary
                       }
+                      autoCapitalize="none"
+                      autoCorrect={false}
                     />
                   </View>
 
@@ -375,7 +662,10 @@ export default function SettingsScreen() {
 
                     <TextInput
                       value={editEmail}
-                      onChangeText={setEditEmail}
+                      onChangeText={(text) => {
+                        setEditEmail(text);
+                        setWarning("");
+                      }}
                       style={styles.input}
                       placeholder="Enter email"
                       placeholderTextColor={
@@ -383,6 +673,7 @@ export default function SettingsScreen() {
                       }
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      autoCorrect={false}
                     />
                   </View>
 
@@ -395,23 +686,39 @@ export default function SettingsScreen() {
                       New Password
                     </AppText>
 
-                    <View style={styles.passwordInputContainer}>
+                    <View
+                      style={
+                        styles.passwordInputContainer
+                      }
+                    >
                       <TextInput
                         value={newPassword}
-                        onChangeText={setNewPassword}
-                        style={styles.passwordInput}
+                        onChangeText={(text) => {
+                          setNewPassword(text);
+                          setWarning("");
+                        }}
+                        style={
+                          styles.passwordInput
+                        }
                         placeholder="Leave blank to keep current"
                         placeholderTextColor={
                           Colors.light.textSecondary
                         }
-                        secureTextEntry={!showNewPassword}
+                        secureTextEntry={
+                          !showNewPassword
+                        }
                       />
 
                       <Pressable
                         onPress={() =>
-                          setShowNewPassword(!showNewPassword)
+                          setShowNewPassword(
+                            (current) =>
+                              !current,
+                          )
                         }
-                        style={styles.eyeButton}
+                        style={
+                          styles.eyeButton
+                        }
                       >
                         <Ionicons
                           name={
@@ -435,13 +742,24 @@ export default function SettingsScreen() {
                       Confirm New Password
                     </AppText>
 
-                    <View style={styles.passwordInputContainer}>
+                    <View
+                      style={
+                        styles.passwordInputContainer
+                      }
+                    >
                       <TextInput
-                        value={confirmNewPassword}
-                        onChangeText={
-                          setConfirmNewPassword
+                        value={
+                          confirmNewPassword
                         }
-                        style={styles.passwordInput}
+                        onChangeText={(text) => {
+                          setConfirmNewPassword(
+                            text,
+                          );
+                          setWarning("");
+                        }}
+                        style={
+                          styles.passwordInput
+                        }
                         placeholder="Confirm new password"
                         placeholderTextColor={
                           Colors.light.textSecondary
@@ -454,10 +772,13 @@ export default function SettingsScreen() {
                       <Pressable
                         onPress={() =>
                           setShowConfirmPassword(
-                            !showConfirmPassword,
+                            (current) =>
+                              !current,
                           )
                         }
-                        style={styles.eyeButton}
+                        style={
+                          styles.eyeButton
+                        }
                       >
                         <Ionicons
                           name={
@@ -472,45 +793,75 @@ export default function SettingsScreen() {
                     </View>
                   </View>
 
-                  {/* Edit Actions */}
+                  {/* Warning */}
                   {warning ? (
-                    <View style={styles.warningContainer}>
+                    <View
+                      style={
+                        styles.warningContainer
+                      }
+                    >
                       <Ionicons
                         name="alert-circle-outline"
                         size={18}
                         color={Colors.light.error}
                       />
-                      <AppText style={styles.warningText}>
+
+                      <AppText
+                        style={
+                          styles.warningText
+                        }
+                      >
                         {warning}
                       </AppText>
                     </View>
                   ) : null}
 
+                  {/* Edit Actions */}
                   <View style={styles.actionRow}>
                     <Pressable
-                      onPress={handleCancelUpdate}
-                      style={({ pressed }) => [
+                      onPress={
+                        handleCancelUpdate
+                      }
+                      disabled={
+                        confirmingAccountUpdate
+                      }
+                      style={({
+                        pressed,
+                      }) => [
                         styles.secondaryButton,
-                        pressed && styles.pressed,
+                        pressed &&
+                          styles.pressed,
                       ]}
                     >
                       <AppText
-                        style={styles.secondaryButtonText}
+                        style={
+                          styles.secondaryButtonText
+                        }
                       >
                         Cancel
                       </AppText>
                     </Pressable>
 
                     <Pressable
-                      onPress={handleSubmitAccountUpdate}
-                      style={({ pressed }) => [
+                      onPress={
+                        handleSubmitAccountUpdate
+                      }
+                      disabled={
+                        confirmingAccountUpdate
+                      }
+                      style={({
+                        pressed,
+                      }) => [
                         styles.primaryButton,
                         styles.actionButton,
-                        pressed && styles.pressed,
+                        pressed &&
+                          styles.pressed,
                       ]}
                     >
                       <AppText
-                        style={styles.primaryButtonText}
+                        style={
+                          styles.primaryButtonText
+                        }
                       >
                         Submit
                       </AppText>
@@ -523,11 +874,12 @@ export default function SettingsScreen() {
         </View>
 
         {/* ================= PREFERENCES ================= */}
+
         <View style={styles.sectionContainer}>
           <Pressable
             onPress={() =>
               setPreferencesExpanded(
-                !preferencesExpanded,
+                (current) => !current,
               )
             }
             style={({ pressed }) => [
@@ -535,7 +887,11 @@ export default function SettingsScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <View style={styles.dropdownHeaderText}>
+            <View
+              style={
+                styles.dropdownHeaderText
+              }
+            >
               <AppText
                 variant="body"
                 style={styles.dropdownTitle}
@@ -545,7 +901,9 @@ export default function SettingsScreen() {
 
               <AppText
                 variant="caption"
-                style={styles.dropdownSubtitle}
+                style={
+                  styles.dropdownSubtitle
+                }
               >
                 Customize your AdlaWatt experience
               </AppText>
@@ -553,7 +911,7 @@ export default function SettingsScreen() {
 
             <Ionicons
               name={
-                accountExpanded
+                preferencesExpanded
                   ? "chevron-up-outline"
                   : "chevron-down-outline"
               }
@@ -563,7 +921,9 @@ export default function SettingsScreen() {
           </Pressable>
 
           {preferencesExpanded && (
-            <View style={styles.expandedContent}>
+            <View
+              style={styles.expandedContent}
+            >
               {/* APPEARANCE */}
               <AppText
                 variant="caption"
@@ -573,17 +933,23 @@ export default function SettingsScreen() {
               </AppText>
 
               <View style={styles.preferenceCard}>
-                <View style={styles.preferenceText}>
+                <View
+                  style={styles.preferenceText}
+                >
                   <AppText
                     variant="body"
-                    style={styles.preferenceTitle}
+                    style={
+                      styles.preferenceTitle
+                    }
                   >
                     Dark Mode
                   </AppText>
 
                   <AppText
                     variant="caption"
-                    style={styles.preferenceDescription}
+                    style={
+                      styles.preferenceDescription
+                    }
                   >
                     Switch between light and dark
                     appearance.
@@ -597,20 +963,25 @@ export default function SettingsScreen() {
               </View>
 
               <View style={styles.preferenceCard}>
-                <View style={styles.preferenceText}>
+                <View
+                  style={styles.preferenceText}
+                >
                   <AppText
                     variant="body"
-                    style={styles.preferenceTitle}
+                    style={
+                      styles.preferenceTitle
+                    }
                   >
                     Color Blind Mode
                   </AppText>
 
                   <AppText
                     variant="caption"
-                    style={styles.preferenceDescription}
+                    style={
+                      styles.preferenceDescription
+                    }
                   >
-                    Adjust colors for better
-                    accessibility.
+                    Adjust colors for better accessibility.
                   </AppText>
                 </View>
 
@@ -629,7 +1000,9 @@ export default function SettingsScreen() {
               </AppText>
 
               {/* Font Size */}
-              <View style={styles.preferenceGroup}>
+              <View
+                style={styles.preferenceGroup}
+              >
                 <AppText
                   variant="caption"
                   style={styles.groupLabel}
@@ -638,41 +1011,46 @@ export default function SettingsScreen() {
                 </AppText>
 
                 <View style={styles.optionRow}>
-                  {["Small", "Medium", "Big"].map(
-                    (option) => (
-                      <Pressable
-                        key={option}
-                        onPress={() =>
-                          setFontSize(
-                            option as
+                  {[
+                    "Small",
+                    "Medium",
+                    "Big",
+                  ].map((option) => (
+                    <Pressable
+                      key={option}
+                      onPress={() =>
+                        setFontSize(
+                          option as
                             | "Small"
                             | "Medium"
                             | "Big",
-                          )
-                        }
-                        style={[
-                          styles.optionButton,
-                          fontSize === option &&
+                        )
+                      }
+                      style={[
+                        styles.optionButton,
+                        fontSize === option &&
                           styles.selectedOption,
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.optionText,
+                          fontSize ===
+                            option &&
+                            styles.selectedOptionText,
                         ]}
                       >
-                        <AppText
-                          style={[
-                            styles.optionText,
-                            fontSize === option &&
-                            styles.selectedOptionText,
-                          ]}
-                        >
-                          {option}
-                        </AppText>
-                      </Pressable>
-                    ),
-                  )}
+                        {option}
+                      </AppText>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
 
               {/* Font Weight */}
-              <View style={styles.preferenceGroup}>
+              <View
+                style={styles.preferenceGroup}
+              >
                 <AppText
                   variant="caption"
                   style={styles.groupLabel}
@@ -681,41 +1059,47 @@ export default function SettingsScreen() {
                 </AppText>
 
                 <View style={styles.optionRow}>
-                  {["Thin", "Regular", "Bold"].map(
-                    (option) => (
-                      <Pressable
-                        key={option}
-                        onPress={() =>
-                          setFontWeight(
-                            option as
+                  {[
+                    "Thin",
+                    "Regular",
+                    "Bold",
+                  ].map((option) => (
+                    <Pressable
+                      key={option}
+                      onPress={() =>
+                        setFontWeight(
+                          option as
                             | "Thin"
                             | "Regular"
                             | "Bold",
-                          )
-                        }
-                        style={[
-                          styles.optionButton,
-                          fontWeight === option &&
+                        )
+                      }
+                      style={[
+                        styles.optionButton,
+                        fontWeight ===
+                          option &&
                           styles.selectedOption,
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.optionText,
+                          fontWeight ===
+                            option &&
+                            styles.selectedOptionText,
                         ]}
                       >
-                        <AppText
-                          style={[
-                            styles.optionText,
-                            fontWeight === option &&
-                            styles.selectedOptionText,
-                          ]}
-                        >
-                          {option}
-                        </AppText>
-                      </Pressable>
-                    ),
-                  )}
+                        {option}
+                      </AppText>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
 
               {/* Font Family */}
-              <View style={styles.preferenceGroup}>
+              <View
+                style={styles.preferenceGroup}
+              >
                 <AppText
                   variant="caption"
                   style={styles.groupLabel}
@@ -726,20 +1110,25 @@ export default function SettingsScreen() {
                 <Pressable
                   onPress={() =>
                     setFontFamilyOpen(
-                      !fontFamilyOpen,
+                      (current) =>
+                        !current,
                     )
                   }
-                  style={styles.dropdownInput}
+                  style={
+                    styles.dropdownInput
+                  }
                 >
                   <AppText
-                    style={styles.dropdownInputText}
+                    style={
+                      styles.dropdownInputText
+                    }
                   >
                     {fontFamily}
                   </AppText>
 
                   <Ionicons
                     name={
-                      preferencesExpanded
+                      fontFamilyOpen
                         ? "chevron-up-outline"
                         : "chevron-down-outline"
                     }
@@ -749,7 +1138,11 @@ export default function SettingsScreen() {
                 </Pressable>
 
                 {fontFamilyOpen && (
-                  <View style={styles.selectionMenu}>
+                  <View
+                    style={
+                      styles.selectionMenu
+                    }
+                  >
                     {[
                       "Times New Roman",
                       "Roboto",
@@ -760,16 +1153,23 @@ export default function SettingsScreen() {
                       <Pressable
                         key={font}
                         onPress={() => {
-                          setFontFamily(font);
-                          setFontFamilyOpen(false);
+                          setFontFamily(
+                            font,
+                          );
+                          setFontFamilyOpen(
+                            false,
+                          );
                         }}
-                        style={styles.selectionItem}
+                        style={
+                          styles.selectionItem
+                        }
                       >
                         <AppText
                           style={[
                             styles.selectionText,
-                            fontFamily === font &&
-                            styles.selectedSelectionText,
+                            fontFamily ===
+                              font &&
+                              styles.selectedSelectionText,
                           ]}
                         >
                           {font}
@@ -788,22 +1188,31 @@ export default function SettingsScreen() {
                 LANGUAGE
               </AppText>
 
-              <View style={styles.preferenceGroup}>
+              <View
+                style={styles.preferenceGroup}
+              >
                 <Pressable
                   onPress={() =>
-                    setLanguageOpen(!languageOpen)
+                    setLanguageOpen(
+                      (current) =>
+                        !current,
+                    )
                   }
-                  style={styles.dropdownInput}
+                  style={
+                    styles.dropdownInput
+                  }
                 >
                   <AppText
-                    style={styles.dropdownInputText}
+                    style={
+                      styles.dropdownInputText
+                    }
                   >
                     {language}
                   </AppText>
 
                   <Ionicons
                     name={
-                      preferencesExpanded
+                      languageOpen
                         ? "chevron-up-outline"
                         : "chevron-down-outline"
                     }
@@ -813,7 +1222,11 @@ export default function SettingsScreen() {
                 </Pressable>
 
                 {languageOpen && (
-                  <View style={styles.selectionMenu}>
+                  <View
+                    style={
+                      styles.selectionMenu
+                    }
+                  >
                     {[
                       "English",
                       "Cebuano (Bisaya)",
@@ -822,16 +1235,23 @@ export default function SettingsScreen() {
                       <Pressable
                         key={item}
                         onPress={() => {
-                          setLanguage(item);
-                          setLanguageOpen(false);
+                          setLanguage(
+                            item,
+                          );
+                          setLanguageOpen(
+                            false,
+                          );
                         }}
-                        style={styles.selectionItem}
+                        style={
+                          styles.selectionItem
+                        }
                       >
                         <AppText
                           style={[
                             styles.selectionText,
-                            language === item &&
-                            styles.selectedSelectionText,
+                            language ===
+                              item &&
+                              styles.selectedSelectionText,
                           ]}
                         >
                           {item}
@@ -851,20 +1271,25 @@ export default function SettingsScreen() {
               </AppText>
 
               <View style={styles.preferenceCard}>
-                <View style={styles.preferenceText}>
+                <View
+                  style={styles.preferenceText}
+                >
                   <AppText
                     variant="body"
-                    style={styles.preferenceTitle}
+                    style={
+                      styles.preferenceTitle
+                    }
                   >
                     Vibration
                   </AppText>
 
                   <AppText
                     variant="caption"
-                    style={styles.preferenceDescription}
+                    style={
+                      styles.preferenceDescription
+                    }
                   >
-                    Vibrate when important alerts are
-                    received.
+                    Vibrate when important alerts are received.
                   </AppText>
                 </View>
 
@@ -875,20 +1300,25 @@ export default function SettingsScreen() {
               </View>
 
               <View style={styles.preferenceCard}>
-                <View style={styles.preferenceText}>
+                <View
+                  style={styles.preferenceText}
+                >
                   <AppText
                     variant="body"
-                    style={styles.preferenceTitle}
+                    style={
+                      styles.preferenceTitle
+                    }
                   >
                     Email Notifications
                   </AppText>
 
                   <AppText
                     variant="caption"
-                    style={styles.preferenceDescription}
+                    style={
+                      styles.preferenceDescription
+                    }
                   >
-                    Allow AdlaWatt to send alerts and
-                    notifications through your email.
+                    Allow AdlaWatt to send alerts and notifications through your email.
                   </AppText>
                 </View>
 
@@ -902,7 +1332,10 @@ export default function SettingsScreen() {
         </View>
 
         {/* ================= APP VERSION ================= */}
-        <View style={styles.versionSection}>
+
+        <View
+          style={styles.versionSection}
+        >
           <AppText
             variant="caption"
             style={styles.versionLabel}
@@ -935,9 +1368,15 @@ export default function SettingsScreen() {
         visible={confirmationVisible}
         transparent
         animationType="fade"
-        onRequestClose={() =>
-          setConfirmationVisible(false)
-        }
+        onRequestClose={() => {
+          if (
+            !confirmingAccountUpdate
+          ) {
+            setConfirmationVisible(false);
+            setConfirmationWarning("");
+            setCurrentPassword("");
+          }
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -952,18 +1391,26 @@ export default function SettingsScreen() {
               variant="caption"
               style={styles.modalDescription}
             >
-              Enter your current password to confirm
-              these account changes.
+              Enter your current password to confirm these account changes.
             </AppText>
 
             {confirmationWarning ? (
-              <View style={styles.warningContainer}>
+              <View
+                style={
+                  styles.warningContainer
+                }
+              >
                 <Ionicons
                   name="alert-circle-outline"
                   size={18}
                   color={Colors.light.error}
                 />
-                <AppText style={styles.warningText}>
+
+                <AppText
+                  style={
+                    styles.warningText
+                  }
+                >
                   {confirmationWarning}
                 </AppText>
               </View>
@@ -977,23 +1424,45 @@ export default function SettingsScreen() {
                 Current Password
               </AppText>
 
-              <View style={styles.passwordInputContainer}>
+              <View
+                style={
+                  styles.passwordInputContainer
+                }
+              >
                 <TextInput
                   value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  style={styles.passwordInput}
+                  onChangeText={(text) => {
+                    setCurrentPassword(text);
+                    setConfirmationWarning("");
+                  }}
+                  style={
+                    styles.passwordInput
+                  }
                   placeholder="Enter current password"
                   placeholderTextColor={
                     Colors.light.textSecondary
                   }
-                  secureTextEntry={!showCurrentPassword}
+                  secureTextEntry={
+                    !showCurrentPassword
+                  }
+                  editable={
+                    !confirmingAccountUpdate
+                  }
                 />
 
                 <Pressable
                   onPress={() =>
-                    setShowCurrentPassword(!showCurrentPassword)
+                    setShowCurrentPassword(
+                      (current) =>
+                        !current,
+                    )
                   }
-                  style={styles.eyeButton}
+                  style={
+                    styles.eyeButton
+                  }
+                  disabled={
+                    confirmingAccountUpdate
+                  }
                 >
                   <Ionicons
                     name={
@@ -1011,34 +1480,56 @@ export default function SettingsScreen() {
             <View style={styles.actionRow}>
               <Pressable
                 onPress={() => {
+                  if (
+                    confirmingAccountUpdate
+                  ) {
+                    return;
+                  }
+
                   setCurrentPassword("");
                   setConfirmationWarning("");
                   setConfirmationVisible(false);
                 }}
+                disabled={
+                  confirmingAccountUpdate
+                }
                 style={({ pressed }) => [
                   styles.secondaryButton,
-                  pressed && styles.pressed,
+                  pressed &&
+                    styles.pressed,
                 ]}
               >
                 <AppText
-                  style={styles.secondaryButtonText}
+                  style={
+                    styles.secondaryButtonText
+                  }
                 >
                   Cancel
                 </AppText>
               </Pressable>
 
               <Pressable
-                onPress={handleConfirmChanges}
+                onPress={
+                  handleConfirmChanges
+                }
+                disabled={
+                  confirmingAccountUpdate
+                }
                 style={({ pressed }) => [
                   styles.primaryButton,
                   styles.actionButton,
-                  pressed && styles.pressed,
+                  pressed &&
+                    styles.pressed,
                 ]}
               >
                 <AppText
-                  style={styles.primaryButtonText}
+                  style={
+                    styles.primaryButtonText
+                  }
                 >
-                  Confirm
+                  {confirmingAccountUpdate
+                    ? "Saving..."
+                    : "Confirm"}
                 </AppText>
               </Pressable>
             </View>
@@ -1048,7 +1539,9 @@ export default function SettingsScreen() {
 
       <Sidebar
         visible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
+        onClose={() =>
+          setSidebarVisible(false)
+        }
       />
     </ScreenContainer2>
   );
