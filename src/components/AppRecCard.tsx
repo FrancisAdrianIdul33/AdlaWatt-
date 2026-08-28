@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   applianceBox: {
     width: "46%",
     maxWidth: 150,
-    height: 220,
+    height: 240,
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderRadius: Radius.md,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
 
   status: {
     maxWidth: "100%",
-    minHeight: 28,
+    minHeight: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: 9,
     paddingVertical: 5,
-    marginTop: 6,
+    marginTop: 10,
     flexShrink: 0,
   },
 
