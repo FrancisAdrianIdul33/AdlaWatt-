@@ -1,0 +1,12 @@
+**AdlaWatt Color Palette**
+
+* **60% Base Canvas (`#EDE8D0` - Warm Linen):** Serves as your primary background color for pages and cards. It grounds the UI with a soft, comfortable canvas that keeps long viewing sessions easy on the eyes.
+* **30% Structure & Surface (`#F7D02C` - Sun Yellow):** Used for framing, category badges, progress cards, top app bars, and active state highlights to give the app its distinctive visual energy.
+* **10% Action & Focus (`#2E9B57` - Emerald Green):** Reserved exclusively for main call-to-action buttons, primary floating action buttons, active tab indicators, and positive alerts.
+
+---
+
+**Text & System Colors**
+
+* **Primary Text & Outlines (`#1A1915` - Dark Charcoal):** Used for main titles, body text, and line icons. This deep off-black creates sharp contrast and perfect legibility over all three palette colors.
+* **Secondary Text (`#5C584E` - Muted Taupe):** Used for subtle captions, subheadings, and inactive icon states to maintain a clean visual hierarchy.

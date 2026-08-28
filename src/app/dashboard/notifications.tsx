@@ -17,14 +17,13 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
-import EmptyState from "@/components/ui/EmptyState";
-
 import NotificationCard, {
   NotificationCardData,
   NotificationType,
 } from "@/components/NotificationCard";
-
 import AppText from "@/components/ui/AppText";
+import EmptyState from "@/components/ui/EmptyState";
+
 import { Colors } from "@/constants/colors";
 import { supabase } from "@/lib/supabase";
 
@@ -58,11 +57,13 @@ export default function NotificationsScreen() {
   const [typeDropdownVisible, setTypeDropdownVisible] =
     useState(false);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] =
+    useState(1);
 
-  /*
-   * Load notifications from Supabase
-   */
+  // ============================================
+  // LOAD CURRENT USER'S NOTIFICATIONS
+  // ============================================
+
   useEffect(() => {
     const loadNotifications = async () => {
       const {
@@ -70,39 +71,39 @@ export default function NotificationsScreen() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        console.error("No authenticated user found.");
+        setNotifications([]);
         return;
       }
 
       const { data, error } = await supabase
         .from("notifications")
         .select(
-          "notif_id, user_id, title, description, type, read, timestamp",
+          "notif_id, user_id, title, description, type, read, created_at",
         )
         .eq("user_id", user.id)
-        .order("timestamp", {
+        .order("created_at", {
           ascending: false,
         });
 
       if (error) {
         console.error(
           "Error loading notifications:",
-          error,
+          error.message,
         );
+        setNotifications([]);
         return;
       }
 
       const formattedNotifications: NotificationData[] =
         (data ?? []).map((notification) => {
           const dateObject = new Date(
-            notification.timestamp,
+            notification.created_at,
           );
 
           return {
             id: notification.notif_id,
             title: notification.title,
             message: notification.description,
-
             date: dateObject.toLocaleDateString(
               "en-US",
               {
@@ -111,7 +112,6 @@ export default function NotificationsScreen() {
                 year: "numeric",
               },
             ),
-
             time: dateObject.toLocaleTimeString(
               "en-US",
               {
@@ -119,12 +119,9 @@ export default function NotificationsScreen() {
                 minute: "2-digit",
               },
             ),
-
             type:
               notification.type as NotificationType,
-
             isRead: notification.read,
-
             timestamp: dateObject.getTime(),
           };
         });
@@ -135,23 +132,22 @@ export default function NotificationsScreen() {
     loadNotifications();
   }, []);
 
-  /*
-   * Total notification count
-   */
+  // ============================================
+  // TOTAL NOTIFICATIONS
+  // ============================================
+
   const totalNotifications =
     notifications.length;
 
   const notificationsPerPage = 15;
 
-  /*
-   * Apply filters
-   */
+  // ============================================
+  // FILTER NOTIFICATIONS
+  // ============================================
+
   const filteredNotifications = useMemo(() => {
     let result = [...notifications];
 
-    /*
-     * Notification type filter
-     */
     if (typeFilter !== "All") {
       result = result.filter(
         (notification) =>
@@ -159,14 +155,9 @@ export default function NotificationsScreen() {
       );
     }
 
-    /*
-     * Time filter
-     */
     const now = new Date();
 
-    if (timeFilter === "All") {
-      // Show all notifications
-    } else if (timeFilter === "Today") {
+    if (timeFilter === "Today") {
       const startOfDay = new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -178,17 +169,23 @@ export default function NotificationsScreen() {
           notification.timestamp >=
           startOfDay.getTime(),
       );
-    } else if (timeFilter === "Last Hour") {
+    }
+
+    if (timeFilter === "Last Hour") {
       result = result.filter(
         (notification) =>
           notification.timestamp >=
           now.getTime() - 60 * 60 * 1000,
       );
-    } else if (timeFilter === "This Week") {
+    }
+
+    if (timeFilter === "This Week") {
       const startOfWeek = new Date(now);
+
       startOfWeek.setDate(
         now.getDate() - now.getDay(),
       );
+
       startOfWeek.setHours(0, 0, 0, 0);
 
       result = result.filter(
@@ -196,7 +193,9 @@ export default function NotificationsScreen() {
           notification.timestamp >=
           startOfWeek.getTime(),
       );
-    } else if (timeFilter === "This Year") {
+    }
+
+    if (timeFilter === "This Year") {
       const startOfYear = new Date(
         now.getFullYear(),
         0,
@@ -210,9 +209,6 @@ export default function NotificationsScreen() {
       );
     }
 
-    /*
-     * Newest first
-     */
     return result.sort(
       (a, b) => b.timestamp - a.timestamp,
     );
@@ -222,14 +218,15 @@ export default function NotificationsScreen() {
     typeFilter,
   ]);
 
-  /*
-   * Pagination
-   */
+  // ============================================
+  // PAGINATION
+  // ============================================
+
   const totalPages = Math.max(
     1,
     Math.ceil(
       filteredNotifications.length /
-      notificationsPerPage,
+        notificationsPerPage,
     ),
   );
 
@@ -246,10 +243,10 @@ export default function NotificationsScreen() {
       pageEnd,
     );
 
-  /*
-   * Divide notifications into Recent
-   * and Earlier
-   */
+  // ============================================
+  // RECENT / EARLIER
+  // ============================================
+
   const recentNotifications =
     currentPageNotifications.filter(
       (notification) =>
@@ -262,9 +259,10 @@ export default function NotificationsScreen() {
         notification.isRead,
     );
 
-  /*
-   * Time filter
-   */
+  // ============================================
+  // FILTER HANDLERS
+  // ============================================
+
   const handleTimeFilter = (
     value: TimeFilter,
   ) => {
@@ -273,9 +271,6 @@ export default function NotificationsScreen() {
     setTimeDropdownVisible(false);
   };
 
-  /*
-   * Notification type filter
-   */
   const handleTypeFilter = (
     value: "All" | NotificationType,
   ) => {
@@ -284,16 +279,54 @@ export default function NotificationsScreen() {
     setTypeDropdownVisible(false);
   };
 
-  /*
-   * Mark all notifications as read
-   */
+  // ============================================
+  // TYPE LABEL
+  // ============================================
+
+  const getTypeLabel = () => {
+    switch (typeFilter) {
+      case "normal":
+        return "Normal";
+
+      case "alert":
+        return "Alert";
+
+      default:
+        return "All";
+    }
+  };
+
+  // ============================================
+  // TYPE ICON
+  // ============================================
+
+  const getTypeIcon =
+    (): keyof typeof Ionicons.glyphMap => {
+      switch (typeFilter) {
+        case "normal":
+          return "notifications-outline";
+
+        case "alert":
+          return "alert-circle-outline";
+
+        default:
+          return "list-outline";
+      }
+    };
+
+  // ============================================
+  // MARK ALL AS READ
+  // ============================================
+
   const handleMarkAsRead = async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      console.error("No authenticated user found.");
+      console.error(
+        "No authenticated user found.",
+      );
       return;
     }
 
@@ -306,15 +339,11 @@ export default function NotificationsScreen() {
     if (error) {
       console.error(
         "Error marking notifications as read:",
-        error,
+        error.message,
       );
       return;
     }
 
-    /*
-     * Update local state after successful
-     * database update.
-     */
     setNotifications((current) =>
       current.map((notification) => ({
         ...notification,
@@ -322,6 +351,10 @@ export default function NotificationsScreen() {
       })),
     );
   };
+
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
     <ScreenContainer2>
@@ -407,20 +440,20 @@ export default function NotificationsScreen() {
 
             {timeDropdownVisible && (
               <View style={styles.dropdown}>
-                {[
-                  "All",
-                  "Last Hour",
-                  "Today",
-                  "This Week",
-                  "This Year",
-                ].map((option) => (
+                {(
+                  [
+                    "All",
+                    "Last Hour",
+                    "Today",
+                    "This Week",
+                    "This Year",
+                  ] as TimeFilter[]
+                ).map((option) => (
                   <Pressable
                     key={option}
                     style={styles.dropdownItem}
                     onPress={() =>
-                      handleTimeFilter(
-                        option as TimeFilter,
-                      )
+                      handleTimeFilter(option)
                     }
                   >
                     <AppText
@@ -428,7 +461,7 @@ export default function NotificationsScreen() {
                       style={[
                         styles.dropdownItemText,
                         timeFilter === option &&
-                        styles.selectedDropdownText,
+                          styles.selectedDropdownText,
                       ]}
                     >
                       {option}
@@ -451,20 +484,20 @@ export default function NotificationsScreen() {
               }}
             >
               <Ionicons
-                name="notifications-outline"
+                name={getTypeIcon()}
                 size={18}
-                color={Colors.light.primary}
+                color={
+                  typeFilter === "alert"
+                    ? Colors.light.error
+                    : Colors.light.primary
+                }
               />
 
               <AppText
                 variant="caption"
                 style={styles.dropdownButtonText}
               >
-                {typeFilter === "All"
-                  ? "All"
-                  : typeFilter === "normal"
-                    ? "Normal"
-                    : "Alert"}
+                {getTypeLabel()}
               </AppText>
 
               <Ionicons
@@ -480,82 +513,58 @@ export default function NotificationsScreen() {
 
             {typeDropdownVisible && (
               <View style={styles.dropdown}>
-                {/* All */}
-                <Pressable
-                  style={styles.dropdownItem}
-                  onPress={() =>
-                    handleTypeFilter("All")
-                  }
-                >
-                  <Ionicons
-                    name="list-outline"
-                    size={17}
-                    color={
-                      Colors.light.textSecondary
+                {[
+                  {
+                    value: "All",
+                    label: "All",
+                    icon: "list-outline",
+                  },
+                  {
+                    value: "normal",
+                    label: "Normal",
+                    icon: "notifications-outline",
+                  },
+                  {
+                    value: "alert",
+                    label: "Alert",
+                    icon: "alert-circle-outline",
+                  },
+                ].map((option) => (
+                  <Pressable
+                    key={option.value}
+                    style={styles.dropdownItem}
+                    onPress={() =>
+                      handleTypeFilter(
+                        option.value as
+                          | "All"
+                          | NotificationType,
+                      )
                     }
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownItemText,
-                      typeFilter === "All" &&
-                      styles.selectedDropdownText,
-                    ]}
                   >
-                    All
-                  </AppText>
-                </Pressable>
+                    <Ionicons
+                      name={
+                        option.icon as keyof typeof Ionicons.glyphMap
+                      }
+                      size={17}
+                      color={
+                        option.value === "alert"
+                          ? Colors.light.error
+                          : Colors.light.primary
+                      }
+                    />
 
-                {/* Normal */}
-                <Pressable
-                  style={styles.dropdownItem}
-                  onPress={() =>
-                    handleTypeFilter("normal")
-                  }
-                >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={17}
-                    color="#2196F3"
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownItemText,
-                      typeFilter === "normal" &&
-                      styles.selectedDropdownText,
-                    ]}
-                  >
-                    Normal
-                  </AppText>
-                </Pressable>
-
-                {/* Alert */}
-                <Pressable
-                  style={styles.dropdownItem}
-                  onPress={() =>
-                    handleTypeFilter("alert")
-                  }
-                >
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={17}
-                    color={Colors.light.error}
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.dropdownItemText,
-                      typeFilter === "alert" &&
-                      styles.selectedDropdownText,
-                    ]}
-                  >
-                    Alert
-                  </AppText>
-                </Pressable>
+                    <AppText
+                      variant="caption"
+                      style={[
+                        styles.dropdownItemText,
+                        typeFilter === option.value &&
+                          styles.selectedDropdownText,
+                      ]}
+                    >
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                ))}
               </View>
             )}
           </View>
@@ -603,35 +612,19 @@ export default function NotificationsScreen() {
           </View>
         )}
 
-        {/* Earlier */}
-        {earlierNotifications.length > 0 && (
-          <View
-            style={[
-              styles.section,
-              recentNotifications.length > 0 &&
-              styles.earlierSection,
-            ]}
-          >
-            <AppText
-              variant="body"
-              style={styles.sectionTitle}
-            >
-              Earlier
-            </AppText>
+       {/* Read Notifications */}
+{earlierNotifications.length > 0 && (
+  <View style={styles.notificationList}>
+    {earlierNotifications.map((notification) => (
+      <NotificationCard
+        key={notification.id}
+        notification={notification}
+      />
+    ))}
+  </View>
+)}
 
-            <View style={styles.notificationList}>
-              {earlierNotifications.map(
-                (notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    notification={notification}
-                  />
-                ),
-              )}
-            </View>
-          </View>
-        )}
-
+        {/* Empty State */}
         {currentPageNotifications.length === 0 && (
           <EmptyState
             icon="notifications-off-outline"
@@ -643,89 +636,89 @@ export default function NotificationsScreen() {
         {/* Pagination */}
         {filteredNotifications.length >
           notificationsPerPage && (
-            <View style={styles.pagination}>
-              {/* Previous */}
-              <Pressable
-                style={[
-                  styles.pageButton,
-                  currentPage === 1 &&
+          <View style={styles.pagination}>
+            {/* Previous */}
+            <Pressable
+              style={[
+                styles.pageButton,
+                currentPage === 1 &&
                   styles.disabledPageButton,
-                ]}
-                disabled={currentPage === 1}
-                onPress={() =>
-                  setCurrentPage(
-                    currentPage - 1,
-                  )
+              ]}
+              disabled={currentPage === 1}
+              onPress={() =>
+                setCurrentPage(
+                  currentPage - 1,
+                )
+              }
+            >
+              <Ionicons
+                name="chevron-back-outline"
+                size={18}
+                color={
+                  currentPage === 1
+                    ? Colors.light.textSecondary
+                    : Colors.light.primary
                 }
-              >
-                <Ionicons
-                  name="chevron-back-outline"
-                  size={18}
-                  color={
-                    currentPage === 1
-                      ? Colors.light.textSecondary
-                      : Colors.light.primary
-                  }
-                />
-              </Pressable>
+              />
+            </Pressable>
 
-              {/* Page Numbers */}
-              {Array.from(
-                { length: totalPages },
-                (_, index) => index + 1,
-              ).map((page) => (
-                <Pressable
-                  key={page}
-                  style={[
-                    styles.pageNumber,
-                    currentPage === page &&
+            {/* Page Numbers */}
+            {Array.from(
+              { length: totalPages },
+              (_, index) => index + 1,
+            ).map((page) => (
+              <Pressable
+                key={page}
+                style={[
+                  styles.pageNumber,
+                  currentPage === page &&
                     styles.activePageNumber,
-                  ]}
-                  onPress={() =>
-                    setCurrentPage(page)
-                  }
-                >
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.pageNumberText,
-                      currentPage === page &&
-                      styles.activePageNumberText,
-                    ]}
-                  >
-                    {page}
-                  </AppText>
-                </Pressable>
-              ))}
-
-              {/* Next */}
-              <Pressable
-                style={[
-                  styles.pageButton,
-                  currentPage === totalPages &&
-                  styles.disabledPageButton,
                 ]}
-                disabled={
-                  currentPage === totalPages
-                }
                 onPress={() =>
-                  setCurrentPage(
-                    currentPage + 1,
-                  )
+                  setCurrentPage(page)
                 }
               >
-                <Ionicons
-                  name="chevron-forward-outline"
-                  size={18}
-                  color={
-                    currentPage === totalPages
-                      ? Colors.light.textSecondary
-                      : Colors.light.primary
-                  }
-                />
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.pageNumberText,
+                    currentPage === page &&
+                      styles.activePageNumberText,
+                  ]}
+                >
+                  {page}
+                </AppText>
               </Pressable>
-            </View>
-          )}
+            ))}
+
+            {/* Next */}
+            <Pressable
+              style={[
+                styles.pageButton,
+                currentPage === totalPages &&
+                  styles.disabledPageButton,
+              ]}
+              disabled={
+                currentPage === totalPages
+              }
+              onPress={() =>
+                setCurrentPage(
+                  currentPage + 1,
+                )
+              }
+            >
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color={
+                  currentPage === totalPages
+                    ? Colors.light.textSecondary
+                    : Colors.light.primary
+                }
+              />
+            </Pressable>
+          </View>
+        )}
 
         <Copyright />
       </ScrollView>
@@ -740,7 +733,6 @@ export default function NotificationsScreen() {
     </ScreenContainer2>
   );
 }
-
 const notificationDimensions = {
   borderWidth: 3,
   cardRadius: 16,
@@ -951,7 +943,7 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 12,
 
-    backgroundColor: "#2196F3",
+    backgroundColor: "#00A86B",
 
     borderRadius:
       notificationDimensions.buttonRadius,
@@ -967,10 +959,6 @@ const styles = StyleSheet.create({
 
   section: {
     width: "100%",
-  },
-
-  earlierSection: {
-    marginTop: 20,
   },
 
   sectionTitle: {

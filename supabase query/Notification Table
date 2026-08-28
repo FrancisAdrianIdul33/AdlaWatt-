@@ -1,0 +1,321 @@
+-- ============================================
+-- ADLAWATT NOTIFICATIONS TABLE
+-- ============================================
+-- Stores notifications for each user.
+--
+-- public.users.id
+--      ↓
+-- notifications.user_id
+--
+-- type:
+--   normal = general notification
+--   alert  = important notification
+--
+-- read:
+--   false = unread
+--   true  = read
+--
+-- Temporary sample data is inserted for testing.
+-- No automatic notification triggers or functions
+-- are used yet.
+-- ============================================
+
+
+-- ============================================
+-- 1. REMOVE EXISTING TABLE
+-- ============================================
+
+drop table if exists public.notifications cascade;
+
+
+-- ============================================
+-- 2. CREATE NOTIFICATIONS TABLE
+-- ============================================
+
+create table public.notifications (
+
+    -- Unique notification record
+    notif_id uuid primary key default gen_random_uuid(),
+
+    -- Notification owner
+    user_id uuid not null
+        references public.users(id)
+        on delete cascade,
+
+    -- Notification title
+    title text not null,
+
+    -- Notification description
+    description text not null,
+
+    -- Notification type
+    type text not null,
+
+    -- false = unread
+    -- true  = read
+    read boolean not null default false,
+
+    -- Notification creation time
+    created_at timestamptz not null default now()
+
+);
+
+
+-- ============================================
+-- 3. VALIDATION CONSTRAINTS
+-- ============================================
+
+-- Allow only supported notification types
+
+alter table public.notifications
+    add constraint notifications_type_check
+    check (
+        type in (
+            'normal',
+            'alert'
+        )
+    );
+
+
+-- Title cannot be empty
+
+alter table public.notifications
+    add constraint notifications_title_check
+    check (
+        char_length(trim(title)) > 0
+    );
+
+
+-- Description cannot be empty
+
+alter table public.notifications
+    add constraint notifications_description_check
+    check (
+        char_length(trim(description)) > 0
+    );
+
+
+-- ============================================
+-- 4. INDEXES
+-- ============================================
+
+-- Fast user notification queries
+
+create index notifications_user_id_idx
+on public.notifications(user_id);
+
+
+-- Fast newest-first queries
+
+create index notifications_user_created_idx
+on public.notifications(
+    user_id,
+    created_at desc
+);
+
+
+-- Fast unread notification queries
+
+create index notifications_user_read_idx
+on public.notifications(
+    user_id,
+    read
+);
+
+
+-- ============================================
+-- 5. ENABLE ROW LEVEL SECURITY
+-- ============================================
+
+alter table public.notifications
+    enable row level security;
+
+
+-- ============================================
+-- 6. RLS POLICIES
+-- ============================================
+
+-- Users can view only their own notifications
+
+create policy "Users can view own notifications"
+on public.notifications
+for select
+to authenticated
+using (
+    auth.uid() = user_id
+);
+
+
+-- Users can create their own notifications
+-- for temporary/application-generated events
+
+create policy "Users can create own notifications"
+on public.notifications
+for insert
+to authenticated
+with check (
+    auth.uid() = user_id
+);
+
+
+-- Users can mark their own notifications
+-- as read or unread
+
+create policy "Users can update own notifications"
+on public.notifications
+for update
+to authenticated
+using (
+    auth.uid() = user_id
+)
+with check (
+    auth.uid() = user_id
+);
+
+
+-- ============================================
+-- 7. INSERT 10 TEMPORARY NOTIFICATIONS
+-- ============================================
+-- Creates 10 temporary notifications for EACH
+-- existing user.
+--
+-- These are sample records only.
+-- ============================================
+
+insert into public.notifications (
+    user_id,
+    title,
+    description,
+    type,
+    read,
+    created_at
+)
+
+select
+    u.id,
+    sample.title,
+    sample.description,
+    sample.type,
+    sample.read,
+    now() - sample.offset_time
+
+from public.users u
+
+cross join (
+    values
+
+        (
+            'System Online',
+            'Your AdlaWatt system is currently online.',
+            'normal',
+            false,
+            interval '10 minutes'
+        ),
+
+        (
+            'Solar Charging',
+            'Solar energy is currently being supplied to the battery.',
+            'normal',
+            false,
+            interval '20 minutes'
+        ),
+
+        (
+            'Appliance Selected',
+            'An appliance was selected for current use.',
+            'normal',
+            true,
+            interval '35 minutes'
+        ),
+
+        (
+            'Battery Status Updated',
+            'Your battery status has been updated.',
+            'normal',
+            true,
+            interval '50 minutes'
+        ),
+
+        (
+            'Low Battery',
+            'Battery level is below the recommended operating level.',
+            'alert',
+            false,
+            interval '1 hour'
+        ),
+
+        (
+            'High Power Consumption',
+            'Current appliance load is higher than the recommended level.',
+            'alert',
+            false,
+            interval '2 hours'
+        ),
+
+        (
+            'Sensor Disconnected',
+            'A system sensor is currently not responding.',
+            'alert',
+            false,
+            interval '3 hours'
+        ),
+
+        (
+            'Component Inactive',
+            'One of your AdlaWatt components is currently inactive.',
+            'alert',
+            true,
+            interval '4 hours'
+        ),
+
+        (
+            'Voltage Warning',
+            'The measured voltage requires attention.',
+            'alert',
+            true,
+            interval '5 hours'
+        ),
+
+        (
+            'Inverter Overload',
+            'The inverter detected a load above the recommended level.',
+            'alert',
+            false,
+            interval '6 hours'
+        )
+
+) as sample(
+    title,
+    description,
+    type,
+    read,
+    offset_time
+);
+
+
+-- ============================================
+-- 8. VERIFY NOTIFICATIONS
+-- ============================================
+
+select
+    notif_id,
+    user_id,
+    title,
+    description,
+    type,
+    read,
+    created_at
+from public.notifications
+order by created_at desc;
+
+
+-- ============================================
+-- 9. CHECK NOTIFICATION COUNT PER USER
+-- ============================================
+
+select
+    user_id,
+    count(*) as notification_count
+from public.notifications
+group by user_id
+order by user_id;

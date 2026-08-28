@@ -1,161 +1,224 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 
-import { Pressable, StyleSheet, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
-
 import { Routes } from "@/constants/routes";
+import { supabase } from "@/lib/supabase";
 
-export type ActivityCardData = {
+type ActivityType =
+  | "info"
+  | "warning"
+  | "error"
+  | "critical";
+
+type Activity = {
   id: string;
-  type: "info" | "warning" | "error" | "critical";
+  type: ActivityType;
   title: string;
   details: string;
   date: string;
   time: string;
 };
 
-const activities: ActivityCardData[] = [
-  {
-    id: "1",
-    type: "info",
-    title: "Solar Charging Started",
-    details:
-      "The solar panel is currently charging the battery using available sunlight.",
-    date: "Aug 10, 2026",
-    time: "08:42 AM",
-  },
-  {
-    id: "2",
-    type: "info",
-    title: "Appliance Connected",
-    details:
-      "An electric fan was detected and added to the current power load.",
-    date: "Aug 10, 2026",
-    time: "08:35 AM",
-  },
-  {
-    id: "3",
-    type: "critical",
-    title: "Battery Level Low",
-    details:
-      "The battery level has dropped below the recommended operating level.",
-    date: "Aug 10, 2026",
-    time: "07:58 AM",
-  },
-  {
-    id: "4",
-    type: "info",
-    title: "Battery Level Updated",
-    details: "The battery level changed from 52% to 50%.",
-    date: "Aug 10, 2026",
-    time: "07:44 AM",
-  },
-  {
-    id: "5",
-    type: "error",
-    title: "High Power Consumption",
-    details:
-      "The current appliance load is higher than the recommended level.",
-    date: "Aug 10, 2026",
-    time: "07:20 AM",
-  },
-  {
-    id: "6",
-    type: "error",
-    title: "Sensor Connection Lost",
-    details:
-      "The battery temperature sensor is no longer responding.",
-    date: "Aug 10, 2026",
-    time: "06:52 AM",
-  },
-  {
-    id: "7",
-    type: "info",
-    title: "System Online",
-    details:
-      "AdlaWatt successfully connected to the monitoring system.",
-    date: "Aug 10, 2026",
-    time: "06:30 AM",
-  },
-  {
-    id: "8",
-    type: "critical",
-    title: "Inverter Overload Detected",
-    details:
-      "The inverter detected a load that exceeded the recommended operating level.",
-    date: "Aug 09, 2026",
-    time: "09:15 PM",
-  },
-];
-
-const recentActivities = activities.slice(0, 5);
-
 export default function ActivityCard() {
+  const [activities, setActivities] =
+    useState<Activity[]>([]);
+
+  useEffect(() => {
+    const loadRecentActivities = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setActivities([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .select(
+          "act_id, title, description, type, created_at",
+        )
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(5);
+
+      if (error) {
+        console.error(
+          "Error loading recent activities:",
+          error.message,
+        );
+        setActivities([]);
+        return;
+      }
+
+      const mappedActivities: Activity[] = (
+        data ?? []
+      ).map((activity) => {
+        const dateObject = new Date(
+          activity.created_at,
+        );
+
+        const type: ActivityType =
+          activity.type === "warning" ||
+          activity.type === "error" ||
+          activity.type === "critical"
+            ? activity.type
+            : "info";
+
+        return {
+          id: activity.act_id,
+          type,
+          title: activity.title,
+          details: activity.description,
+          date: dateObject.toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            },
+          ),
+          time: dateObject.toLocaleTimeString(
+            "en-US",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+            },
+          ),
+        };
+      });
+
+      setActivities(mappedActivities);
+    };
+
+    loadRecentActivities();
+  }, []);
+
+  const getActivityIcon = (
+    type: ActivityType,
+  ): keyof typeof Ionicons.glyphMap => {
+    switch (type) {
+      case "info":
+        return "information-circle-outline";
+
+      case "warning":
+        return "warning-outline";
+
+      case "error":
+      case "critical":
+        return "alert-circle-outline";
+
+      default:
+        return "information-circle-outline";
+    }
+  };
+
+  const getActivityColor = (
+    type: ActivityType,
+  ) => {
+    switch (type) {
+      case "info":
+        return Colors.light.primary;
+
+      case "warning":
+        return Colors.light.secondary;
+
+      case "error":
+      case "critical":
+        return Colors.light.error;
+
+      default:
+        return Colors.light.primary;
+    }
+  };
+
   return (
-    <View style={styles.wrapper}>
+    <View>
+      {/* Header */}
       <View style={styles.header}>
-        <AppText variant="body" style={styles.title}>
+        <AppText
+          variant="body"
+          style={styles.title}
+        >
           Recent Activity
         </AppText>
 
         <Pressable
-          onPress={() => router.push(Routes.ACTIVITY_LOGS)}
+          onPress={() =>
+            router.push(Routes.ACTIVITY_LOGS)
+          }
         >
-          <AppText variant="caption" style={styles.viewAll}>
+          <AppText
+            variant="caption"
+            style={styles.viewAll}
+          >
             View All
           </AppText>
         </Pressable>
       </View>
 
+      {/* Activity List */}
       <View style={styles.list}>
-        {recentActivities.map((activity) => (
-          <View
-            key={activity.id}
-            style={styles.item}
-          >
+        {activities.map((activity) => {
+          const color = getActivityColor(
+            activity.type,
+          );
+
+          return (
             <View
-              style={[
-                styles.indicator,
-                {
-                  backgroundColor:
-                    activity.type === "info"
-                      ? Colors.light.primary
-                      : activity.type === "warning"
-                        ? Colors.light.secondary
-                        : "#EF4444",
-                },
-              ]}
-            />
+              key={activity.id}
+              style={styles.item}
+            >
+              {/* Activity Icon */}
+              <Ionicons
+                name={getActivityIcon(
+                  activity.type,
+                )}
+                size={24}
+                color={color}
+              />
 
-            <View style={styles.content}>
-              <AppText
-                variant="caption"
-                style={styles.activityTitle}
-              >
-                {activity.title}
-              </AppText>
+              {/* Activity Content */}
+              <View style={styles.content}>
+                <AppText
+                  variant="caption"
+                  style={styles.activityTitle}
+                >
+                  {activity.title}
+                </AppText>
 
-              <AppText
-                variant="caption"
-                style={styles.details}
-              >
-                {activity.details}
-              </AppText>
+                <AppText
+                  variant="caption"
+                  style={styles.details}
+                >
+                  {activity.details}
+                </AppText>
 
-              <AppText
-                variant="caption"
-                style={styles.timestamp}
-              >
-                {activity.date} • {activity.time}
-              </AppText>
+                <AppText
+                  variant="caption"
+                  style={styles.timestamp}
+                >
+                  {activity.date} •{" "}
+                  {activity.time}
+                </AppText>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -166,10 +229,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-
-  wrapper: {
-    marginTop: 20,
   },
 
   title: {
@@ -192,7 +251,7 @@ const styles = StyleSheet.create({
 
   list: {
     width: "100%",
-    gap: 10,
+    gap: 5,
   },
 
   item: {
@@ -205,16 +264,9 @@ const styles = StyleSheet.create({
     padding: 12,
   },
 
-  indicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 4,
-    marginTop: 5,
-    marginRight: 10,
-  },
-
   content: {
     flex: 1,
+    marginLeft: 10,
   },
 
   activityTitle: {
@@ -225,11 +277,12 @@ const styles = StyleSheet.create({
   details: {
     color: Colors.light.textSecondary,
     marginTop: 3,
+    lineHeight: 18,
   },
 
   timestamp: {
     color: Colors.light.textSecondary,
-    marginTop: 10,
+    marginTop: 5,
     fontSize: 11,
   },
 });

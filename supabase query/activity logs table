@@ -1,0 +1,279 @@
+-- ============================================
+-- ADLAWATT ACTIVITY LOGS TABLE
+-- ============================================
+-- Simple temporary activity log storage.
+--
+-- Each activity belongs to a user through user_id.
+-- No automatic authentication logging.
+-- No log_activity() function.
+-- No triggers.
+--
+-- Columns:
+--   act_id
+--   user_id
+--   title
+--   description
+--   type
+--   created_at
+-- ============================================
+
+
+-- ============================================
+-- 1. REMOVE EXISTING TABLE
+-- ============================================
+
+drop table if exists public.activity_logs cascade;
+
+
+-- ============================================
+-- 2. CREATE ACTIVITY LOGS TABLE
+-- ============================================
+
+create table public.activity_logs (
+
+    -- Unique activity record
+    act_id uuid primary key default gen_random_uuid(),
+
+    -- Activity owner
+    user_id uuid not null
+        references public.users(id)
+        on delete cascade,
+
+    -- Activity title
+    title text not null,
+
+    -- Activity description
+    description text not null,
+
+    -- Activity type
+    type text not null,
+
+    -- Activity creation time
+    created_at timestamptz not null default now()
+
+);
+
+
+-- ============================================
+-- 3. VALIDATION CONSTRAINTS
+-- ============================================
+
+-- Supported activity types
+
+alter table public.activity_logs
+    add constraint activity_logs_type_check
+    check (
+        type in (
+            'info',
+            'warning',
+            'error',
+            'critical'
+        )
+    );
+
+
+-- Title cannot be empty
+
+alter table public.activity_logs
+    add constraint activity_logs_title_check
+    check (
+        char_length(trim(title)) > 0
+    );
+
+
+-- Description cannot be empty
+
+alter table public.activity_logs
+    add constraint activity_logs_description_check
+    check (
+        char_length(trim(description)) > 0
+    );
+
+
+-- ============================================
+-- 4. INDEXES
+-- ============================================
+
+create index activity_logs_user_id_idx
+on public.activity_logs(user_id);
+
+create index activity_logs_user_created_idx
+on public.activity_logs(
+    user_id,
+    created_at desc
+);
+
+create index activity_logs_user_type_idx
+on public.activity_logs(
+    user_id,
+    type
+);
+
+
+-- ============================================
+-- 5. ENABLE ROW LEVEL SECURITY
+-- ============================================
+
+alter table public.activity_logs
+    enable row level security;
+
+
+-- ============================================
+-- 6. RLS POLICIES
+-- ============================================
+
+-- Users can view only their own logs
+
+create policy "Users can view own activity logs"
+on public.activity_logs
+for select
+to authenticated
+using (
+    auth.uid() = user_id
+);
+
+
+-- Users can create their own temporary logs
+
+create policy "Users can create own activity logs"
+on public.activity_logs
+for insert
+to authenticated
+with check (
+    auth.uid() = user_id
+);
+
+
+-- ============================================
+-- 7. INSERT 10 TEMPORARY ACTIVITY LOGS
+-- ============================================
+-- Creates 10 temporary records for EACH
+-- existing user.
+--
+-- These are sample records only.
+-- They are not automatically generated.
+-- ============================================
+
+insert into public.activity_logs (
+    user_id,
+    title,
+    description,
+    type,
+    created_at
+)
+
+select
+    u.id,
+    sample.title,
+    sample.description,
+    sample.type,
+    now() - sample.offset_time
+
+from public.users u
+
+cross join (
+    values
+
+        (
+            'System Online',
+            'AdlaWatt system is currently online.',
+            'info',
+            interval '10 minutes'
+        ),
+
+        (
+            'Solar Charging Started',
+            'The solar panel started charging the battery.',
+            'info',
+            interval '20 minutes'
+        ),
+
+        (
+            'Appliance Connected',
+            'An appliance was selected for current use.',
+            'info',
+            interval '35 minutes'
+        ),
+
+        (
+            'Battery Level Updated',
+            'The battery level was updated by the monitoring system.',
+            'info',
+            interval '50 minutes'
+        ),
+
+        (
+            'Battery Level Low',
+            'Battery level dropped below the recommended operating level.',
+            'warning',
+            interval '1 hour'
+        ),
+
+        (
+            'High Power Consumption',
+            'Current appliance load is higher than the recommended level.',
+            'warning',
+            interval '2 hours'
+        ),
+
+        (
+            'Sensor Connection Lost',
+            'A sensor is currently not responding.',
+            'error',
+            interval '3 hours'
+        ),
+
+        (
+            'Voltage Sensor Warning',
+            'The voltage sensor reading requires attention.',
+            'warning',
+            interval '4 hours'
+        ),
+
+        (
+            'Component Inactive',
+            'A system component is currently inactive.',
+            'error',
+            interval '5 hours'
+        ),
+
+        (
+            'Inverter Overload Detected',
+            'The inverter detected a load above the recommended level.',
+            'critical',
+            interval '6 hours'
+        )
+
+) as sample(
+    title,
+    description,
+    type,
+    offset_time
+);
+
+
+-- ============================================
+-- 8. VERIFY ACTIVITY LOGS
+-- ============================================
+
+select
+    act_id,
+    user_id,
+    title,
+    description,
+    type,
+    created_at
+from public.activity_logs
+order by created_at desc;
+
+
+-- ============================================
+-- 9. CHECK LOG COUNT PER USER
+-- ============================================
+
+select
+    user_id,
+    count(*) as activity_count
+from public.activity_logs
+group by user_id
+order by user_id;
