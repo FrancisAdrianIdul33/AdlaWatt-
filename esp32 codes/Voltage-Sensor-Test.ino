@@ -1,22 +1,22 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-// =====================================================
+// ============================================
 // WiFi Configuration
-// =====================================================
+// ============================================
 
 const char* WIFI_SSID = "ERROR101(^_^メ^)";
 const char* WIFI_PASSWORD = "SystemNotRunning#101";
 
-// =====================================================
+// ============================================
 // Supabase Configuration
-// =====================================================
+// ============================================
 
 const char* SUPABASE_URL =
   "https://nxdabgvbwunyeffzrzta.supabase.co";
 
 const char* SUPABASE_KEY =
-  "sb_publishable_YiGbcekZEnaKnf-FeOFBkQ_mDEBe-wW";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZGFiZ3Zid3VueWVmZnpyenRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjAxNzksImV4cCI6MjEwMTczNjE3OX0.ya4SFGY1pHhc7AywIWH3mg_IufbN4_z8OHetMAbZeFs";
 
 // Exact Voltage Sensor component ID
 const char* VOLTAGE_SENSOR_COMPONENT_ID =
