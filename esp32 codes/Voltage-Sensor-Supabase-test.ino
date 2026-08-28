@@ -5,8 +5,8 @@
 // WiFi Configuration
 // =====================================================
 
-const char* WIFI_SSID = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID = "ERROR101(^_^メ^)";
+const char* WIFI_PASSWORD = "SystemNotRunning#101";
 
 // =====================================================
 // Supabase Configuration
@@ -16,14 +16,17 @@ const char* SUPABASE_URL =
   "https://nxdabgvbwunyeffzrzta.supabase.co";
 
 const char* SUPABASE_KEY =
-  "YOUR_SUPABASE_PUBLISHABLE_KEY";
+  "sb_publishable_YiGbcekZEnaKnf-FeOFBkQ_mDEBe-wW";
 
 // =====================================================
-// User / Component Configuration
+// User / Monitoring / Component Configuration
 // =====================================================
 
 const char* USER_ID =
   "a3d0385a-43e0-4921-95b2-f1102cc75de7";
+
+const char* MONITOR_ID =
+  "589e5b4d-1a94-417d-ba58-f1dbf7b10d53";
 
 const char* VOLTAGE_SENSOR_COMPONENT_ID =
   "736a21d2-ce93-4026-a260-5d192a7c31f7";
@@ -45,29 +48,29 @@ unsigned long lastUpdate = 0;
 const float BATTERY_NOMINAL_VOLTAGE = 12.0;
 const float BATTERY_CAPACITY_AH = 60.0;
 
-// 720 Wh nominal capacity
+// Nominal battery capacity
+// 12 V × 60 Ah = 720 Wh
 const float TOTAL_BATTERY_CAPACITY_WH =
   BATTERY_NOMINAL_VOLTAGE *
   BATTERY_CAPACITY_AH;
 
-// 80% DoD
+// DoD = 80%
 const float DOD_PERCENT = 80.0;
 
-// 576 Wh usable capacity
+// Usable battery energy
+// 720 Wh × 80% = 576 Wh
 const float USABLE_BATTERY_CAPACITY_WH =
   TOTAL_BATTERY_CAPACITY_WH *
   (DOD_PERCENT / 100.0);
 
-// Physical SOC at DoD limit
-// 80% DoD means 20% physical SOC remains.
+// 20% physical SOC remains as protected reserve
 const float MIN_PHYSICAL_SOC = 20.0;
 
 // =====================================================
 // Voltage Sensor Configuration
 // =====================================================
 
-// Common 0-25 V sensor:
-// Battery voltage ≈ ADC voltage × 5
+// Common 0–25 V voltage sensor
 const float SENSOR_RATIO = 5.0;
 
 const float ADC_REFERENCE_VOLTAGE = 3.3;
@@ -76,17 +79,13 @@ const int ADC_MAX_VALUE = 4095;
 const int ADC_SAMPLES = 20;
 
 // =====================================================
-// LiFePO4 Voltage / SOC Calibration
+// LiFePO4 Voltage / SOC Table
 // =====================================================
 //
-// Approximate resting-voltage relationship for a
-// 4S LiFePO4 battery.
+// Initial approximation for a 4S LiFePO4 battery.
 //
-// IMPORTANT:
-// Voltage-only SOC is approximate.
-// Calibrate these values against your battery.
-//
-// Higher voltage = higher physical SOC.
+// Voltage-only SOC is an estimate.
+// Calibrate these values against your actual battery.
 // =====================================================
 
 struct VoltagePoint {
@@ -95,15 +94,17 @@ struct VoltagePoint {
 };
 
 const VoltagePoint SOC_TABLE[] = {
-  { 12.00, 0.0  },
-  { 12.20, 10.0 },
-  { 12.40, 20.0 },
-  { 12.80, 40.0 },
-  { 13.00, 50.0 },
-  { 13.20, 70.0 },
-  { 13.30, 80.0 },
-  { 13.40, 90.0 },
-  { 13.50, 100.0 }
+
+  {12.00, 0.0},
+  {12.20, 10.0},
+  {12.40, 20.0},
+  {12.80, 40.0},
+  {13.00, 50.0},
+  {13.20, 70.0},
+  {13.30, 80.0},
+  {13.40, 90.0},
+  {13.50, 100.0}
+
 };
 
 const int SOC_TABLE_SIZE =
@@ -131,6 +132,7 @@ void connectWiFi() {
   );
 
   while (WiFi.status() != WL_CONNECTED) {
+
     delay(500);
     Serial.print(".");
   }
@@ -150,7 +152,12 @@ int readADC() {
 
   long total = 0;
 
-  for (int i = 0; i < ADC_SAMPLES; i++) {
+  for (
+    int i = 0;
+    i < ADC_SAMPLES;
+    i++
+  ) {
+
     total += analogRead(
       VOLTAGE_SENSOR_PIN
     );
@@ -177,9 +184,10 @@ float readBatteryVoltage() {
     ADC_MAX_VALUE;
 
   float batteryVoltage =
-    adcVoltage * SENSOR_RATIO;
+    adcVoltage *
+    SENSOR_RATIO;
 
-  Serial.print("ADC: ");
+  Serial.print("ADC Value: ");
   Serial.println(adcValue);
 
   Serial.print("Battery Voltage: ");
@@ -216,6 +224,7 @@ float voltageToPhysicalSOC(
     voltage <=
     SOC_TABLE[0].voltage
   ) {
+
     return 0.0;
   }
 
@@ -225,6 +234,7 @@ float voltageToPhysicalSOC(
       SOC_TABLE_SIZE - 1
     ].voltage
   ) {
+
     return 100.0;
   }
 
@@ -273,30 +283,36 @@ float voltageToPhysicalSOC(
 }
 
 // =====================================================
-// Convert Physical SOC to AdlaWatt Usable Percentage
+// Convert Physical SOC to AdlaWatt Battery Level
 // =====================================================
 //
-// Physical:
-// 20% SOC = AdlaWatt 0%
-// 100% SOC = AdlaWatt 100%
+// Physical battery:
+// 20% SOC = protected DoD limit
+// 100% SOC = fully charged
 //
-// This protects the final 20% battery reserve.
+// AdlaWatt:
+// 20% physical SOC = 0%
+// 100% physical SOC = 100%
 // =====================================================
 
 float physicalSOCToAdlaWatt(
   float physicalSOC
 ) {
 
-  float usablePercent =
+  float usablePercentage =
     (
-      (physicalSOC -
-       MIN_PHYSICAL_SOC) /
-      (100.0 -
-       MIN_PHYSICAL_SOC)
+      (
+        physicalSOC -
+        MIN_PHYSICAL_SOC
+      ) /
+      (
+        100.0 -
+        MIN_PHYSICAL_SOC
+      )
     ) * 100.0;
 
   return constrain(
-    usablePercent,
+    usablePercentage,
     0.0,
     100.0
   );
@@ -315,38 +331,30 @@ float calculateBatteryLevel(
       batteryVoltage
     );
 
-  float applicationSOC =
+  float batteryLevel =
     physicalSOCToAdlaWatt(
       physicalSOC
     );
 
-  Serial.print(
-    "Physical SOC: "
-  );
-
+  Serial.print("Physical SOC: ");
   Serial.print(
     physicalSOC,
     1
   );
-
   Serial.println("%");
 
+  Serial.print("AdlaWatt Battery Level: ");
   Serial.print(
-    "AdlaWatt Battery Level: "
-  );
-
-  Serial.print(
-    applicationSOC,
+    batteryLevel,
     1
   );
-
   Serial.println("%");
 
-  return applicationSOC;
+  return batteryLevel;
 }
 
 // =====================================================
-// Update Monitoring Battery Level
+// Update monitoring.battery_level
 // =====================================================
 
 void updateBatteryLevel(
@@ -356,8 +364,9 @@ void updateBatteryLevel(
   if (
     WiFi.status() != WL_CONNECTED
   ) {
+
     Serial.println(
-      "WiFi disconnected."
+      "WiFi disconnected. Cannot update monitoring."
     );
 
     return;
@@ -368,8 +377,8 @@ void updateBatteryLevel(
   String url =
     String(SUPABASE_URL) +
     "/rest/v1/monitoring" +
-    "?user_id=eq." +
-    String(USER_ID);
+    "?monitor_id=eq." +
+    String(MONITOR_ID);
 
   http.begin(url);
 
@@ -409,11 +418,35 @@ void updateBatteryLevel(
     ) +
     "}";
 
+  Serial.println();
+  Serial.println(
+    "Updating monitoring..."
+  );
+
+  Serial.print(
+    "Monitor ID: "
+  );
+
+  Serial.println(
+    MONITOR_ID
+  );
+
+  Serial.print(
+    "Battery Level: "
+  );
+
+  Serial.print(
+    batteryLevel,
+    2
+  );
+
+  Serial.println("%");
+
   int httpCode =
     http.PATCH(json);
 
   Serial.print(
-    "Monitoring update: "
+    "HTTP Response Code: "
   );
 
   Serial.println(
@@ -426,25 +459,37 @@ void updateBatteryLevel(
   ) {
 
     Serial.println(
-      "Battery level updated successfully."
+      "SUCCESS: Battery level updated!"
     );
 
   } else {
 
     Serial.println(
-      "Battery level update failed."
+      "ERROR: Battery level update failed."
     );
 
-    Serial.println(
-      http.getString()
-    );
+    String response =
+      http.getString();
+
+    if (
+      response.length() > 0
+    ) {
+
+      Serial.println(
+        "Supabase response:"
+      );
+
+      Serial.println(
+        response
+      );
+    }
   }
 
   http.end();
 }
 
 // =====================================================
-// Update Voltage Sensor Status
+// Update Voltage Sensor Component Status
 // =====================================================
 
 void updateSensorStatus(
@@ -454,6 +499,11 @@ void updateSensorStatus(
   if (
     WiFi.status() != WL_CONNECTED
   ) {
+
+    Serial.println(
+      "WiFi disconnected."
+    );
+
     return;
   }
 
@@ -501,11 +551,24 @@ void updateSensorStatus(
     ) +
     "}";
 
+  Serial.println();
+  Serial.println(
+    "Updating voltage sensor status..."
+  );
+
+  Serial.print(
+    "Component ID: "
+  );
+
+  Serial.println(
+    VOLTAGE_SENSOR_COMPONENT_ID
+  );
+
   int httpCode =
     http.PATCH(json);
 
   Serial.print(
-    "Sensor status update: "
+    "HTTP Response Code: "
   );
 
   Serial.println(
@@ -518,25 +581,56 @@ void updateSensorStatus(
   ) {
 
     Serial.println(
-      "Sensor status updated."
+      "SUCCESS: Sensor status updated!"
     );
+
+  } else {
+
+    Serial.println(
+      "ERROR: Sensor status update failed."
+    );
+
+    String response =
+      http.getString();
+
+    if (
+      response.length() > 0
+    ) {
+
+      Serial.println(
+        response
+      );
+    }
   }
 
   http.end();
 }
 
 // =====================================================
-// Battery Monitoring
+// Complete Battery Monitoring
 // =====================================================
 
 void monitorBattery() {
 
-  float voltage =
+  Serial.println();
+  Serial.println(
+    "========================================"
+  );
+
+  Serial.println(
+    "Battery Monitoring"
+  );
+
+  Serial.println(
+    "========================================"
+  );
+
+  float batteryVoltage =
     readBatteryVoltage();
 
   bool sensorConnected =
     isVoltageSensorConnected(
-      voltage
+      batteryVoltage
     );
 
   Serial.print(
@@ -550,7 +644,7 @@ void monitorBattery() {
   );
 
   // -----------------------------------------------
-  // Sensor state changed
+  // Sensor status changed
   // -----------------------------------------------
 
   if (
@@ -567,29 +661,33 @@ void monitorBattery() {
   }
 
   // -----------------------------------------------
-  // Stop if sensor is disconnected
+  // Stop if sensor disconnected
   // -----------------------------------------------
 
   if (!sensorConnected) {
 
     Serial.println(
-      "No valid battery voltage."
+      "Battery percentage not updated."
+    );
+
+    Serial.println(
+      "Reason: no valid voltage signal."
     );
 
     return;
   }
 
   // -----------------------------------------------
-  // Calculate AdlaWatt percentage
+  // Calculate battery level
   // -----------------------------------------------
 
   float batteryLevel =
     calculateBatteryLevel(
-      voltage
+      batteryVoltage
     );
 
   // -----------------------------------------------
-  // Upload battery level
+  // Update Supabase
   // -----------------------------------------------
 
   updateBatteryLevel(
@@ -597,7 +695,7 @@ void monitorBattery() {
   );
 
   Serial.println(
-    "----------------------------------------"
+    "========================================"
   );
 }
 
@@ -634,7 +732,31 @@ void setup() {
   );
 
   Serial.print(
-    "Battery: "
+    "User ID: "
+  );
+
+  Serial.println(
+    USER_ID
+  );
+
+  Serial.print(
+    "Monitor ID: "
+  );
+
+  Serial.println(
+    MONITOR_ID
+  );
+
+  Serial.print(
+    "Voltage Sensor Component ID: "
+  );
+
+  Serial.println(
+    VOLTAGE_SENSOR_COMPONENT_ID
+  );
+
+  Serial.print(
+    "Battery Capacity: "
   );
 
   Serial.print(
@@ -646,7 +768,7 @@ void setup() {
   );
 
   Serial.print(
-    "Nominal Capacity: "
+    "Total Battery Energy: "
   );
 
   Serial.print(
@@ -658,7 +780,7 @@ void setup() {
   );
 
   Serial.print(
-    "Usable Capacity: "
+    "Usable Energy at 80% DoD: "
   );
 
   Serial.print(
@@ -669,23 +791,11 @@ void setup() {
     " Wh"
   );
 
-  Serial.print(
-    "DoD: "
-  );
-
-  Serial.print(
-    DOD_PERCENT
-  );
-
-  Serial.println("%");
-
   Serial.println(
     "========================================"
   );
 
-  Serial.println();
-
-  // Initial reading
+  // Initial battery reading
   monitorBattery();
 
   lastUpdate =
