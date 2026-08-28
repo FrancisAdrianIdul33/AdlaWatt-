@@ -1,10 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, View } from "react-native";
+
+import React, {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  StyleSheet,
+  View,
+} from "react-native";
+
 import Svg, { Circle } from "react-native-svg";
 
 import AppText from "@/components/ui/AppText";
+
 import { Colors } from "@/constants/colors";
+
+import { supabase } from "@/lib/supabase";
 
 type ChartType =
   | "battery"
@@ -18,32 +30,142 @@ type TemperatureStatus =
   | "Moderate"
   | "Alarming";
 
-type DeviceStatus = "Online" | "Offline";
+type DeviceStatus =
+  | "Online"
+  | "Offline";
+
+type BatteryStatus =
+  | "Charging"
+  | "Discharging"
+  | "Idle";
+
+type SolarStatus =
+  | "Low"
+  | "Moderate"
+  | "High";
+
+interface MonitoringData {
+  battery_level: number;
+  battery_status: BatteryStatus;
+  time_remaining: string;
+  solar_input: number;
+  solar_status: SolarStatus;
+  current_load: number;
+  device_status: DeviceStatus;
+  battery_temperature: number;
+  battery_temperature_status: TemperatureStatus;
+}
 
 interface ChartCardProps {
   type: ChartType;
-  value?: number | string;
-  status?: string;
-  timeRemaining?: string;
 }
 
 const RING_SIZE = 150;
 const RADIUS = 60;
 const STROKE = 11;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const CIRCUMFERENCE =
+  2 * Math.PI * RADIUS;
 
 export default function ChartCard({
   type,
-  value,
-  status,
-  timeRemaining,
 }: ChartCardProps) {
+  const [monitoring, setMonitoring] =
+    useState<MonitoringData | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  // ============================================
+  // LOAD CURRENT USER'S MONITORING DATA
+  // ============================================
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadMonitoring = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        if (mounted) {
+          setMonitoring(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const { data, error } =
+        await supabase
+          .from("monitoring")
+          .select(
+            "battery_level, battery_status, time_remaining, solar_input, solar_status, current_load, device_status, battery_temperature, battery_temperature_status",
+          )
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Error loading monitoring data:",
+          error.message,
+        );
+
+        if (mounted) {
+          setMonitoring(null);
+          setLoading(false);
+        }
+
+        return;
+      }
+
+      const monitoringData =
+        data as MonitoringData | null;
+
+      if (mounted) {
+        setMonitoring(monitoringData);
+        setLoading(false);
+      }
+
+      if (error) {
+        console.error(
+          "Error loading monitoring data:",
+          error,
+        );
+
+        if (mounted) {
+          setMonitoring(null);
+          setLoading(false);
+        }
+
+        return;
+      }
+
+      if (mounted) {
+        setMonitoring(data);
+        setLoading(false);
+      }
+    };
+
+    loadMonitoring();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ============================================
+  // BATTERY CARD
+  // ============================================
+
   if (type === "battery") {
     const level =
-      typeof value === "number" ? value : 50;
+      monitoring?.battery_level ?? 0;
 
     const progress =
-      Math.max(0, Math.min(100, level)) / 100;
+      Math.max(
+        0,
+        Math.min(100, level),
+      ) / 100;
 
     return (
       <View style={styles.batterySection}>
@@ -74,17 +196,24 @@ export default function ChartCard({
               strokeLinecap="round"
               strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
               strokeDashoffset={
-                CIRCUMFERENCE * (1 - progress)
+                CIRCUMFERENCE *
+                (1 - progress)
               }
             />
           </Svg>
 
-          <View style={styles.batteryCenter}>
+          <View
+            style={styles.batteryCenter}
+          >
             <AppText
               variant="heading"
-              style={styles.batteryPercentage}
+              style={
+                styles.batteryPercentage
+              }
             >
-              {level}%
+              {loading
+                ? "—"
+                : `${level}%`}
             </AppText>
 
             <AppText
@@ -94,12 +223,17 @@ export default function ChartCard({
               Battery
             </AppText>
 
-            <View style={styles.batteryStatus}>
+            <View
+              style={styles.batteryStatus}
+            >
               <AppText
                 variant="caption"
-                style={styles.batteryStatusText}
+                style={
+                  styles.batteryStatusText
+                }
               >
-                {status || "Discharging"}
+                {monitoring
+                  ?.battery_status ?? "Offline"}
               </AppText>
             </View>
           </View>
@@ -109,13 +243,23 @@ export default function ChartCard({
           variant="caption"
           style={styles.remainingText}
         >
-          Time Remaining: {timeRemaining || "4h 12m"}
+          Time Remaining:{" "}
+          {monitoring?.time_remaining ??
+            "—"}
         </AppText>
       </View>
     );
   }
 
-  const data = getCardData(type, value, status);
+  // ============================================
+  // OTHER MONITORING CARDS
+  // ============================================
+
+  const data = getCardData(
+    type,
+    monitoring,
+    loading,
+  );
 
   return (
     <View style={styles.monitorCard}>
@@ -139,8 +283,9 @@ export default function ChartCard({
           style={[
             styles.monitorValue,
             type === "device" &&
-              data.value === "Offline" &&
-              styles.offlineValue,
+            data.value ===
+            "Offline" &&
+            styles.offlineValue,
           ]}
         >
           {data.value}
@@ -169,35 +314,62 @@ export default function ChartCard({
   );
 }
 
+// ============================================
+// CARD DATA
+// ============================================
+
 function getCardData(
-  type: Exclude<ChartType, "battery">,
-  value?: number | string,
-  status?: string,
+  type: Exclude<
+    ChartType,
+    "battery"
+  >,
+  monitoring: MonitoringData | null,
+  loading: boolean,
 ) {
   switch (type) {
     case "solar":
       return {
-        icon: "sunny-outline" as keyof typeof Ionicons.glyphMap,
+        icon:
+          "sunny-outline" as keyof typeof Ionicons.glyphMap,
         label: "Solar Input",
-        value: value ?? "46W",
-        badge: status ?? "Moderate",
-        badgeStyle: styles.moderateBadge,
-        badgeTextStyle: styles.darkBadgeText,
+        value: loading
+          ? "—"
+          : `${monitoring?.solar_input ?? 0}W`,
+        badge:
+          monitoring?.solar_status,
+        badgeStyle:
+          monitoring?.solar_status ===
+            "Moderate"
+            ? styles.moderateBadge
+            : monitoring?.solar_status ===
+              "High"
+              ? styles.normalBadge
+              : styles.statusBadge,
+        badgeTextStyle:
+          monitoring?.solar_status ===
+            "Moderate"
+            ? styles.darkBadgeText
+            : styles.lightBadgeText,
       };
 
     case "load":
       return {
-        icon: "flash-outline" as keyof typeof Ionicons.glyphMap,
+        icon:
+          "flash-outline" as keyof typeof Ionicons.glyphMap,
         label: "Load Now",
-        value: value ?? "170W",
+        value: loading
+          ? "—"
+          : `${monitoring?.current_load ?? 0}W`,
       };
 
     case "device": {
       const deviceStatus =
-        (status as DeviceStatus) || "Online";
+        monitoring?.device_status ??
+        "Offline";
 
       return {
-        icon: "hardware-chip-outline" as keyof typeof Ionicons.glyphMap,
+        icon:
+          "hardware-chip-outline" as keyof typeof Ionicons.glyphMap,
         label: "Device",
         value: deviceStatus,
       };
@@ -205,7 +377,8 @@ function getCardData(
 
     case "temperature": {
       const tempStatus =
-        (status as TemperatureStatus) || "Normal";
+        monitoring?.battery_temperature_status ??
+        "Normal";
 
       const badgeStyle =
         tempStatus === "Alarming"
@@ -220,12 +393,12 @@ function getCardData(
           : styles.lightBadgeText;
 
       return {
-        icon: "thermometer-outline" as keyof typeof Ionicons.glyphMap,
+        icon:
+          "thermometer-outline" as keyof typeof Ionicons.glyphMap,
         label: "Battery Temp",
-        value:
-          typeof value === "number"
-            ? `${value}°C`
-            : value ?? "20°C",
+        value: loading
+          ? "—"
+          : `${monitoring?.battery_temperature ?? 0}°C`,
         badge: tempStatus,
         badgeStyle,
         badgeTextStyle,
