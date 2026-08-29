@@ -1,0 +1,377 @@
+-- ============================================
+-- ADLAWATT MONITORING TABLE
+-- ============================================
+-- Current real-time state of each user's
+-- AdlaWatt system.
+--
+-- One user = one monitoring row.
+--
+-- monitor_id:
+--   100
+--   200
+--   300
+--   ...
+--
+-- ESP32 updates the existing row.
+-- Frontend reads the current values.
+--
+-- No historical timestamps are stored.
+-- Realtime replication is enabled.
+-- RLS remains ENABLED.
+-- ============================================
+
+
+-- ============================================
+-- 1. REMOVE OLD MONITORING DEPENDENCIES
+-- ============================================
+
+drop trigger if exists monitoring_updated_at
+on public.monitoring;
+
+drop trigger if exists on_public_user_created_monitoring
+on public.users;
+
+drop function if exists public.update_monitoring_timestamp();
+
+drop function if exists public.handle_new_user_monitoring();
+
+drop function if exists public.update_monitoring_from_hardware(
+    bigint,
+    numeric
+);
+
+drop function if exists public.update_monitoring_from_hardware(
+    integer,
+    numeric
+);
+
+drop table if exists public.monitoring cascade;
+
+
+-- ============================================
+-- 2. CREATE MONITORING TABLE
+-- ============================================
+
+create table public.monitoring (
+
+    -- 100, 200, 300, 400, ...
+    monitor_id bigint generated always as identity
+        (start with 100 increment by 100)
+        primary key,
+
+    -- One monitoring row per user
+    user_id uuid not null
+        references public.users(id)
+        on delete cascade
+        unique,
+
+    -- Battery percentage
+    battery_level numeric(5,2) not null default 0,
+
+    -- Battery operating state
+    battery_status text not null default 'Idle',
+
+    -- Estimated remaining runtime
+    time_remaining text not null default '0h 00m',
+
+    -- Current solar input
+    solar_input numeric(10,2) not null default 0,
+
+    -- Solar condition
+    solar_status text not null default 'Low',
+
+    -- Current system/appliance load
+    current_load numeric(10,2) not null default 0,
+
+    -- ESP32/system status
+    device_status text not null default 'Offline',
+
+    -- Battery temperature
+    battery_temperature numeric(5,2) not null default 0,
+
+    -- Battery temperature condition
+    battery_temperature_status text not null default 'Normal'
+);
+
+
+-- ============================================
+-- 3. VALIDATION
+-- ============================================
+
+alter table public.monitoring
+    add constraint monitoring_battery_level_check
+    check (battery_level between 0 and 100);
+
+alter table public.monitoring
+    add constraint monitoring_battery_status_check
+    check (
+        battery_status in (
+            'Charging',
+            'Discharging',
+            'Idle'
+        )
+    );
+
+alter table public.monitoring
+    add constraint monitoring_solar_input_check
+    check (solar_input >= 0);
+
+alter table public.monitoring
+    add constraint monitoring_solar_status_check
+    check (
+        solar_status in (
+            'Low',
+            'Moderate',
+            'High'
+        )
+    );
+
+alter table public.monitoring
+    add constraint monitoring_current_load_check
+    check (current_load >= 0);
+
+alter table public.monitoring
+    add constraint monitoring_device_status_check
+    check (
+        device_status in (
+            'Online',
+            'Offline'
+        )
+    );
+
+alter table public.monitoring
+    add constraint monitoring_temperature_status_check
+    check (
+        battery_temperature_status in (
+            'Normal',
+            'Moderate',
+            'Alarming'
+        )
+    );
+
+alter table public.monitoring
+    add constraint monitoring_time_remaining_check
+    check (
+        char_length(trim(time_remaining)) > 0
+    );
+
+
+-- ============================================
+-- 4. ENABLE RLS
+-- ============================================
+
+alter table public.monitoring
+    enable row level security;
+
+
+-- ============================================
+-- 5. AUTHENTICATED USER READ POLICY
+-- ============================================
+
+create policy "Users can view own monitoring"
+on public.monitoring
+for select
+to authenticated
+using (
+    auth.uid() = user_id
+);
+
+
+-- ============================================
+-- 6. AUTHENTICATED USER UPDATE POLICY
+-- ============================================
+
+create policy "Users can update own monitoring"
+on public.monitoring
+for update
+to authenticated
+using (
+    auth.uid() = user_id
+)
+with check (
+    auth.uid() = user_id
+);
+
+
+-- ============================================
+-- 7. ESP32 READ POLICY
+-- ============================================
+
+create policy "ESP32 can read monitoring"
+on public.monitoring
+for select
+to anon
+using (
+    true
+);
+
+
+-- ============================================
+-- 8. ESP32 UPDATE POLICY
+-- ============================================
+-- Prototype hardware row:
+--
+-- monitor_id = 300
+-- user_id =
+-- a3d0385a-43e0-4921-95b2-f1102cc75de7
+--
+-- This is intentionally restricted.
+-- Do NOT use using (true) for anon UPDATE.
+-- ============================================
+
+create policy "ESP32 can update prototype monitoring"
+on public.monitoring
+for update
+to anon
+using (
+    monitor_id = 300
+    and user_id =
+        'a3d0385a-43e0-4921-95b2-f1102cc75de7'::uuid
+)
+with check (
+    monitor_id = 300
+    and user_id =
+        'a3d0385a-43e0-4921-95b2-f1102cc75de7'::uuid
+);
+
+
+-- ============================================
+-- 9. GRANT REST ACCESS
+-- ============================================
+
+grant select, update
+on public.monitoring
+to anon;
+
+grant select, update
+on public.monitoring
+to authenticated;
+
+
+-- ============================================
+-- 10. NEW USER MONITORING FUNCTION
+-- ============================================
+
+create or replace function public.handle_new_user_monitoring()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+
+    insert into public.monitoring (
+        user_id
+    )
+    values (
+        new.id
+    )
+    on conflict (user_id) do nothing;
+
+    return new;
+
+end;
+$$;
+
+
+-- ============================================
+-- 11. NEW USER TRIGGER
+-- ============================================
+
+create trigger on_public_user_created_monitoring
+after insert on public.users
+for each row
+execute function public.handle_new_user_monitoring();
+
+
+-- ============================================
+-- 12. CREATE MONITORING ROWS FOR EXISTING USERS
+-- ============================================
+
+insert into public.monitoring (
+    user_id
+)
+select
+    id
+from public.users
+on conflict (user_id) do nothing;
+
+
+-- ============================================
+-- 13. ENABLE REALTIME
+-- ============================================
+
+alter table public.monitoring
+    replica identity full;
+
+
+do $$
+begin
+
+    if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = 'monitoring'
+    ) then
+
+        alter publication supabase_realtime
+        add table public.monitoring;
+
+    end if;
+
+end
+$$;
+
+
+-- ============================================
+-- 14. VERIFY
+-- ============================================
+
+select
+    monitor_id,
+    user_id,
+    battery_level,
+    battery_status,
+    time_remaining,
+    solar_input,
+    solar_status,
+    current_load,
+    device_status,
+    battery_temperature,
+    battery_temperature_status
+from public.monitoring
+order by monitor_id;
+
+
+-- ============================================
+-- 15. VERIFY USER RELATIONSHIP
+-- ============================================
+
+select
+    u.id as user_id,
+    u.username,
+    m.monitor_id,
+    m.battery_level,
+    m.device_status
+from public.users u
+left join public.monitoring m
+    on m.user_id = u.id
+order by m.monitor_id;
+
+
+-- ============================================
+-- 16. CHECK COUNTS
+-- ============================================
+
+select
+    (
+        select count(*)
+        from public.users
+    ) as user_count,
+
+    (
+        select count(*)
+        from public.monitoring
+    ) as monitoring_count;
