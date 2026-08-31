@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     color: Colors.light.textSecondary,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: Colors.light.primary,
     borderRadius: 12,
     paddingLeft: 16,
     paddingRight: 48, // Space reserved for the icon

@@ -11,6 +11,7 @@ import {
 
 import ApplianceBox from "@/components/forms/ApplianceBox";
 import AppText from "@/components/ui/AppText";
+import SearchBox from "@/components/ui/SearchBox";
 import { Colors } from "@/constants/colors";
 import { Radius, Spacing, Typography } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
@@ -36,10 +37,11 @@ type ApplianceModalProps = {
 const areaColors: Record<string, string> = {
   "Living Area": Colors.light.primary,
   Bedroom: "#9B59B6",
-  "Kitchen & Dining Area": Colors.light.secondary,
-  "Work & Study Area": "#4A90E2",
-  "Bathroom & Laundry Area": "#16A085",
-  "Porch & Yard": "#E67E22",
+  "Kitchen Area": Colors.light.secondary,
+  "Work/Study Area": "#4A90E2",
+  "Bathroom Area": "#16A085",
+  Porch: "#E67E22",
+  "Custom Appliances": Colors.light.primary,
 };
 
 const getAreaColor = (area: string) =>
@@ -48,14 +50,16 @@ const getAreaColor = (area: string) =>
 export default function ApplianceModal({
   visible,
   onClose,
-  onSave,
   selectedAppliances = [],
   onCustomAdd,
   onCustomUpdate,
   onCustomDelete,
+  onSave,
 }: ApplianceModalProps) {
   const [selected, setSelected] = useState<string[]>([]);
   const [appliances, setAppliances] = useState<Appliance[]>([]);
+
+  const [searchText, setSearchText] = useState("");
 
   const [customVisible, setCustomVisible] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -63,14 +67,13 @@ export default function ApplianceModal({
   const [customError, setCustomError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const scrollRef = useRef<ScrollView>(null);
-  const customFormY = useRef(0);
+  const [editingCustom, setEditingCustom] =
+    useState<Appliance | null>(null);
 
   const [isReset, setIsReset] = useState(false);
 
-  // Stores the appliance currently being edited.
-  const [editingCustom, setEditingCustom] =
-    useState<Appliance | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const customFormY = useRef(0);
 
   // ============================================================
   // LOAD APPLIANCES
@@ -113,8 +116,10 @@ export default function ApplianceModal({
       setSelected(
         selectedAppliances.map(({ id }) => id),
       );
+      setSearchText("");
     } else {
       setSelected([]);
+      setSearchText("");
       setCustomVisible(false);
       setCustomName("");
       setCustomWatts("");
@@ -161,9 +166,11 @@ export default function ApplianceModal({
         "Reset appliance selection error:",
         error.message,
       );
+
       setCustomError(
         "Unable to reset appliance selection.",
       );
+
       return;
     }
 
@@ -312,9 +319,11 @@ export default function ApplianceModal({
         "Duplicate appliance check error:",
         duplicateError.message,
       );
+
       setCustomError(
         "Unable to check appliance name.",
       );
+
       return;
     }
 
@@ -346,9 +355,11 @@ export default function ApplianceModal({
         "Custom appliance error:",
         error.message,
       );
+
       setCustomError(
         "Unable to add appliance. Please try again.",
       );
+
       return;
     }
 
@@ -417,7 +428,6 @@ export default function ApplianceModal({
       return;
     }
 
-    // Prevent duplicate names when editing.
     const {
       data: duplicate,
       error: duplicateError,
@@ -434,6 +444,16 @@ export default function ApplianceModal({
         "Duplicate appliance check error:",
         duplicateError.message,
       );
+    }
+
+    if (
+      duplicate &&
+      duplicate.app_id !== editingCustom.id
+    ) {
+      setCustomError(
+        "This appliance already exists.",
+      );
+      return;
     }
 
     const { data, error } = await supabase
@@ -454,9 +474,11 @@ export default function ApplianceModal({
         "Custom appliance update error:",
         error.message,
       );
+
       setCustomError(
         "Unable to update appliance. Please try again.",
       );
+
       return;
     }
 
@@ -506,9 +528,11 @@ export default function ApplianceModal({
         "Custom appliance delete error:",
         error.message,
       );
+
       setCustomError(
         "Unable to delete appliance. Please try again.",
       );
+
       return;
     }
 
@@ -530,7 +554,9 @@ export default function ApplianceModal({
   const openCustomEditor = (appliance: Appliance) => {
     setEditingCustom(appliance);
     setCustomName(appliance.name);
-    setCustomWatts(appliance.watts.replace(/W$/, ""));
+    setCustomWatts(
+      appliance.watts.replace(/W$/, ""),
+    );
     setCustomError("");
     setCustomVisible(true);
 
@@ -543,17 +569,33 @@ export default function ApplianceModal({
   };
 
   // ============================================================
-  // SECTIONS
+  // AREA SECTIONS
   // ============================================================
 
   const sections = [
     "Living Area",
     "Bedroom",
-    "Kitchen & Dining Area",
-    "Work & Study Area",
-    "Bathroom & Laundry Area",
-    "Porch & Yard",
+    "Kitchen Area",
+    "Work/Study Area",
+    "Bathroom Area",
+    "Porch",
   ];
+
+  // ============================================================
+  // SEARCH FILTER
+  // ============================================================
+
+  const normalizedSearch = searchText
+    .trim()
+    .toLowerCase();
+
+  const filteredAppliances = appliances.filter(
+    (appliance) =>
+      !normalizedSearch ||
+      appliance.name
+        .toLowerCase()
+        .includes(normalizedSearch),
+  );
 
   return (
     <Modal
@@ -564,6 +606,7 @@ export default function ApplianceModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
+
           {/* Header */}
           <View style={styles.header}>
             <AppText
@@ -591,7 +634,9 @@ export default function ApplianceModal({
           <ScrollView
             ref={scrollRef}
             style={styles.content}
-            contentContainerStyle={styles.contentContainer}
+            contentContainerStyle={
+              styles.contentContainer
+            }
             showsVerticalScrollIndicator
           >
             <AppText
@@ -627,6 +672,16 @@ export default function ApplianceModal({
                 </AppText>
               </View>
             </View>
+
+            {/* Search */}
+            <SearchBox
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Search appliances..."
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Search appliances"
+            />
 
             {/* Custom Appliance */}
             <View style={styles.customSection}>
@@ -675,7 +730,8 @@ export default function ApplianceModal({
               <View
                 style={styles.customForm}
                 onLayout={(event) => {
-                  customFormY.current = event.nativeEvent.layout.y;
+                  customFormY.current =
+                    event.nativeEvent.layout.y;
                 }}
               >
                 <AppText
@@ -706,6 +762,7 @@ export default function ApplianceModal({
                       /[^\d-]/g,
                       "",
                     );
+
                     setCustomWatts(value);
                     setCustomError("");
                   }}
@@ -789,59 +846,68 @@ export default function ApplianceModal({
             ) : null}
 
             {/* Custom Appliances */}
-            {appliances.some(
+            {filteredAppliances.some(
               (item) =>
                 item.area === "Custom Appliances",
             ) && (
-                <View style={styles.section}>
-                  <AppText
-                    variant="body"
-                    style={styles.sectionTitle}
-                  >
-                    Custom Appliances
-                  </AppText>
+              <View style={styles.section}>
+                <AppText
+                  variant="body"
+                  style={styles.sectionTitle}
+                >
+                  Custom Appliances
+                </AppText>
 
-                  <View style={styles.grid}>
-                    {appliances
-                      .filter(
-                        (item) =>
-                          item.area === "Custom Appliances",
-                      )
-                      .map((appliance) => {
-                        const isSelected =
-                          selected.includes(appliance.id);
-
-                        return (
-                          <ApplianceBox
-                            key={appliance.id}
-                            name={appliance.name}
-                            wattage={appliance.watts}
-                            color={Colors.light.primary}
-                            selected={isSelected}
-                            isCustom
-                            onPress={() =>
-                              toggleAppliance(appliance.id)
-                            }
-                            onEdit={() =>
-                              openCustomEditor(appliance)
-                            }
-                            onDelete={() =>
-                              handleCustomDelete(
-                                appliance.id,
-                              )
-                            }
-                          />
+                <View style={styles.grid}>
+                  {filteredAppliances
+                    .filter(
+                      (item) =>
+                        item.area ===
+                        "Custom Appliances",
+                    )
+                    .map((appliance) => {
+                      const isSelected =
+                        selected.includes(
+                          appliance.id,
                         );
-                      })}
-                  </View>
+
+                      return (
+                        <ApplianceBox
+                          key={appliance.id}
+                          name={appliance.name}
+                          wattage={appliance.watts}
+                          color={Colors.light.primary}
+                          selected={isSelected}
+                          isCustom
+                          onPress={() =>
+                            toggleAppliance(
+                              appliance.id,
+                            )
+                          }
+                          onEdit={() =>
+                            openCustomEditor(
+                              appliance,
+                            )
+                          }
+                          onDelete={() =>
+                            handleCustomDelete(
+                              appliance.id,
+                            )
+                          }
+                        />
+                      );
+                    })}
                 </View>
-              )}
+              </View>
+            )}
 
             {/* Appliance Categories */}
             {sections.map((section) => {
-              const items = appliances.filter(
+              const items = filteredAppliances.filter(
                 (item) => item.area === section,
               );
+
+              if (items.length === 0) return null;
 
               return (
                 <View
@@ -858,7 +924,9 @@ export default function ApplianceModal({
                   <View style={styles.grid}>
                     {items.map((appliance) => {
                       const isSelected =
-                        selected.includes(appliance.id);
+                        selected.includes(
+                          appliance.id,
+                        );
 
                       return (
                         <ApplianceBox
@@ -870,7 +938,9 @@ export default function ApplianceModal({
                           )}
                           selected={isSelected}
                           onPress={() =>
-                            toggleAppliance(appliance.id)
+                            toggleAppliance(
+                              appliance.id,
+                            )
                           }
                         />
                       );
@@ -879,6 +949,26 @@ export default function ApplianceModal({
                 </View>
               );
             })}
+
+            {/* No Search Results */}
+            {normalizedSearch &&
+              filteredAppliances.length === 0 && (
+                <View style={styles.noResults}>
+                  <Ionicons
+                    name="search-outline"
+                    size={28}
+                    color={Colors.light.textSecondary}
+                  />
+
+                  <AppText
+                    variant="caption"
+                    style={styles.noResultsText}
+                  >
+                    No appliances found for "
+                    {searchText.trim()}"
+                  </AppText>
+                </View>
+              )}
           </ScrollView>
 
           {/* Footer */}
@@ -1074,6 +1164,18 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 10,
+  },
+
+  noResults: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 35,
+    gap: 8,
+  },
+
+  noResultsText: {
+    color: Colors.light.textSecondary,
+    textAlign: "center",
   },
 
   footer: {
