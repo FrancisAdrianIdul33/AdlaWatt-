@@ -334,11 +334,11 @@ const styles = StyleSheet.create({
   },
 
   deleteButton: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: "transparent",
   },
 
   editButton: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "transparent",
   },
 
   /* ======================================================= */

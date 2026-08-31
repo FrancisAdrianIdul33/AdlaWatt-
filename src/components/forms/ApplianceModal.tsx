@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -62,6 +62,8 @@ export default function ApplianceModal({
   const [customWatts, setCustomWatts] = useState("");
   const [customError, setCustomError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const scrollRef = useRef<ScrollView>(null);
 
   // Stores the appliance currently being edited.
   const [editingCustom, setEditingCustom] =
@@ -577,6 +579,7 @@ export default function ApplianceModal({
 
           {/* Content */}
           <ScrollView
+            ref={scrollRef}
             style={styles.content}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator
@@ -659,7 +662,21 @@ export default function ApplianceModal({
 
             {/* Custom Form */}
             {customVisible && (
-              <View style={styles.customForm}>
+              <View
+                style={styles.customForm}
+                onLayout={(event) => {
+                  if (editingCustom) {
+                    const { y } = event.nativeEvent.layout;
+
+                    requestAnimationFrame(() => {
+                      scrollRef.current?.scrollTo({
+                        y: Math.max(y - 20, 0),
+                        animated: true,
+                      });
+                    });
+                  }
+                }}
+              >
                 <AppText
                   variant="caption"
                   style={styles.infoNote}
@@ -775,49 +792,49 @@ export default function ApplianceModal({
               (item) =>
                 item.area === "Custom Appliances",
             ) && (
-              <View style={styles.section}>
-                <AppText
-                  variant="body"
-                  style={styles.sectionTitle}
-                >
-                  Custom Appliances
-                </AppText>
+                <View style={styles.section}>
+                  <AppText
+                    variant="body"
+                    style={styles.sectionTitle}
+                  >
+                    Custom Appliances
+                  </AppText>
 
-                <View style={styles.grid}>
-                  {appliances
-                    .filter(
-                      (item) =>
-                        item.area === "Custom Appliances",
-                    )
-                    .map((appliance) => {
-                      const isSelected =
-                        selected.includes(appliance.id);
+                  <View style={styles.grid}>
+                    {appliances
+                      .filter(
+                        (item) =>
+                          item.area === "Custom Appliances",
+                      )
+                      .map((appliance) => {
+                        const isSelected =
+                          selected.includes(appliance.id);
 
-                      return (
-                        <ApplianceBox
-                          key={appliance.id}
-                          name={appliance.name}
-                          wattage={appliance.watts}
-                          color={Colors.light.primary}
-                          selected={isSelected}
-                          isCustom
-                          onPress={() =>
-                            toggleAppliance(appliance.id)
-                          }
-                          onEdit={() =>
-                            openCustomEditor(appliance)
-                          }
-                          onDelete={() =>
-                            handleCustomDelete(
-                              appliance.id,
-                            )
-                          }
-                        />
-                      );
-                    })}
+                        return (
+                          <ApplianceBox
+                            key={appliance.id}
+                            name={appliance.name}
+                            wattage={appliance.watts}
+                            color={Colors.light.primary}
+                            selected={isSelected}
+                            isCustom
+                            onPress={() =>
+                              toggleAppliance(appliance.id)
+                            }
+                            onEdit={() =>
+                              openCustomEditor(appliance)
+                            }
+                            onDelete={() =>
+                              handleCustomDelete(
+                                appliance.id,
+                              )
+                            }
+                          />
+                        );
+                      })}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
             {/* Appliance Categories */}
             {sections.map((section) => {
