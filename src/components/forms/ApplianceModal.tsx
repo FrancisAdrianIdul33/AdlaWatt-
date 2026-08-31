@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -13,7 +13,6 @@ import ApplianceBox from "@/components/forms/ApplianceBox";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Radius, Spacing, Typography } from "@/constants/theme";
-
 import { supabase } from "@/lib/supabase";
 
 type Appliance = {
@@ -34,7 +33,6 @@ type ApplianceModalProps = {
   selectedAppliances?: Appliance[];
 };
 
-
 const areaColors: Record<string, string> = {
   "Living Area": Colors.light.primary,
   Bedroom: "#9B59B6",
@@ -51,7 +49,6 @@ export default function ApplianceModal({
   visible,
   onClose,
   onSave,
-  customAppliances = [],
   selectedAppliances = [],
   onCustomAdd,
   onCustomUpdate,
@@ -65,18 +62,34 @@ export default function ApplianceModal({
   const [customWatts, setCustomWatts] = useState("");
   const [customError, setCustomError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const scrollRef = useRef<ScrollView>(null);
+  const customFormY = useRef(0);
+
+  const [isReset, setIsReset] = useState(false);
+
+  // Stores the appliance currently being edited.
   const [editingCustom, setEditingCustom] =
     useState<Appliance | null>(null);
+
+  // ============================================================
+  // LOAD APPLIANCES
+  // ============================================================
 
   const loadAppliances = async () => {
     const { data, error } = await supabase
       .from("appliances")
-      .select("app_id, appliance_name, wattage, area, type, status")
+      .select(
+        "app_id, appliance_name, wattage, area, type, status",
+      )
       .order("area")
       .order("appliance_name");
 
     if (error) {
-      console.error("Failed to load appliances:", error.message);
+      console.error(
+        "Failed to load appliances:",
+        error.message,
+      );
       return;
     }
 
@@ -90,10 +103,16 @@ export default function ApplianceModal({
     );
   };
 
+  // ============================================================
+  // MODAL STATE
+  // ============================================================
+
   useEffect(() => {
     if (visible) {
       loadAppliances();
-      setSelected(selectedAppliances.map(({ id }) => id));
+      setSelected(
+        selectedAppliances.map(({ id }) => id),
+      );
     } else {
       setSelected([]);
       setCustomVisible(false);
@@ -102,8 +121,13 @@ export default function ApplianceModal({
       setCustomError("");
       setSuccessMessage("");
       setEditingCustom(null);
+      setIsReset(false);
     }
   }, [visible, selectedAppliances]);
+
+  // ============================================================
+  // TOGGLE APPLIANCE
+  // ============================================================
 
   const toggleAppliance = (id: string) => {
     setSelected((current) =>
@@ -112,6 +136,10 @@ export default function ApplianceModal({
         : [...current, id],
     );
   };
+
+  // ============================================================
+  // RESET SELECTION
+  // ============================================================
 
   const handleReset = async () => {
     const {
@@ -129,8 +157,13 @@ export default function ApplianceModal({
       .eq("user_id", user.id);
 
     if (error) {
-      console.error("Reset appliance selection error:", error.message);
-      setCustomError("Unable to reset appliance selection.");
+      console.error(
+        "Reset appliance selection error:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to reset appliance selection.",
+      );
       return;
     }
 
@@ -140,7 +173,12 @@ export default function ApplianceModal({
     setCustomError("");
     setCustomVisible(false);
     setEditingCustom(null);
+    setIsReset(true);
   };
+
+  // ============================================================
+  // SAVE APPLIANCE SELECTION
+  // ============================================================
 
   const handleSave = async () => {
     const {
@@ -189,18 +227,26 @@ export default function ApplianceModal({
     onClose();
   };
 
+  // ============================================================
+  // CANCEL CUSTOM FORM
+  // ============================================================
+
   const handleCustomCancel = () => {
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setEditingCustom(null);
     setCustomVisible(false);
   };
+
+  // ============================================================
+  // ADD CUSTOM APPLIANCE
+  // ============================================================
 
   const handleCustomAdd = async () => {
     const name = customName.trim();
     const watts = customWatts.trim();
 
-    // Validate appliance name
     if (!/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(name)) {
       setCustomError(
         "Appliance name must be valid and readable.",
@@ -208,7 +254,6 @@ export default function ApplianceModal({
       return;
     }
 
-    // Validate wattage format
     if (!/^\d+-\d+$/.test(watts)) {
       setCustomError(
         "Enter valid wattage intervals, for example 15-25.",
@@ -220,7 +265,6 @@ export default function ApplianceModal({
       .split("-")
       .map(Number);
 
-    // Validate wattage range
     if (
       minWatts < 1 ||
       maxWatts < 1 ||
@@ -233,7 +277,6 @@ export default function ApplianceModal({
       return;
     }
 
-    // Validate interval
     if (minWatts > maxWatts) {
       setCustomError(
         "Enter a valid wattage interval.",
@@ -241,7 +284,6 @@ export default function ApplianceModal({
       return;
     }
 
-    // Get authenticated user
     const {
       data: { user },
       error: userError,
@@ -254,15 +296,16 @@ export default function ApplianceModal({
       return;
     }
 
-    // Prevent duplicate custom appliances
-    const { data: duplicate, error: duplicateError } =
-      await supabase
-        .from("appliances")
-        .select("app_id")
-        .eq("user_id", user.id)
-        .eq("type", "custom")
-        .ilike("appliance_name", name)
-        .maybeSingle();
+    const {
+      data: duplicate,
+      error: duplicateError,
+    } = await supabase
+      .from("appliances")
+      .select("app_id")
+      .eq("user_id", user.id)
+      .eq("type", "custom")
+      .ilike("appliance_name", name)
+      .maybeSingle();
 
     if (duplicateError) {
       console.error(
@@ -282,7 +325,6 @@ export default function ApplianceModal({
       return;
     }
 
-    // Insert custom appliance
     const { data, error } = await supabase
       .from("appliances")
       .insert({
@@ -310,7 +352,6 @@ export default function ApplianceModal({
       return;
     }
 
-    // IMPORTANT: use the database-generated app_id
     const appliance: Appliance = {
       id: data.app_id,
       name: data.appliance_name,
@@ -339,7 +380,11 @@ export default function ApplianceModal({
     }, 5000);
   };
 
-  const handleCustomUpdate = () => {
+  // ============================================================
+  // UPDATE CUSTOM APPLIANCE
+  // ============================================================
+
+  const handleCustomUpdate = async () => {
     if (!editingCustom) return;
 
     const name = customName.trim();
@@ -355,24 +400,151 @@ export default function ApplianceModal({
       return;
     }
 
-    onCustomUpdate?.({
-      ...editingCustom,
-      name,
-      watts: `${watts}W`,
-    });
+    const [minWatts, maxWatts] = watts
+      .split("-")
+      .map(Number);
+
+    if (
+      minWatts < 1 ||
+      maxWatts < 1 ||
+      minWatts > 720 ||
+      maxWatts > 720 ||
+      minWatts > maxWatts
+    ) {
+      setCustomError(
+        "Enter a valid wattage interval up to 720W.",
+      );
+      return;
+    }
+
+    // Prevent duplicate names when editing.
+    const {
+      data: duplicate,
+      error: duplicateError,
+    } = await supabase
+      .from("appliances")
+      .select("app_id")
+      .eq("user_id", editingCustom.id)
+      .eq("type", "custom")
+      .ilike("appliance_name", name)
+      .maybeSingle();
+
+    if (duplicateError) {
+      console.error(
+        "Duplicate appliance check error:",
+        duplicateError.message,
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("appliances")
+      .update({
+        appliance_name: name,
+        wattage: `${watts}W`,
+      })
+      .eq("app_id", editingCustom.id)
+      .eq("type", "custom")
+      .select(
+        "app_id, appliance_name, wattage, area",
+      )
+      .single();
+
+    if (error) {
+      console.error(
+        "Custom appliance update error:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to update appliance. Please try again.",
+      );
+      return;
+    }
+
+    const updated: Appliance = {
+      id: data.app_id,
+      name: data.appliance_name,
+      watts: data.wattage,
+      area: data.area,
+    };
+
+    setAppliances((current) =>
+      current.map((item) =>
+        item.id === updated.id ? updated : item,
+      ),
+    );
+
+    onCustomUpdate?.(updated);
 
     setEditingCustom(null);
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
+    setCustomVisible(false);
+
+    setSuccessMessage(
+      `${name} successfully updated!`,
+    );
+
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 5000);
   };
+
+  // ============================================================
+  // DELETE CUSTOM APPLIANCE
+  // ============================================================
+
+  const handleCustomDelete = async (id: string) => {
+    const { error } = await supabase
+      .from("appliances")
+      .delete()
+      .eq("app_id", id)
+      .eq("type", "custom");
+
+    if (error) {
+      console.error(
+        "Custom appliance delete error:",
+        error.message,
+      );
+      setCustomError(
+        "Unable to delete appliance. Please try again.",
+      );
+      return;
+    }
+
+    setAppliances((current) =>
+      current.filter((item) => item.id !== id),
+    );
+
+    setSelected((current) =>
+      current.filter((item) => item !== id),
+    );
+
+    onCustomDelete?.(id);
+  };
+
+  // ============================================================
+  // OPEN CUSTOM EDITOR
+  // ============================================================
 
   const openCustomEditor = (appliance: Appliance) => {
     setEditingCustom(appliance);
     setCustomName(appliance.name);
     setCustomWatts(appliance.watts.replace(/W$/, ""));
     setCustomError("");
+    setCustomVisible(true);
+
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(customFormY.current - 20, 0),
+        animated: true,
+      });
+    });
   };
+
+  // ============================================================
+  // SECTIONS
+  // ============================================================
 
   const sections = [
     "Living Area",
@@ -394,7 +566,10 @@ export default function ApplianceModal({
         <View style={styles.modal}>
           {/* Header */}
           <View style={styles.header}>
-            <AppText variant="heading" style={styles.title}>
+            <AppText
+              variant="heading"
+              style={styles.title}
+            >
               Add Appliances
             </AppText>
 
@@ -414,12 +589,17 @@ export default function ApplianceModal({
 
           {/* Content */}
           <ScrollView
+            ref={scrollRef}
             style={styles.content}
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator
           >
-            <AppText variant="caption" style={styles.subtitle}>
-              Select the appliances you want to use with your AdlaWatt system.
+            <AppText
+              variant="caption"
+              style={styles.subtitle}
+            >
+              Select the appliances you want to use with
+              your AdlaWatt system.
             </AppText>
 
             {/* Battery Advisory */}
@@ -431,7 +611,10 @@ export default function ApplianceModal({
               />
 
               <View style={styles.advisoryText}>
-                <AppText variant="body" style={styles.advisoryTitle}>
+                <AppText
+                  variant="body"
+                  style={styles.advisoryTitle}
+                >
                   Battery Capacity: 720 Wh
                 </AppText>
 
@@ -439,27 +622,33 @@ export default function ApplianceModal({
                   variant="caption"
                   style={styles.advisoryDescription}
                 >
-                  Keep your selected appliances within the available energy
-                  capacity.
+                  Keep your selected appliances within the
+                  available energy capacity.
                 </AppText>
               </View>
             </View>
 
             {/* Custom Appliance */}
             <View style={styles.customSection}>
-              <AppText variant="body" style={styles.sectionTitle}>
+              <AppText
+                variant="body"
+                style={styles.sectionTitle}
+              >
                 Custom Appliance
               </AppText>
 
               <Pressable
                 onPress={() => {
                   if (customVisible) {
-                    setCustomName("");
-                    setCustomWatts("");
-                    setCustomError("");
+                    handleCustomCancel();
+                    return;
                   }
 
-                  setCustomVisible((value) => !value);
+                  setEditingCustom(null);
+                  setCustomName("");
+                  setCustomWatts("");
+                  setCustomError("");
+                  setCustomVisible(true);
                 }}
                 style={({ pressed }) => [
                   styles.customButton,
@@ -481,14 +670,20 @@ export default function ApplianceModal({
               </Pressable>
             </View>
 
+            {/* Custom Form */}
             {customVisible && (
-              <View style={styles.customForm}>
+              <View
+                style={styles.customForm}
+                onLayout={(event) => {
+                  customFormY.current = event.nativeEvent.layout.y;
+                }}
+              >
                 <AppText
                   variant="caption"
                   style={styles.infoNote}
                 >
-                  Check the appliance wattage first, for example,
-                  soldering wire may use 15-25W.
+                  Check the appliance wattage first, for
+                  example, soldering wire may use 15-25W.
                 </AppText>
 
                 <TextInput
@@ -498,19 +693,26 @@ export default function ApplianceModal({
                     setCustomError("");
                   }}
                   placeholder="Enter valid appliance name"
-                  placeholderTextColor={Colors.light.textSecondary}
+                  placeholderTextColor={
+                    Colors.light.textSecondary
+                  }
                   style={styles.input}
                 />
 
                 <TextInput
                   value={customWatts}
                   onChangeText={(text) => {
-                    const value = text.replace(/[^\d-]/g, "");
+                    const value = text.replace(
+                      /[^\d-]/g,
+                      "",
+                    );
                     setCustomWatts(value);
                     setCustomError("");
                   }}
                   placeholder="Enter wattage like 15-20"
-                  placeholderTextColor={Colors.light.textSecondary}
+                  placeholderTextColor={
+                    Colors.light.textSecondary
+                  }
                   style={styles.input}
                   keyboardType="numeric"
                 />
@@ -542,7 +744,11 @@ export default function ApplianceModal({
                   </Pressable>
 
                   <Pressable
-                    onPress={handleCustomAdd}
+                    onPress={
+                      editingCustom
+                        ? handleCustomUpdate
+                        : handleCustomAdd
+                    }
                     disabled={
                       !customName.trim() ||
                       !customWatts.trim()
@@ -557,14 +763,14 @@ export default function ApplianceModal({
                       variant="caption"
                       style={styles.addText}
                     >
-                      Add
+                      {editingCustom ? "Save" : "Add"}
                     </AppText>
                   </Pressable>
                 </View>
               </View>
             )}
 
-            {/* Success Panel */}
+            {/* Success Message */}
             {successMessage ? (
               <View style={styles.successPanel}>
                 <Ionicons
@@ -583,41 +789,53 @@ export default function ApplianceModal({
             ) : null}
 
             {/* Custom Appliances */}
-            {appliances.some((item) => item.area === "Custom Appliances") && (
-              <View style={styles.section}>
-                <AppText
-                  variant="body"
-                  style={styles.sectionTitle}
-                >
-                  Custom Appliances
-                </AppText>
+            {appliances.some(
+              (item) =>
+                item.area === "Custom Appliances",
+            ) && (
+                <View style={styles.section}>
+                  <AppText
+                    variant="body"
+                    style={styles.sectionTitle}
+                  >
+                    Custom Appliances
+                  </AppText>
 
-                <View style={styles.grid}>
-                  {appliances
-                    .filter(
-                      (item) => item.area === "Custom Appliances",
-                    )
-                    .map((appliance) => {
-                      const isSelected = selected.includes(
-                        appliance.id,
-                      );
+                  <View style={styles.grid}>
+                    {appliances
+                      .filter(
+                        (item) =>
+                          item.area === "Custom Appliances",
+                      )
+                      .map((appliance) => {
+                        const isSelected =
+                          selected.includes(appliance.id);
 
-                      return (
-                        <ApplianceBox
-                          key={appliance.id}
-                          name={appliance.name}
-                          wattage={appliance.watts}
-                          color={Colors.light.primary}
-                          selected={isSelected}
-                          onPress={() =>
-                            toggleAppliance(appliance.id)
-                          }
-                        />
-                      );
-                    })}
+                        return (
+                          <ApplianceBox
+                            key={appliance.id}
+                            name={appliance.name}
+                            wattage={appliance.watts}
+                            color={Colors.light.primary}
+                            selected={isSelected}
+                            isCustom
+                            onPress={() =>
+                              toggleAppliance(appliance.id)
+                            }
+                            onEdit={() =>
+                              openCustomEditor(appliance)
+                            }
+                            onDelete={() =>
+                              handleCustomDelete(
+                                appliance.id,
+                              )
+                            }
+                          />
+                        );
+                      })}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
             {/* Appliance Categories */}
             {sections.map((section) => {
@@ -647,7 +865,9 @@ export default function ApplianceModal({
                           key={appliance.id}
                           name={appliance.name}
                           wattage={appliance.watts}
-                          color={getAreaColor(appliance.area)}
+                          color={getAreaColor(
+                            appliance.area,
+                          )}
                           selected={isSelected}
                           onPress={() =>
                             toggleAppliance(appliance.id)
@@ -706,119 +926,13 @@ export default function ApplianceModal({
                   variant="caption"
                   style={styles.actionText}
                 >
-                  Add
+                  {isReset ? "Save" : "Add"}
                 </AppText>
               </Pressable>
             </View>
           </View>
         </View>
       </View>
-
-      {/* Custom Appliance Editor */}
-      <Modal
-        visible={!!editingCustom}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEditingCustom(null)}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.successPanel}>
-            <AppText
-              variant="body"
-              style={styles.sectionTitle}
-            >
-              Update Custom Appliance
-            </AppText>
-
-            <TextInput
-              value={customName}
-              onChangeText={(text) => {
-                setCustomName(text);
-                setCustomError("");
-              }}
-              placeholder="Enter valid appliance name"
-              placeholderTextColor={Colors.light.textSecondary}
-              style={styles.input}
-            />
-
-            <TextInput
-              value={customWatts}
-              onChangeText={(text) => {
-                setCustomWatts(
-                  text.replace(/[^\d-]/g, ""),
-                );
-                setCustomError("");
-              }}
-              placeholder="Enter wattage like 15-20"
-              placeholderTextColor={Colors.light.textSecondary}
-              style={styles.input}
-              keyboardType="numeric"
-            />
-
-            {customError ? (
-              <AppText
-                variant="caption"
-                style={styles.customError}
-              >
-                {customError}
-              </AppText>
-            ) : null}
-
-            <View style={styles.customActions}>
-              <Pressable
-                onPress={() => {
-                  setEditingCustom(null);
-                  setCustomName("");
-                  setCustomWatts("");
-                  setCustomError("");
-                }}
-                style={styles.customAction}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.cancelText}
-                >
-                  Cancel
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                onPress={handleCustomUpdate}
-                style={styles.customAction}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.addText}
-                >
-                  Update
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  if (editingCustom) {
-                    onCustomDelete?.(
-                      editingCustom.id,
-                    );
-                    setEditingCustom(null);
-                    setCustomName("");
-                    setCustomWatts("");
-                    setCustomError("");
-                  }
-                }}
-                style={styles.customAction}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.cancelText}
-                >
-                  Delete
-                </AppText>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </Modal>
   );
 }
