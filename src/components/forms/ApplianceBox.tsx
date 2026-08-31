@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
 
   noButton: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#ffffff",
   },
 
   yesButton: {

@@ -64,6 +64,7 @@ export default function ApplianceModal({
   const [successMessage, setSuccessMessage] = useState("");
 
   const scrollRef = useRef<ScrollView>(null);
+  const customFormY = useRef(0);
 
   // Stores the appliance currently being edited.
   const [editingCustom, setEditingCustom] =
@@ -525,11 +526,16 @@ export default function ApplianceModal({
   const openCustomEditor = (appliance: Appliance) => {
     setEditingCustom(appliance);
     setCustomName(appliance.name);
-    setCustomWatts(
-      appliance.watts.replace(/W$/, ""),
-    );
+    setCustomWatts(appliance.watts.replace(/W$/, ""));
     setCustomError("");
     setCustomVisible(true);
+
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(customFormY.current - 20, 0),
+        animated: true,
+      });
+    });
   };
 
   // ============================================================
@@ -665,16 +671,7 @@ export default function ApplianceModal({
               <View
                 style={styles.customForm}
                 onLayout={(event) => {
-                  if (editingCustom) {
-                    const { y } = event.nativeEvent.layout;
-
-                    requestAnimationFrame(() => {
-                      scrollRef.current?.scrollTo({
-                        y: Math.max(y - 20, 0),
-                        animated: true,
-                      });
-                    });
-                  }
+                  customFormY.current = event.nativeEvent.layout.y;
                 }}
               >
                 <AppText
