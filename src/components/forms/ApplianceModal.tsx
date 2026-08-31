@@ -66,6 +66,8 @@ export default function ApplianceModal({
   const scrollRef = useRef<ScrollView>(null);
   const customFormY = useRef(0);
 
+  const [isReset, setIsReset] = useState(false);
+
   // Stores the appliance currently being edited.
   const [editingCustom, setEditingCustom] =
     useState<Appliance | null>(null);
@@ -119,6 +121,7 @@ export default function ApplianceModal({
       setCustomError("");
       setSuccessMessage("");
       setEditingCustom(null);
+      setIsReset(false);
     }
   }, [visible, selectedAppliances]);
 
@@ -170,6 +173,7 @@ export default function ApplianceModal({
     setCustomError("");
     setCustomVisible(false);
     setEditingCustom(null);
+    setIsReset(true);
   };
 
   // ============================================================
@@ -922,7 +926,7 @@ export default function ApplianceModal({
                   variant="caption"
                   style={styles.actionText}
                 >
-                  Add
+                  {isReset ? "Save" : "Add"}
                 </AppText>
               </Pressable>
             </View>
