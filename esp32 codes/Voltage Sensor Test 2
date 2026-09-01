@@ -17,10 +17,10 @@ const char* SUPABASE_URL =
   "https://nxdabgvbwunyeffzrzta.supabase.co";
 
 const char* SUPABASE_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZGFiZ3Zid3VueWVmZnpyenRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjAxNzksImV4cCI6MjEwMTczNjE3OX0.ya4SFGY1pHhc7AywIWH3mg_IufbN4_z8OHetMAbZeFs";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54ZGFiZ3Zid3VueWVmZnpyenRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjAxNzksImV4cCI6MjEwMTczNjE3OX0.ya4SFGY1pHhc7AywIWH3mg_IufbN4_z8OHetMAbZeFs";
 
 // ============================================
-// Monitoring Target
+// Supabase Monitoring Target
 // ============================================
 
 const int MONITOR_ID = 300;
@@ -29,12 +29,16 @@ const int MONITOR_ID = 300;
 // Voltage Sensor
 // ============================================
 
-// Voltage Sensor Signal -> GPIO 34
+// Voltage sensor signal (S) -> ESP32 GPIO 34
+
 const int VOLTAGE_SENSOR_PIN = 34;
 
-// Standard 0-25V voltage sensor divider
+// Standard 0-25V voltage sensor resistor divider
+
 const float R1 = 30000.0;
 const float R2 = 7500.0;
+
+// ESP32 ADC configuration
 
 const float REF_VOLTAGE = 3.3;
 const float ADC_MAX = 4095.0;
@@ -43,16 +47,37 @@ const float ADC_MAX = 4095.0;
 // Battery Configuration
 // ============================================
 
-// Working voltage range
-const float BATTERY_MIN_VOLTAGE = 8.4;
-const float BATTERY_MAX_VOLTAGE = 12.6;
+// 2 x 12V 30Ah lithium batteries in parallel
 
-// Battery protection settings
+const float BATTERY_VOLTAGE = 12.0;
 const float BATTERY_CAPACITY_AH = 60.0;
 
-// 80% DoD means battery should retain 20%
-const float DOD_LIMIT_PERCENT = 80.0;
-const float MINIMUM_SOC_PERCENT = 20.0;
+// Approximate nominal total energy
+
+const float TOTAL_BATTERY_ENERGY_WH = 720.0;
+
+// ============================================
+// Depth of Discharge Configuration
+// ============================================
+
+// Maximum allowed Depth of Discharge
+
+const int MAX_DOD_PERCENT = 80;
+
+// At 80% DoD, 20% battery capacity remains
+
+const int MINIMUM_SOC_PERCENT = 20;
+
+// Usable energy
+
+const float USABLE_ENERGY_WH = 576.0;
+
+// ============================================
+// Battery Voltage Range
+// ============================================
+
+const float BATTERY_MIN_VOLTAGE = 8.4;
+const float BATTERY_MAX_VOLTAGE = 12.6;
 
 // ============================================
 // Sampling Intervals
@@ -65,10 +90,8 @@ unsigned long previousSampleMillis = 0;
 unsigned long previousDatabaseMillis = 0;
 
 // ============================================
-// Battery Voltage / SoC Table
+// Battery Voltage / State of Charge Table
 // ============================================
-//
-// Based on the configured working range:
 //
 // 12.60V = 100%
 // 12.18V = 90%
@@ -78,19 +101,22 @@ unsigned long previousDatabaseMillis = 0;
 // 10.50V = 50%
 // 10.08V = 40%
 //  9.66V = 30%
-//  9.24V = 20%  <-- 80% DoD Threshold
+//  9.24V = 20%  <-- 80% DoD threshold
 //  8.82V = 10%
 //  8.40V = 0%
+//
 // ============================================
 
 struct VoltagePoint {
+
   float voltage;
   float soc;
+
 };
 
 const VoltagePoint SOC_TABLE[] = {
 
-  {8.40,   0.0},
+  {8.40,  0.0},
   {8.82,  10.0},
   {9.24,  20.0},
   {9.66,  30.0},
@@ -112,8 +138,17 @@ const int SOC_TABLE_SIZE =
 // Current Readings
 // ============================================
 
+// Decimal is retained internally for calculation
+
 float currentVoltage = 0.0;
 float currentBatteryLevel = 0.0;
+
+// Integer percentage used for display AND Supabase
+
+int currentBatteryPercentage = 0;
+
+int currentDoD = 0;
+int currentRemainingEnergy = 0;
 
 // ============================================
 // Read Battery Voltage
@@ -133,7 +168,9 @@ float readBatteryVoltage() {
     ((R1 + R2) / R2);
 
   if (adcValue < 10) {
+
     batteryVoltage = 0.0;
+
   }
 
   return batteryVoltage;
@@ -143,19 +180,29 @@ float readBatteryVoltage() {
 // Voltage -> Battery Percentage
 // ============================================
 
-float voltageToBatteryLevel(float voltage) {
+float voltageToBatteryLevel(
+  float voltage
+) {
 
-  // No voltage or below working range
-  if (voltage <= BATTERY_MIN_VOLTAGE) {
+  if (
+    voltage <= BATTERY_MIN_VOLTAGE
+  ) {
+
     return 0.0;
+
   }
 
-  // Fully charged
-  if (voltage >= BATTERY_MAX_VOLTAGE) {
+  if (
+    voltage >= BATTERY_MAX_VOLTAGE
+  ) {
+
     return 100.0;
+
   }
 
-  // Find the voltage range and interpolate
+  // Find the correct voltage range
+  // and interpolate the percentage
+
   for (
     int i = 0;
     i < SOC_TABLE_SIZE - 1;
@@ -183,8 +230,17 @@ float voltageToBatteryLevel(float voltage) {
         (voltage - lowVoltage) /
         (highVoltage - lowVoltage);
 
-      return lowSOC +
-        ratio * (highSOC - lowSOC);
+      float batteryLevel =
+        lowSOC +
+        ratio *
+        (highSOC - lowSOC);
+
+      return constrain(
+        batteryLevel,
+        0.0,
+        100.0
+      );
+
     }
   }
 
@@ -192,13 +248,37 @@ float voltageToBatteryLevel(float voltage) {
 }
 
 // ============================================
-// Calculate Battery Level
+// Calculate Depth of Discharge
 // ============================================
 
-float calculateBatteryLevel(float voltage) {
+float calculateDoD(
+  float batteryLevel
+) {
 
-  return voltageToBatteryLevel(voltage);
+  return constrain(
+    100.0 - batteryLevel,
+    0.0,
+    100.0
+  );
+}
 
+// ============================================
+// Calculate Remaining Battery Energy
+// ============================================
+
+float calculateRemainingEnergy(
+  float batteryLevel
+) {
+
+  float energy =
+    TOTAL_BATTERY_ENERGY_WH *
+    (batteryLevel / 100.0);
+
+  return constrain(
+    energy,
+    0.0,
+    TOTAL_BATTERY_ENERGY_WH
+  );
 }
 
 // ============================================
@@ -206,31 +286,43 @@ float calculateBatteryLevel(float voltage) {
 // ============================================
 
 bool isDoDThresholdReached(
-  float batteryLevel
+  int batteryPercentage
 ) {
 
-  return batteryLevel <= MINIMUM_SOC_PERCENT;
-
+  return (
+    batteryPercentage <=
+    MINIMUM_SOC_PERCENT
+  );
 }
 
 // ============================================
 // Update Supabase
 // ============================================
 
+// IMPORTANT:
+// This function receives an INTEGER.
+// Therefore Supabase receives an integer value,
+// for example: 74 instead of 74.32.
+
 void updateBatteryLevel(
-  float batteryLevel
+  int batteryPercentage
 ) {
 
-  if (WiFi.status() != WL_CONNECTED) {
+  if (
+    WiFi.status() !=
+    WL_CONNECTED
+  ) {
 
     Serial.println(
       "Supabase skipped: WiFi disconnected."
     );
 
     return;
+
   }
 
   WiFiClientSecure client;
+
   client.setInsecure();
 
   HTTPClient http;
@@ -241,18 +333,26 @@ void updateBatteryLevel(
     "?monitor_id=eq." +
     String(MONITOR_ID);
 
+  // Integer battery percentage sent to Supabase
+
   String json =
     "{\"battery_level\":" +
-    String(batteryLevel, 2) +
+    String(batteryPercentage) +
     "}";
 
-  if (!http.begin(client, url)) {
+  if (
+    !http.begin(
+      client,
+      url
+    )
+  ) {
 
     Serial.println(
       "Failed to connect to Supabase."
     );
 
     return;
+
   }
 
   http.addHeader(
@@ -279,16 +379,29 @@ void updateBatteryLevel(
   int responseCode =
     http.PATCH(json);
 
-  Serial.print("Supabase HTTP: ");
-  Serial.println(responseCode);
+  Serial.print(
+    "Supabase HTTP: "
+  );
+
+  Serial.println(
+    responseCode
+  );
 
   if (
     responseCode >= 200 &&
     responseCode < 300
   ) {
 
+    Serial.print(
+      "Supabase Battery Level Updated: "
+    );
+
+    Serial.print(
+      batteryPercentage
+    );
+
     Serial.println(
-      "Battery level updated successfully."
+      "%"
     );
 
   } else {
@@ -300,6 +413,7 @@ void updateBatteryLevel(
     Serial.println(
       http.getString()
     );
+
   }
 
   http.end();
@@ -311,20 +425,50 @@ void updateBatteryLevel(
 
 void sampleVoltage() {
 
+  // Read voltage
+
   currentVoltage =
     readBatteryVoltage();
 
+  // Calculate precise decimal percentage
+
   currentBatteryLevel =
-    calculateBatteryLevel(
+    voltageToBatteryLevel(
       currentVoltage
     );
 
-  float currentDoD =
-    100.0 - currentBatteryLevel;
+  // Convert percentage to integer
+  //
+  // Example:
+  // 74.32 -> 74
+  // 74.78 -> 75
+
+  currentBatteryPercentage =
+    round(currentBatteryLevel);
+
+  // Calculate DoD using the integer percentage
+
+  currentDoD =
+    100 -
+    currentBatteryPercentage;
+
+  // Calculate remaining energy
+  // based on the integer percentage
+
+  currentRemainingEnergy =
+    round(
+      TOTAL_BATTERY_ENERGY_WH *
+      (
+        currentBatteryPercentage /
+        100.0
+      )
+    );
+
+  // Check threshold
 
   bool thresholdReached =
     isDoDThresholdReached(
-      currentBatteryLevel
+      currentBatteryPercentage
     );
 
   // ==========================================
@@ -332,6 +476,14 @@ void sampleVoltage() {
   // ==========================================
 
   Serial.println();
+
+  Serial.println(
+    "======================================"
+  );
+
+  Serial.println(
+    "       ADLAWATT BATTERY MONITOR"
+  );
 
   Serial.println(
     "======================================"
@@ -346,75 +498,111 @@ void sampleVoltage() {
     2
   );
 
-  Serial.println(" V");
+  Serial.println(
+    " V"
+  );
 
   Serial.print(
     "Battery Level: "
   );
 
   Serial.print(
-    currentBatteryLevel,
-    2
+    currentBatteryPercentage
   );
 
-  Serial.println("%");
+  Serial.println(
+    "%"
+  );
 
   Serial.print(
     "Depth of Discharge: "
   );
 
   Serial.print(
-    currentDoD,
-    2
+    currentDoD
   );
 
-  Serial.println("%");
+  Serial.println(
+    "%"
+  );
+
+  Serial.print(
+    "Estimated Remaining Energy: "
+  );
+
+  Serial.print(
+    currentRemainingEnergy
+  );
+
+  Serial.println(
+    " Wh"
+  );
 
   Serial.println(
     "--------------------------------------"
   );
 
   // ==========================================
-  // 80% DoD Threshold Status
+  // 80% DoD Threshold
   // ==========================================
 
-  if (thresholdReached) {
+  if (
+    thresholdReached
+  ) {
 
     Serial.println(
-      "WARNING: 80% DoD THRESHOLD REACHED!"
+      "WARNING!"
+    );
+
+    Serial.println(
+      "80% DEPTH OF DISCHARGE THRESHOLD REACHED."
     );
 
     Serial.print(
-      "Remaining Battery: "
+      "Battery Remaining: "
     );
 
     Serial.print(
-      currentBatteryLevel,
-      2
+      currentBatteryPercentage
     );
 
-    Serial.println("%");
+    Serial.println(
+      "%"
+    );
 
     Serial.println(
-      "Battery is at or below the 20% SoC limit."
+      "Recharge battery recommended."
     );
 
   } else {
 
     Serial.println(
-      "Battery is within the safe 80% DoD range."
+      "STATUS: BATTERY WITHIN SAFE RANGE"
     );
 
     Serial.print(
-      "Remaining Battery: "
+      "80% DoD Limit: "
     );
 
     Serial.print(
-      currentBatteryLevel,
-      2
+      MAX_DOD_PERCENT
     );
 
-    Serial.println("%");
+    Serial.println(
+      "%"
+    );
+
+    Serial.print(
+      "Minimum Allowed Battery: "
+    );
+
+    Serial.print(
+      MINIMUM_SOC_PERCENT
+    );
+
+    Serial.println(
+      "%"
+    );
 
   }
 
@@ -429,9 +617,13 @@ void sampleVoltage() {
 
 void setup() {
 
-  Serial.begin(115200);
+  Serial.begin(
+    115200
+  );
 
-  delay(500);
+  delay(
+    500
+  );
 
   Serial.println();
 
@@ -447,14 +639,22 @@ void setup() {
     "======================================"
   );
 
+  // Configure voltage sensor
+
   pinMode(
     VOLTAGE_SENSOR_PIN,
     INPUT
   );
 
-  analogReadResolution(12);
+  // ESP32 ADC resolution
 
+  analogReadResolution(
+    12
+  );
+
+  // ==========================================
   // Connect to WiFi
+  // ==========================================
 
   WiFi.begin(
     WIFI_SSID,
@@ -466,12 +666,17 @@ void setup() {
   );
 
   while (
-    WiFi.status() != WL_CONNECTED
+    WiFi.status() !=
+    WL_CONNECTED
   ) {
 
-    delay(500);
+    delay(
+      500
+    );
 
-    Serial.print(".");
+    Serial.print(
+      "."
+    );
   }
 
   Serial.println();
@@ -488,14 +693,16 @@ void setup() {
     WiFi.localIP()
   );
 
-  // Initial reading
+  // Initial sensor reading
 
   sampleVoltage();
 
-  // Initial database update
+  // Initial Supabase update
+  //
+  // Sends INTEGER battery percentage
 
   updateBatteryLevel(
-    currentBatteryLevel
+    currentBatteryPercentage
   );
 
   previousSampleMillis =
@@ -515,7 +722,7 @@ void loop() {
     millis();
 
   // ==========================================
-  // Sample Voltage
+  // Sample Battery
   // ==========================================
 
   if (
@@ -543,8 +750,12 @@ void loop() {
     previousDatabaseMillis =
       currentMillis;
 
+    // IMPORTANT:
+    // Sends currentBatteryPercentage,
+    // which is an INTEGER.
+
     updateBatteryLevel(
-      currentBatteryLevel
+      currentBatteryPercentage
     );
   }
 }
