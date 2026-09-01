@@ -1,5 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import {
   Modal,
   Pressable,
@@ -12,8 +17,14 @@ import {
 import ApplianceBox from "@/components/forms/ApplianceBox";
 import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
+
 import { Colors } from "@/constants/colors";
-import { Radius, Spacing, Typography } from "@/constants/theme";
+import {
+  Radius,
+  Spacing,
+  Typography,
+} from "@/constants/theme";
+
 import { supabase } from "@/lib/supabase";
 
 type Appliance = {
@@ -27,13 +38,30 @@ type ApplianceModalProps = {
   visible: boolean;
   onClose: () => void;
   onSave?: (appliances: Appliance[]) => void;
-  customAppliances?: Appliance[];
   onCustomAdd?: (appliance: Appliance) => void;
-  onCustomUpdate?: (appliance: Appliance) => void;
+  onCustomUpdate?: (
+    appliance: Appliance,
+  ) => void;
   onCustomDelete?: (id: string) => void;
   selectedAppliances?: Appliance[];
 };
 
+/*
+ * Database area -> UI area
+ */
+const databaseToUiArea: Record<string, string> = {
+  "Living Area": "Living Area",
+  Bedroom: "Bedroom",
+  "Kitchen & Dining Area": "Kitchen Area",
+  "Work & Study Area": "Work/Study Area",
+  "Bathroom & Laundry Area": "Bathroom Area",
+  "Porch & Yard": "Porch",
+  "Custom Appliances": "Custom Appliances",
+};
+
+/*
+ * UI area colors
+ */
 const areaColors: Record<string, string> = {
   "Living Area": Colors.light.primary,
   Bedroom: "#9B59B6",
@@ -56,21 +84,37 @@ export default function ApplianceModal({
   onCustomDelete,
   onSave,
 }: ApplianceModalProps) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [appliances, setAppliances] = useState<Appliance[]>([]);
+  const [selected, setSelected] = useState<
+    string[]
+  >([]);
 
-  const [searchText, setSearchText] = useState("");
+  const [appliances, setAppliances] = useState<
+    Appliance[]
+  >([]);
 
-  const [customVisible, setCustomVisible] = useState(false);
-  const [customName, setCustomName] = useState("");
-  const [customWatts, setCustomWatts] = useState("");
-  const [customError, setCustomError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [searchText, setSearchText] =
+    useState("");
+
+  const [customVisible, setCustomVisible] =
+    useState(false);
+
+  const [customName, setCustomName] =
+    useState("");
+
+  const [customWatts, setCustomWatts] =
+    useState("");
+
+  const [customError, setCustomError] =
+    useState("");
+
+  const [successMessage, setSuccessMessage] =
+    useState("");
 
   const [editingCustom, setEditingCustom] =
     useState<Appliance | null>(null);
 
-  const [isReset, setIsReset] = useState(false);
+  const [isReset, setIsReset] =
+    useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const customFormY = useRef(0);
@@ -101,7 +145,9 @@ export default function ApplianceModal({
         id: item.app_id,
         name: item.appliance_name,
         watts: item.wattage,
-        area: item.area,
+        area:
+          databaseToUiArea[item.area] ??
+          item.area,
       })),
     );
   };
@@ -113,21 +159,24 @@ export default function ApplianceModal({
   useEffect(() => {
     if (visible) {
       loadAppliances();
+
       setSelected(
         selectedAppliances.map(({ id }) => id),
       );
+
       setSearchText("");
-    } else {
-      setSelected([]);
-      setSearchText("");
-      setCustomVisible(false);
-      setCustomName("");
-      setCustomWatts("");
-      setCustomError("");
-      setSuccessMessage("");
-      setEditingCustom(null);
-      setIsReset(false);
+      return;
     }
+
+    setSelected([]);
+    setSearchText("");
+    setCustomVisible(false);
+    setCustomName("");
+    setCustomWatts("");
+    setCustomError("");
+    setSuccessMessage("");
+    setEditingCustom(null);
+    setIsReset(false);
   }, [visible, selectedAppliances]);
 
   // ============================================================
@@ -137,7 +186,9 @@ export default function ApplianceModal({
   const toggleAppliance = (id: string) => {
     setSelected((current) =>
       current.includes(id)
-        ? current.filter((item) => item !== id)
+        ? current.filter(
+            (item) => item !== id,
+          )
         : [...current, id],
     );
   };
@@ -207,27 +258,30 @@ export default function ApplianceModal({
         "Reset appliance selection error:",
         resetError.message,
       );
+
       return;
     }
 
     if (selected.length > 0) {
-      const { error: selectionError } = await supabase
-        .from("appliances")
-        .update({ selection: true })
-        .eq("user_id", user.id)
-        .in("app_id", selected);
+      const { error: selectionError } =
+        await supabase
+          .from("appliances")
+          .update({ selection: true })
+          .eq("user_id", user.id)
+          .in("app_id", selected);
 
       if (selectionError) {
         console.error(
           "Update appliance selection error:",
           selectionError.message,
         );
+
         return;
       }
     }
 
-    const selectedItems = appliances.filter((item) =>
-      selected.includes(item.id),
+    const selectedItems = appliances.filter(
+      (item) => selected.includes(item.id),
     );
 
     onSave?.(selectedItems);
@@ -254,7 +308,11 @@ export default function ApplianceModal({
     const name = customName.trim();
     const watts = customWatts.trim();
 
-    if (!/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(name)) {
+    if (
+      !/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(
+        name,
+      )
+    ) {
       setCustomError(
         "Appliance name must be valid and readable.",
       );
@@ -367,7 +425,7 @@ export default function ApplianceModal({
       id: data.app_id,
       name: data.appliance_name,
       watts: data.wattage,
-      area: data.area,
+      area: "Custom Appliances",
     };
 
     onCustomAdd?.(appliance);
@@ -401,13 +459,21 @@ export default function ApplianceModal({
     const name = customName.trim();
     const watts = customWatts.trim();
 
-    if (!/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(name)) {
-      setCustomError("Enter a valid appliance name.");
+    if (
+      !/^[A-Za-z][A-Za-z0-9 /&.'-]{2,49}$/.test(
+        name,
+      )
+    ) {
+      setCustomError(
+        "Enter a valid appliance name.",
+      );
       return;
     }
 
     if (!/^\d+-\d+$/.test(watts)) {
-      setCustomError("Enter wattage like 15-25.");
+      setCustomError(
+        "Enter wattage like 15-25.",
+      );
       return;
     }
 
@@ -429,14 +495,26 @@ export default function ApplianceModal({
     }
 
     const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setCustomError(
+        "You must be signed in to update an appliance.",
+      );
+      return;
+    }
+
+    const {
       data: duplicate,
       error: duplicateError,
     } = await supabase
       .from("appliances")
       .select("app_id")
-      .eq("user_id", editingCustom.id)
+      .eq("user_id", user.id)
       .eq("type", "custom")
       .ilike("appliance_name", name)
+      .neq("app_id", editingCustom.id)
       .maybeSingle();
 
     if (duplicateError) {
@@ -444,12 +522,15 @@ export default function ApplianceModal({
         "Duplicate appliance check error:",
         duplicateError.message,
       );
+
+      setCustomError(
+        "Unable to check appliance name.",
+      );
+
+      return;
     }
 
-    if (
-      duplicate &&
-      duplicate.app_id !== editingCustom.id
-    ) {
+    if (duplicate) {
       setCustomError(
         "This appliance already exists.",
       );
@@ -463,6 +544,7 @@ export default function ApplianceModal({
         wattage: `${watts}W`,
       })
       .eq("app_id", editingCustom.id)
+      .eq("user_id", user.id)
       .eq("type", "custom")
       .select(
         "app_id, appliance_name, wattage, area",
@@ -486,12 +568,14 @@ export default function ApplianceModal({
       id: data.app_id,
       name: data.appliance_name,
       watts: data.wattage,
-      area: data.area,
+      area: "Custom Appliances",
     };
 
     setAppliances((current) =>
       current.map((item) =>
-        item.id === updated.id ? updated : item,
+        item.id === updated.id
+          ? updated
+          : item,
       ),
     );
 
@@ -516,11 +600,25 @@ export default function ApplianceModal({
   // DELETE CUSTOM APPLIANCE
   // ============================================================
 
-  const handleCustomDelete = async (id: string) => {
+  const handleCustomDelete = async (
+    id: string,
+  ) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setCustomError(
+        "You must be signed in to delete an appliance.",
+      );
+      return;
+    }
+
     const { error } = await supabase
       .from("appliances")
       .delete()
       .eq("app_id", id)
+      .eq("user_id", user.id)
       .eq("type", "custom");
 
     if (error) {
@@ -551,18 +649,25 @@ export default function ApplianceModal({
   // OPEN CUSTOM EDITOR
   // ============================================================
 
-  const openCustomEditor = (appliance: Appliance) => {
+  const openCustomEditor = (
+    appliance: Appliance,
+  ) => {
     setEditingCustom(appliance);
     setCustomName(appliance.name);
+
     setCustomWatts(
       appliance.watts.replace(/W$/, ""),
     );
+
     setCustomError("");
     setCustomVisible(true);
 
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({
-        y: Math.max(customFormY.current - 20, 0),
+        y: Math.max(
+          customFormY.current - 20,
+          0,
+        ),
         animated: true,
       });
     });
@@ -589,13 +694,14 @@ export default function ApplianceModal({
     .trim()
     .toLowerCase();
 
-  const filteredAppliances = appliances.filter(
-    (appliance) =>
-      !normalizedSearch ||
-      appliance.name
-        .toLowerCase()
-        .includes(normalizedSearch),
-  );
+  const filteredAppliances =
+    appliances.filter(
+      (appliance) =>
+        !normalizedSearch ||
+        appliance.name
+          .toLowerCase()
+          .includes(normalizedSearch),
+    );
 
   return (
     <Modal
@@ -606,7 +712,6 @@ export default function ApplianceModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-
           {/* Header */}
           <View style={styles.header}>
             <AppText
@@ -665,7 +770,9 @@ export default function ApplianceModal({
 
                 <AppText
                   variant="caption"
-                  style={styles.advisoryDescription}
+                  style={
+                    styles.advisoryDescription
+                  }
                 >
                   Keep your selected appliances within the
                   available energy capacity.
@@ -848,7 +955,8 @@ export default function ApplianceModal({
             {/* Custom Appliances */}
             {filteredAppliances.some(
               (item) =>
-                item.area === "Custom Appliances",
+                item.area ===
+                "Custom Appliances",
             ) && (
               <View style={styles.section}>
                 <AppText
@@ -876,7 +984,9 @@ export default function ApplianceModal({
                           key={appliance.id}
                           name={appliance.name}
                           wattage={appliance.watts}
-                          color={Colors.light.primary}
+                          color={
+                            Colors.light.primary
+                          }
                           selected={isSelected}
                           isCustom
                           onPress={() =>
@@ -903,11 +1013,15 @@ export default function ApplianceModal({
 
             {/* Appliance Categories */}
             {sections.map((section) => {
-              const items = filteredAppliances.filter(
-                (item) => item.area === section,
-              );
+              const items =
+                filteredAppliances.filter(
+                  (item) =>
+                    item.area === section,
+                );
 
-              if (items.length === 0) return null;
+              if (items.length === 0) {
+                return null;
+              }
 
               return (
                 <View
@@ -957,15 +1071,16 @@ export default function ApplianceModal({
                   <Ionicons
                     name="search-outline"
                     size={28}
-                    color={Colors.light.textSecondary}
+                    color={
+                      Colors.light.textSecondary
+                    }
                   />
 
                   <AppText
                     variant="caption"
                     style={styles.noResultsText}
                   >
-                    No appliances found for "
-                    {searchText.trim()}"
+                    {`No appliances found for "${searchText.trim()}"`}
                   </AppText>
                 </View>
               )}
@@ -985,7 +1100,10 @@ export default function ApplianceModal({
                 style={styles.selectedText}
               >
                 {selected.length} appliance
-                {selected.length !== 1 ? "s" : ""} selected
+                {selected.length !== 1
+                  ? "s"
+                  : ""}{" "}
+                selected
               </AppText>
             </View>
 
