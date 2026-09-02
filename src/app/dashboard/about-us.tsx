@@ -103,7 +103,7 @@ export default function AboutUsScreen() {
 
         {/* Developer 1 */}
         <DeveloperProfile
-          image={require("@/assets/images/developers/d1.png")}
+          image={require("@/assets/images/developers/d1.jpg")}
           name="Francis Adrian Idul"
           role="Programmer"
           roleColor= {Colors.light.primary}
@@ -112,7 +112,7 @@ export default function AboutUsScreen() {
 
         {/* Developer 2 */}
         <DeveloperProfile
-          image={require("@/assets/images/developers/d2.png")}
+          image={require("@/assets/images/developers/d2.jpg")}
           name="Rhics T. Geonzon"
           role="Documenter"
           roleColor="#4A90E2"
@@ -121,7 +121,7 @@ export default function AboutUsScreen() {
 
         {/* Developer 3 */}
         <DeveloperProfile
-          image={require("@/assets/images/developers/d3.png")}
+          image={require("@/assets/images/developers/d3.jpg")}
           name="Troy M. Rojo"
           role="Data Analyst"
           roleColor="#F4C430"

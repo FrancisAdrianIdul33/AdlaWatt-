@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
+
 import {
   Pressable,
   ScrollView,
@@ -14,11 +15,10 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
-import { Colors } from "@/constants/colors";
 import EmptyState from "@/components/ui/EmptyState";
 
+import { Colors } from "@/constants/colors";
 import { supabase } from "@/lib/supabase";
-
 
 type PowerLevel =
   | "All"
@@ -43,15 +43,59 @@ type SelectedAppliance = {
   area: string;
 };
 
-type StatusFilter = "All" | "Advisable" | "notAdvisable";
+type StatusFilter =
+  | "All"
+  | "Advisable"
+  | "notAdvisable";
+
+/*
+ * UI area names -> database area names
+ */
+const areaMap: Record<
+  Exclude<Area, "All Areas">,
+  string
+> = {
+  "Living Area": "Living Area",
+  Bedroom: "Bedroom",
+  "Kitchen Area": "Kitchen & Dining Area",
+  "Work/Study Area": "Work & Study Area",
+  "Bathroom Area": "Bathroom & Laundry Area",
+  Porch: "Porch & Yard",
+  Custom: "Custom Appliances",
+};
 
 export default function AppliancesScreen() {
-
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("All");
 
-  const [selectedAppliances, setSelectedAppliances] =
-    useState<SelectedAppliance[]>([]);
+  const [
+    selectedAppliances,
+    setSelectedAppliances,
+  ] = useState<SelectedAppliance[]>([]);
+
+  const [
+    applianceModalVisible,
+    setApplianceModalVisible,
+  ] = useState(false);
+
+  const [sidebarVisible, setSidebarVisible] =
+    useState(false);
+
+  const [powerFilter, setPowerFilter] =
+    useState<PowerLevel>("All");
+
+  const [areaFilter, setAreaFilter] =
+    useState<Area>("All Areas");
+
+  const [
+    powerDropdownVisible,
+    setPowerDropdownVisible,
+  ] = useState(false);
+
+  const [
+    areaDropdownVisible,
+    setAreaDropdownVisible,
+  ] = useState(false);
 
   const loadSelectedAppliances = async () => {
     const {
@@ -65,7 +109,9 @@ export default function AppliancesScreen() {
 
     const { data, error } = await supabase
       .from("appliances")
-      .select("app_id, appliance_name, wattage, area")
+      .select(
+        "app_id, appliance_name, wattage, area",
+      )
       .eq("user_id", user.id)
       .eq("selection", true)
       .order("area")
@@ -97,25 +143,9 @@ export default function AppliancesScreen() {
     loadSelectedAppliances();
   }, []);
 
-  const [applianceModalVisible, setApplianceModalVisible] =
-    useState(false);
-
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
-  const [powerFilter, setPowerFilter] =
-    useState<PowerLevel>("All");
-
-  const [areaFilter, setAreaFilter] =
-    useState<Area>("All Areas");
-
-  const [powerDropdownVisible, setPowerDropdownVisible] =
-    useState(false);
-
-  const [areaDropdownVisible, setAreaDropdownVisible] =
-    useState(false);
-
-  const handlePowerFilter = (filter: PowerLevel) => {
+  const handlePowerFilter = (
+    filter: PowerLevel,
+  ) => {
     setPowerFilter(filter);
     setPowerDropdownVisible(false);
   };
@@ -125,10 +155,50 @@ export default function AppliancesScreen() {
     setAreaDropdownVisible(false);
   };
 
+  const filteredAppliances =
+    selectedAppliances.filter((appliance) => {
+      const watts =
+        appliance.watts.match(/\d+/g)?.map(Number) ??
+        [];
+
+      const maxWatts = Math.max(...watts, 0);
+
+      const matchesPower =
+        powerFilter === "All" ||
+        (powerFilter === "Highest" &&
+          maxWatts >= 50) ||
+        (powerFilter === "Moderate" &&
+          maxWatts >= 20 &&
+          maxWatts < 50) ||
+        (powerFilter === "Low" &&
+          maxWatts < 20);
+
+      const matchesArea =
+        areaFilter === "All Areas" ||
+        appliance.area === areaMap[areaFilter];
+
+      const status =
+        maxWatts >= 300
+          ? "notAdvisable"
+          : "Advisable";
+
+      const matchesStatus =
+        statusFilter === "All" ||
+        status === statusFilter;
+
+      return (
+        matchesPower &&
+        matchesArea &&
+        matchesStatus
+      );
+    });
+
   return (
     <ScreenContainer2>
       <NavBar
-        onMenuPress={() => setSidebarVisible(true)}
+        onMenuPress={() =>
+          setSidebarVisible(true)
+        }
       />
 
       <ScrollView
@@ -157,7 +227,9 @@ export default function AppliancesScreen() {
         <View style={styles.controls}>
           {/* Add New */}
           <Pressable
-            onPress={() => setApplianceModalVisible(true)}
+            onPress={() =>
+              setApplianceModalVisible(true)
+            }
             style={({ pressed }) => [
               styles.addButton,
               pressed && styles.pressed,
@@ -233,9 +305,9 @@ export default function AppliancesScreen() {
                     style={({ pressed }) => [
                       styles.dropdownItem,
                       powerFilter === option &&
-                      styles.selectedItem,
+                        styles.selectedItem,
                       pressed &&
-                      styles.dropdownPressed,
+                        styles.dropdownPressed,
                     ]}
                   >
                     <AppText
@@ -243,7 +315,7 @@ export default function AppliancesScreen() {
                       style={[
                         styles.dropdownText,
                         powerFilter === option &&
-                        styles.selectedText,
+                          styles.selectedText,
                       ]}
                     >
                       {option}
@@ -314,9 +386,9 @@ export default function AppliancesScreen() {
                     style={({ pressed }) => [
                       styles.dropdownItem,
                       areaFilter === option &&
-                      styles.selectedItem,
+                        styles.selectedItem,
                       pressed &&
-                      styles.dropdownPressed,
+                        styles.dropdownPressed,
                     ]}
                   >
                     <AppText
@@ -324,10 +396,9 @@ export default function AppliancesScreen() {
                       style={[
                         styles.dropdownText,
                         areaFilter === option &&
-                        styles.selectedText,
+                          styles.selectedText,
                       ]}
                     >
-
                       {option}
                     </AppText>
                   </Pressable>
@@ -337,151 +408,144 @@ export default function AppliancesScreen() {
           </View>
         </View>
 
+        {/* Status Filter */}
         <View style={styles.statusToggle}>
-          {(["All", "Advisable", "notAdvisable"] as StatusFilter[]).map(
-            (option) => (
-              <Pressable
-                key={option}
-                onPress={() => setStatusFilter(option)}
-                style={({ pressed }) => [
-                  styles.statusButton,
-                  statusFilter === option && {
-                    backgroundColor:
-                      option === "Advisable"
-                        ? Colors.light.primary
-                        : option === "notAdvisable"
-                          ? "#EF4444"
-                          : Colors.light.primary,
-                  },
-                  pressed && styles.pressed,
+          {(
+            [
+              "All",
+              "Advisable",
+              "notAdvisable",
+            ] as StatusFilter[]
+          ).map((option) => (
+            <Pressable
+              key={option}
+              onPress={() =>
+                setStatusFilter(option)
+              }
+              style={({ pressed }) => [
+                styles.statusButton,
+                statusFilter === option && {
+                  backgroundColor:
+                    option === "Advisable"
+                      ? Colors.light.primary
+                      : option === "notAdvisable"
+                        ? "#EF4444"
+                        : Colors.light.primary,
+                },
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText
+                variant="caption"
+                style={[
+                  styles.statusText,
+                  statusFilter === option &&
+                    styles.activeStatusText,
                 ]}
               >
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.statusText,
-                    statusFilter === option && styles.activeStatusText,
-                  ]}
-                >
-                  {option === "notAdvisable"
-                    ? "Not Advisable"
-                    : option}
-                </AppText>
-              </Pressable>
-            ),
-          )}
+                {option === "notAdvisable"
+                  ? "Not Advisable"
+                  : option}
+              </AppText>
+            </Pressable>
+          ))}
         </View>
 
-        {(() => {
-          const filteredAppliances = selectedAppliances.filter((appliance) => {
-            const watts = appliance.watts.match(/\d+/g)?.map(Number) ?? [];
-            const maxWatts = Math.max(...watts, 0);
+        {/* Appliances */}
+        <View style={styles.applianceGrid}>
+          {filteredAppliances.length === 0 ? (
+            <EmptyState
+              title={
+                selectedAppliances.length === 0
+                  ? "No Appliances"
+                  : statusFilter === "Advisable"
+                    ? "No Advisable Appliances"
+                    : statusFilter === "notAdvisable"
+                      ? "No Not Advisable Appliances"
+                      : "No Appliances"
+              }
+              description={
+                selectedAppliances.length === 0
+                  ? "No appliances have been selected yet."
+                  : "No appliances match the selected filters."
+              }
+              icon={
+                statusFilter === "Advisable"
+                  ? "checkmark-circle-outline"
+                  : statusFilter === "notAdvisable"
+                    ? "warning-outline"
+                    : "cube-outline"
+              }
+            />
+          ) : (
+            filteredAppliances.map((appliance) => {
+              const color =
+                appliance.area === "Living Area"
+                  ? Colors.light.primary
+                  : appliance.area === "Bedroom"
+                    ? "#9B59B6"
+                    : appliance.area ===
+                        "Kitchen & Dining Area"
+                      ? Colors.light.secondary
+                      : appliance.area ===
+                          "Work & Study Area"
+                        ? "#4A90E2"
+                        : appliance.area ===
+                            "Bathroom & Laundry Area"
+                          ? "#16A085"
+                          : appliance.area ===
+                              "Porch & Yard"
+                            ? "#E67E22"
+                            : appliance.area ===
+                                "Custom Appliances"
+                              ? Colors.light.primary
+                              : Colors.light.border;
 
-            const matchesPower =
-              powerFilter === "All" ||
-              (powerFilter === "Highest" && maxWatts >= 50) ||
-              (powerFilter === "Moderate" &&
-                maxWatts >= 20 &&
-                maxWatts < 50) ||
-              (powerFilter === "Low" && maxWatts < 20);
+              const watts =
+                appliance.watts
+                  .match(/\d+/g)
+                  ?.map(Number) ?? [];
 
-            const matchesArea =
-              areaFilter === "All Areas" ||
-              appliance.area === areaFilter ||
-              (areaFilter === "Custom" &&
-                appliance.area === "Custom Appliances");
+              const maxWatts = Math.max(
+                ...watts,
+                0,
+              );
 
-            const status =
-              maxWatts >= 300 ? "notAdvisable" : "Advisable";
+              const status =
+                maxWatts >= 300
+                  ? "Not advised"
+                  : "OK to use";
 
-            const matchesStatus =
-              statusFilter === "All" ||
-              status === statusFilter;
-
-            return matchesPower && matchesArea && matchesStatus;
-          });
-
-          return (
-            <View style={styles.applianceGrid}>
-              {filteredAppliances.length === 0 ? (
-                <EmptyState
-                  title={
-                    selectedAppliances.length === 0
-                      ? "No Appliances"
-                      : statusFilter === "Advisable"
-                        ? "No Advisable Appliances"
-                        : statusFilter === "notAdvisable"
-                          ? "No Not Advisable Appliances"
-                          : "No Appliances"
-                  }
-                  description={
-                    selectedAppliances.length === 0
-                      ? "No appliances have been selected yet."
-                      : "No appliances match the selected filters."
-                  }
-                  icon={
-                    statusFilter === "Advisable"
-                      ? "checkmark-circle-outline"
-                      : statusFilter === "notAdvisable"
-                        ? "warning-outline"
-                        : "cube-outline"
-                  }
+              return (
+                <ApplianceStatusBox
+                  key={appliance.id}
+                  name={appliance.name}
+                  wattage={appliance.watts}
+                  color={color}
+                  status={status}
                 />
-              ) : (
-                filteredAppliances.map((appliance) => {
-                  const color =
-                    appliance.area === "Living Area"
-                      ? Colors.light.primary
-                      : appliance.area === "Bedroom"
-                        ? "#9B59B6"
-                        : appliance.area === "Kitchen Area"
-                          ? Colors.light.secondary
-                          : appliance.area === "Work/Study Area"
-                            ? "#4A90E2"
-                            : appliance.area === "Bathroom Area"
-                              ? "#16A085"
-                              : appliance.area === "Porch"
-                                ? "#E67E22"
-                                : appliance.area === "Custom Appliances"
-                                  ? Colors.light.primary
-                                  : Colors.light.border;
-
-                  const watts =
-                    appliance.watts.match(/\d+/g)?.map(Number) ?? [];
-
-                  const maxWatts = Math.max(...watts, 0);
-
-                  const status =
-                    maxWatts >= 300 ? "Not advised" : "OK to use";
-
-                  return (
-                    <ApplianceStatusBox
-                      key={appliance.id}
-                      name={appliance.name}
-                      wattage={appliance.watts}
-                      color={color}
-                      status={status}
-                    />
-                  );
-                })
-              )}
-            </View>
-          );
-        })()}
+              );
+            })
+          )}
+        </View>
 
         <Copyright />
       </ScrollView>
 
       <ApplianceModal
         visible={applianceModalVisible}
-        onClose={() => setApplianceModalVisible(false)}
+        onClose={() =>
+          setApplianceModalVisible(false)
+        }
         onSave={handleApplianceSave}
         selectedAppliances={selectedAppliances}
       />
 
       <Sidebar
         visible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
+        onClose={() =>
+          setSidebarVisible(false)
+        }
       />
     </ScreenContainer2>
   );
@@ -513,8 +577,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
-  /* Header */
-
   card: {
     backgroundColor: Colors.glass.white,
     borderWidth: dimensions.borderWidth,
@@ -534,8 +596,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  /* Controls */
-
   controls: {
     width: "100%",
     flexDirection: "row",
@@ -551,11 +611,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-
     backgroundColor: Colors.light.primary,
-
     borderRadius: 14,
-
     paddingHorizontal: 12,
   },
 
@@ -572,16 +629,12 @@ const styles = StyleSheet.create({
   filterButton: {
     height: 46,
     width: "100%",
-
     flexDirection: "row",
     alignItems: "center",
-
     backgroundColor: Colors.glass.white,
-
     borderWidth: dimensions.borderWidth,
     borderColor: Colors.light.primary,
     borderRadius: 14,
-
     paddingHorizontal: 11,
     gap: 6,
   },
@@ -596,26 +649,18 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  /* Dropdown */
-
   dropdown: {
     position: "absolute",
-
     top: 52,
     left: 0,
     right: 0,
-
     backgroundColor: "#FFFFFF",
-
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: 14,
-
     paddingVertical: 5,
-
     zIndex: 100,
     elevation: 10,
-
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -627,9 +672,7 @@ const styles = StyleSheet.create({
 
   dropdownItem: {
     minHeight: 42,
-
     justifyContent: "center",
-
     paddingHorizontal: 12,
   },
 
@@ -650,8 +693,6 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
   },
 
-  /* Appliance Section */
-
   applianceSection: {
     width: "100%",
     marginBottom: 18,
@@ -663,7 +704,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  /* Status Section */
   statusToggle: {
     width: "100%",
     flexDirection: "row",
