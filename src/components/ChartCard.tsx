@@ -23,7 +23,9 @@ type ChartType =
   | "solar"
   | "load"
   | "device"
-  | "temperature";
+  | "temperature"
+  | "solar_temperature"
+  | "dod";
 
 type TemperatureStatus =
   | "Normal"
@@ -44,14 +46,22 @@ type SolarStatus =
   | "Moderate"
   | "High";
 
+type DoDStatus =
+  | "Safe"
+  | "Unsafe";
+
 interface MonitoringData {
   battery_level: number;
   battery_status: BatteryStatus;
   time_remaining: string;
+
   solar_input: number;
   solar_status: SolarStatus;
+
   current_load: number;
+
   device_status: DeviceStatus;
+
   battery_temperature: number;
   battery_temperature_status: TemperatureStatus;
 }
@@ -60,9 +70,17 @@ interface ChartCardProps {
   type: ChartType;
 }
 
-const RING_SIZE = 150;
-const RADIUS = 60;
-const STROKE = 11;
+/*
+  Battery Gauge Configuration
+*/
+
+const RING_SIZE = 160;
+
+const RADIUS =
+  RING_SIZE / 2 - 12;
+
+const STROKE = 12;
+
 const CIRCUMFERENCE =
   2 * Math.PI * RADIUS;
 
@@ -92,6 +110,7 @@ export default function ChartCard({
           setMonitoring(null);
           setLoading(false);
         }
+
         return;
       }
 
@@ -99,7 +118,17 @@ export default function ChartCard({
         await supabase
           .from("monitoring")
           .select(
-            "battery_level, battery_status, time_remaining, solar_input, solar_status, current_load, device_status, battery_temperature, battery_temperature_status",
+            `
+              battery_level,
+              battery_status,
+              time_remaining,
+              solar_input,
+              solar_status,
+              current_load,
+              device_status,
+              battery_temperature,
+              battery_temperature_status
+            `,
           )
           .eq("user_id", user.id)
           .maybeSingle();
@@ -118,30 +147,11 @@ export default function ChartCard({
         return;
       }
 
-      const monitoringData =
-        data as MonitoringData | null;
-
       if (mounted) {
-        setMonitoring(monitoringData);
-        setLoading(false);
-      }
-
-      if (error) {
-        console.error(
-          "Error loading monitoring data:",
-          error,
+        setMonitoring(
+          data as MonitoringData | null,
         );
 
-        if (mounted) {
-          setMonitoring(null);
-          setLoading(false);
-        }
-
-        return;
-      }
-
-      if (mounted) {
-        setMonitoring(data);
         setLoading(false);
       }
     };
@@ -161,47 +171,58 @@ export default function ChartCard({
     const level =
       monitoring?.battery_level ?? 0;
 
-    const progress =
+    const clamped =
       Math.max(
         0,
         Math.min(100, level),
-      ) / 100;
+      );
+
+    const progress =
+      clamped / 100;
+
+    const offset =
+      CIRCUMFERENCE -
+      progress * CIRCUMFERENCE;
+
+    const center =
+      RING_SIZE / 2;
 
     return (
       <View style={styles.batterySection}>
-        <View style={styles.batteryCircle}>
+        <View
+          style={styles.batteryCircle}
+        >
           <Svg
             width={RING_SIZE}
             height={RING_SIZE}
             viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
           >
-            {/* Background Ring */}
+            {/* Background Track */}
             <Circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
+              cx={center}
+              cy={center}
               r={RADIUS}
               stroke="#D8D6CC"
               strokeWidth={STROKE}
               fill="none"
             />
 
-            {/* Progress Ring */}
+            {/* Battery Progress */}
             <Circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
+              cx={center}
+              cy={center}
               r={RADIUS}
               stroke={Colors.light.primary}
               strokeWidth={STROKE}
               fill="none"
               strokeLinecap="round"
-              strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-              strokeDashoffset={
-                CIRCUMFERENCE *
-                (1 - progress)
-              }
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={offset}
+              transform={`rotate(-90 ${center} ${center})`}
             />
           </Svg>
 
+          {/* Center Content */}
           <View
             style={styles.batteryCenter}
           >
@@ -213,7 +234,7 @@ export default function ChartCard({
             >
               {loading
                 ? "—"
-                : `${level}%`}
+                : `${Math.round(clamped)}%`}
             </AppText>
 
             <AppText
@@ -233,7 +254,7 @@ export default function ChartCard({
                 }
               >
                 {monitoring
-                  ?.battery_status ?? "Offline"}
+                  ?.battery_status ?? "Idle"}
               </AppText>
             </View>
           </View>
@@ -244,8 +265,9 @@ export default function ChartCard({
           style={styles.remainingText}
         >
           Time Remaining:{" "}
-          {monitoring?.time_remaining ??
-            "—"}
+          {loading
+            ? "—"
+            : monitoring?.time_remaining ?? "—"}
         </AppText>
       </View>
     );
@@ -260,6 +282,18 @@ export default function ChartCard({
     monitoring,
     loading,
   );
+
+  const isOffline =
+    type === "device" &&
+    data.value === "Offline";
+
+  const isSafe =
+    type === "dod" &&
+    data.value === "Safe";
+
+  const isUnsafe =
+    type === "dod" &&
+    data.value === "Unsafe";
 
   return (
     <View style={styles.monitorCard}>
@@ -282,10 +316,15 @@ export default function ChartCard({
           variant="heading"
           style={[
             styles.monitorValue,
-            type === "device" &&
-            data.value ===
-            "Offline" &&
-            styles.offlineValue,
+
+            isOffline &&
+              styles.offlineValue,
+
+            isSafe &&
+              styles.safeValue,
+
+            isUnsafe &&
+              styles.unsafeValue,
           ]}
         >
           {data.value}
@@ -327,40 +366,59 @@ function getCardData(
   loading: boolean,
 ) {
   switch (type) {
-    case "solar":
+    // ==========================================
+    // SOLAR INPUT
+    // ==========================================
+
+    case "solar": {
+      const solarStatus =
+        monitoring?.solar_status ?? "Low";
+
       return {
         icon:
           "sunny-outline" as keyof typeof Ionicons.glyphMap,
+
         label: "Solar Input",
+
         value: loading
           ? "—"
           : `${monitoring?.solar_input ?? 0}W`,
-        badge:
-          monitoring?.solar_status,
+
+        badge: solarStatus,
+
         badgeStyle:
-          monitoring?.solar_status ===
-            "Moderate"
+          solarStatus === "Moderate"
             ? styles.moderateBadge
-            : monitoring?.solar_status ===
-              "High"
+            : solarStatus === "High"
               ? styles.normalBadge
               : styles.statusBadge,
+
         badgeTextStyle:
-          monitoring?.solar_status ===
-            "Moderate"
+          solarStatus === "Moderate"
             ? styles.darkBadgeText
             : styles.lightBadgeText,
       };
+    }
+
+    // ==========================================
+    // CURRENT LOAD
+    // ==========================================
 
     case "load":
       return {
         icon:
           "flash-outline" as keyof typeof Ionicons.glyphMap,
+
         label: "Load Now",
+
         value: loading
           ? "—"
           : `${monitoring?.current_load ?? 0}W`,
       };
+
+    // ==========================================
+    // DEVICE STATUS
+    // ==========================================
 
     case "device": {
       const deviceStatus =
@@ -370,10 +428,16 @@ function getCardData(
       return {
         icon:
           "hardware-chip-outline" as keyof typeof Ionicons.glyphMap,
+
         label: "Device",
+
         value: deviceStatus,
       };
     }
+
+    // ==========================================
+    // BATTERY TEMPERATURE
+    // ==========================================
 
     case "temperature": {
       const tempStatus =
@@ -395,20 +459,82 @@ function getCardData(
       return {
         icon:
           "thermometer-outline" as keyof typeof Ionicons.glyphMap,
+
         label: "Battery Temp",
+
         value: loading
           ? "—"
           : `${monitoring?.battery_temperature ?? 0}°C`,
+
         badge: tempStatus,
+
         badgeStyle,
+
         badgeTextStyle,
+      };
+    }
+
+    // ==========================================
+    // SOLAR PANEL TEMPERATURE
+    //
+    // Placeholder for future Supabase data.
+    // Default:
+    // Temperature = 0°C
+    // Status = Moderate
+    // ==========================================
+
+    case "solar_temperature": {
+      const solarTempStatus =
+        "Moderate";
+
+      return {
+        icon:
+          "thermometer-outline" as keyof typeof Ionicons.glyphMap,
+
+        label: "Solar Panel Temp",
+
+        value: "0°C",
+
+        badge: solarTempStatus,
+
+        badgeStyle:
+          styles.moderateBadge,
+
+        badgeTextStyle:
+          styles.darkBadgeText,
+      };
+    }
+
+    // ==========================================
+    // DEPTH OF DISCHARGE STATUS
+    //
+    // Placeholder for future Supabase data.
+    // Default = Safe
+    // ==========================================
+
+    case "dod": {
+      const dodStatus: DoDStatus =
+        "Safe";
+
+      return {
+        icon:
+          "flash-outline" as keyof typeof Ionicons.glyphMap,
+
+        label: "DoD Status",
+
+        value: dodStatus,
       };
     }
   }
 }
 
+// ============================================
+// STYLES
+// ============================================
+
 const styles = StyleSheet.create({
   /* Battery */
+
   batterySection: {
     width: "100%",
     alignItems: "center",
@@ -424,19 +550,28 @@ const styles = StyleSheet.create({
 
   batteryCenter: {
     position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+
     alignItems: "center",
     justifyContent: "center",
+
+    paddingHorizontal: 14,
   },
 
   batteryPercentage: {
     color: "#000000",
-    fontSize: 26,
-    fontWeight: "700",
+    fontSize: 27,
+    fontWeight: "800",
+    lineHeight: 30,
   },
 
   batteryLabel: {
-    color: "#000000",
-    marginTop: -2,
+    color: Colors.light.textSecondary,
+    fontWeight: "600",
+    marginTop: 1,
   },
 
   batteryStatus: {
@@ -444,7 +579,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    marginTop: 3,
+    marginTop: 4,
   },
 
   batteryStatusText: {
@@ -454,18 +589,22 @@ const styles = StyleSheet.create({
 
   remainingText: {
     color: Colors.light.textSecondary,
-    marginTop: 8,
+    marginTop: 6,
   },
 
   /* Monitoring Cards */
+
   monitorCard: {
     width: "48%",
     minHeight: 95,
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor:
+      Colors.glass.white,
 
     borderWidth: 3,
-    borderColor: Colors.light.primary,
+    borderColor:
+      Colors.light.primary,
+
     borderRadius: 16,
 
     alignItems: "center",
@@ -497,7 +636,16 @@ const styles = StyleSheet.create({
     color: Colors.light.error,
   },
 
+  safeValue: {
+    color: Colors.light.primary,
+  },
+
+  unsafeValue: {
+    color: Colors.light.error,
+  },
+
   /* Status Badges */
+
   statusBadge: {
     marginTop: 4,
     paddingHorizontal: 9,
@@ -511,15 +659,18 @@ const styles = StyleSheet.create({
   },
 
   normalBadge: {
-    backgroundColor: Colors.light.primary,
+    backgroundColor:
+      Colors.light.primary,
   },
 
   moderateBadge: {
-    backgroundColor: Colors.light.secondary,
+    backgroundColor:
+      Colors.light.secondary,
   },
 
   alarmingBadge: {
-    backgroundColor: Colors.light.error,
+    backgroundColor:
+      Colors.light.error,
   },
 
   lightBadgeText: {
