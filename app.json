@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ADLAWATT-",
-    "slug": "ADLAWATT-",
+    "name": "AdlaWatt",
+    "slug": "AdlaWatt",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adlawatt-icon.png",
@@ -33,7 +33,7 @@
         {
           "backgroundColor": "#208AEF",
           "android": {
-            "image": "./assets/images/adlawatt-icon.png",
+            "image": "./assets/images/adlawatt-logo.png",
             "imageWidth": 76
           }
         }
