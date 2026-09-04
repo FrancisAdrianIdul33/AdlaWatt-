@@ -22,11 +22,54 @@ import Sidebar from "@/components/layout/Sidebar";
 
 import AppText from "@/components/ui/AppText";
 
+import EmptyState from "@/components/ui/EmptyState";
+
 import { Colors } from "@/constants/colors";
 
 import { supabase } from "@/lib/supabase";
 
-import EmptyState from "@/components/ui/EmptyState";
+
+// ============================================
+// COMPONENT IMAGE MAPPING
+// ============================================
+
+const componentImages: Record<string, any> = {
+  "Buck Converter": require(
+    "@/assets/images/components/Buck Converter.png"
+  ),
+
+  DS18B20: require(
+    "@/assets/images/components/DS18B20.png"
+  ),
+
+  ESP32: require(
+    "@/assets/images/components/ESP32.png"
+  ),
+
+  "INA228 (Input)": require(
+    "@/assets/images/components/INA228.png"
+  ),
+
+  "INA228 (Output)": require(
+    "@/assets/images/components/INA228.png"
+  ),
+
+  "LCD2004 with I2C": require(
+    "@/assets/images/components/LCD2004.png"
+  ),
+
+  "I2C OLED 1.3-inch": require(
+    "@/assets/images/components/OLED 1.3Inch.png"
+  ),
+
+  "Relay Module 5V 1 Channel": require(
+    "@/assets/images/components/Relay.png"
+  ),
+
+  "Voltage Sensor": require(
+    "@/assets/images/components/Voltage Sensor.png"
+  ),
+};
 
 
 export default function ComponentsScreen() {
@@ -81,7 +124,6 @@ export default function ComponentsScreen() {
           );
 
 
-      // Do not update state after unmount
       if (cancelled) {
         return;
       }
@@ -95,10 +137,12 @@ export default function ComponentsScreen() {
         );
 
         return;
+
       }
 
 
       setComponents(data ?? []);
+
     };
 
 
@@ -109,7 +153,6 @@ export default function ComponentsScreen() {
       } = await supabase.auth.getUser();
 
 
-      // Component was already unmounted
       if (cancelled) {
         return;
       }
@@ -120,14 +163,15 @@ export default function ComponentsScreen() {
         setComponents([]);
 
         return;
+
       }
 
 
       // Load initial component data
+
       await loadComponents(user.id);
 
 
-      // Check again because loading is asynchronous
       if (cancelled) {
         return;
       }
@@ -150,18 +194,17 @@ export default function ComponentsScreen() {
         },
         () => {
 
-          // Avoid callback actions after cleanup
           if (cancelled) {
             return;
           }
 
+
           loadComponents(user.id);
+
         },
       );
 
 
-      // The component may have unmounted
-      // while the channel was being prepared.
       if (cancelled) {
 
         supabase.removeChannel(
@@ -169,12 +212,14 @@ export default function ComponentsScreen() {
         );
 
         return;
+
       }
 
 
       channel = newChannel;
 
       channel.subscribe();
+
     };
 
 
@@ -187,7 +232,6 @@ export default function ComponentsScreen() {
 
     return () => {
 
-      // Prevent async setup/load from continuing
       cancelled = true;
 
 
@@ -198,7 +242,9 @@ export default function ComponentsScreen() {
         );
 
         channel = null;
+
       }
+
     };
 
   }, []);
@@ -214,6 +260,7 @@ export default function ComponentsScreen() {
         }
       />
 
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -228,6 +275,7 @@ export default function ComponentsScreen() {
             Components
           </AppText>
 
+
           <AppText
             variant="caption"
             style={styles.subtitle}
@@ -237,6 +285,8 @@ export default function ComponentsScreen() {
 
         </View>
 
+
+        {/* STATUS FILTER */}
 
         <View style={styles.statusToggle}>
 
@@ -254,31 +304,27 @@ export default function ComponentsScreen() {
                 setStatusFilter(option)
               }
               style={({ pressed }) => [
-
                 styles.statusButton,
 
                 statusFilter === option && {
-
                   backgroundColor:
-
                     option === "Inactive"
                       ? "#EF4444"
                       : Colors.light.primary,
                 },
 
                 pressed &&
-                  styles.pressed,
+                styles.pressed,
               ]}
             >
 
               <AppText
                 variant="caption"
                 style={[
-
                   styles.statusText,
 
                   statusFilter === option &&
-                    styles.activeStatusText,
+                  styles.activeStatusText,
                 ]}
               >
                 {option}
@@ -291,19 +337,19 @@ export default function ComponentsScreen() {
         </View>
 
 
+        {/* COMPONENT GRID */}
+
         <View style={styles.componentGrid}>
 
           {(() => {
 
             const filteredComponents =
               [...components]
-
                 .sort((a, b) =>
                   a.component_name.localeCompare(
                     b.component_name,
                   ),
                 )
-
                 .filter((component) => {
 
                   if (
@@ -312,12 +358,18 @@ export default function ComponentsScreen() {
                     return true;
                   }
 
+
                   return statusFilter ===
                     "Active"
                     ? component.status
                     : !component.status;
+
                 });
 
+
+            // ============================================
+            // EMPTY STATE
+            // ============================================
 
             if (
               filteredComponents.length === 0
@@ -326,7 +378,6 @@ export default function ComponentsScreen() {
               return (
 
                 <EmptyState
-
                   title={
                     statusFilter === "All"
                       ? "No Components"
@@ -334,7 +385,6 @@ export default function ComponentsScreen() {
                         ? "No Active Components"
                         : "No Inactive Components"
                   }
-
                   description={
                     statusFilter === "All"
                       ? "No components are available for this account."
@@ -342,26 +392,27 @@ export default function ComponentsScreen() {
                         ? "No components are currently active."
                         : "No components are currently inactive."
                   }
-
                   icon="hardware-chip-outline"
                 />
 
               );
+
             }
 
+
+            // ============================================
+            // COMPONENT CARDS
+            // ============================================
 
             return filteredComponents.map(
               (component) => {
 
                 const status =
-
                   component.component_name ===
-                  "ESP32"
-
+                    "ESP32"
                     ? component.status
                       ? "Connected"
                       : "Not Connected"
-
                     : component.status
                       ? "Active"
                       : "Inactive";
@@ -370,19 +421,18 @@ export default function ComponentsScreen() {
                 return (
 
                   <ComponentStatusBox
-
-                    key={
-                      component.component_id
-                    }
-
-                    name={
-                      component.component_name
-                    }
-
+                    key={component.component_id}
+                    name={component.component_name}
                     status={status}
+                    imageSource={
+                      componentImages[
+                      component.component_name
+                      ]
+                    }
                   />
 
                 );
+
               },
             );
 
@@ -404,7 +454,9 @@ export default function ComponentsScreen() {
       />
 
     </ScreenContainer2>
+
   );
+
 }
 
 
