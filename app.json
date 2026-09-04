@@ -7,7 +7,6 @@
     "icon": "./assets/images/adlawatt-icon.png",
     "scheme": "adlawatt",
     "userInterfaceStyle": "automatic",
-
     "ios": {
       "icon": "./assets/images/adlawatt-icon.png",
       "bundleIdentifier": "com.teamadlawatt.ADLAWATT",
@@ -15,7 +14,6 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
@@ -24,31 +22,29 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.teamadlawatt.ADLAWATT"
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/adlawatt-icon.png"
     },
-
     "plugins": [
       "expo-router",
-
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F0EAD6"
+          "backgroundColor": "#F0EAD6",
+          "android": {
+            "image": "./assets/images/adlawatt-logo.png",
+            "imageWidth": 76
+          }
         }
       ],
-
       "expo-sqlite",
       "expo-web-browser"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
-
     "extra": {
       "router": {},
       "eas": {
