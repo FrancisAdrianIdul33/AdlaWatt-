@@ -79,14 +79,14 @@ interface MonitoringData {
   battery_temperature: number;
 
   battery_temperature_status:
-    TemperatureStatus;
+  TemperatureStatus;
 
   dod_status: DoDStatus;
 
   solar_temp: number;
 
   solar_temperature_status:
-    TemperatureStatus;
+  TemperatureStatus;
 
 }
 
@@ -151,8 +151,8 @@ export default function ChartCard({
 
     let realtimeChannel:
       | ReturnType<
-          typeof supabase.channel
-        >
+        typeof supabase.channel
+      >
       | null = null;
 
     const loadMonitoring =
@@ -512,7 +512,7 @@ export default function ChartCard({
               style={[
                 styles.batteryPercentage,
                 isLowBattery &&
-                  styles.lowBatteryText,
+                styles.lowBatteryText,
               ]}
             >
 
@@ -535,21 +535,11 @@ export default function ChartCard({
 
             </AppText>
 
-            <View
-              style={[
-                styles.batteryStatus,
-                isLowBattery &&
-                  styles.lowBatteryStatus,
-              ]}
-            >
+            <View style={styles.batteryStatus}>
 
               <AppText
                 variant="caption"
-                style={[
-                  styles.batteryStatusText,
-                  isLowBattery &&
-                    styles.lowBatteryStatusText,
-                ]}
+                style={styles.batteryStatusText}
               >
 
                 {
@@ -579,8 +569,8 @@ export default function ChartCard({
             loading
               ? "—"
               : monitoring
-                  ?.time_remaining ??
-                "—"
+                ?.time_remaining ??
+              "—"
           }
 
         </AppText>
@@ -641,24 +631,24 @@ export default function ChartCard({
       {data.value !==
         undefined && (
 
-        <AppText
-          variant="heading"
-          style={[
-            styles.monitorValue,
-            isOffline &&
+          <AppText
+            variant="heading"
+            style={[
+              styles.monitorValue,
+              isOffline &&
               styles.offlineValue,
-            isSafe &&
+              isSafe &&
               styles.safeValue,
-            isUnsafe &&
+              isUnsafe &&
               styles.unsafeValue,
-          ]}
-        >
+            ]}
+          >
 
-          {data.value}
+            {data.value}
 
-        </AppText>
+          </AppText>
 
-      )}
+        )}
 
       {/* Status Badge */}
 
@@ -757,7 +747,7 @@ function getCardData(
         badgeTextStyle:
 
           solarStatus ===
-          "Moderate"
+            "Moderate"
 
             ? styles.darkBadgeText
 
@@ -870,8 +860,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-                ?.battery_temperature ??
-                0}°C`,
+              ?.battery_temperature ??
+            0}°C`,
 
         badge:
           tempStatus,
@@ -885,7 +875,7 @@ function getCardData(
         badgeTextStyle:
 
           tempStatus ===
-          "Moderate"
+            "Moderate"
 
             ? styles.darkBadgeText
 
@@ -921,8 +911,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-                ?.solar_temp ??
-                0}°C`,
+              ?.solar_temp ??
+            0}°C`,
 
         badge:
           solarTempStatus,
@@ -936,7 +926,7 @@ function getCardData(
         badgeTextStyle:
 
           solarTempStatus ===
-          "Moderate"
+            "Moderate"
 
             ? styles.darkBadgeText
 
@@ -1071,18 +1061,6 @@ const styles = StyleSheet.create({
   },
 
   lowBatteryText: {
-
-    color: "#EF4444",
-
-  },
-
-  lowBatteryStatus: {
-
-    borderColor: "#EF4444",
-
-  },
-
-  lowBatteryStatusText: {
 
     color: "#EF4444",
 
