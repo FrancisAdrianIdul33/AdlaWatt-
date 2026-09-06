@@ -46,7 +46,7 @@ export default function NotificationsScreen() {
     useState<NotificationData[]>([]);
 
   const [timeFilter, setTimeFilter] =
-    useState<TimeFilter>("Today");
+    useState<TimeFilter>("All");
 
   const [typeFilter, setTypeFilter] =
     useState<"All" | NotificationType>("All");

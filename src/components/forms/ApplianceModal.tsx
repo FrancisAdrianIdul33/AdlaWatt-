@@ -51,7 +51,7 @@ type ApplianceModalProps = {
  */
 const databaseToUiArea: Record<string, string> = {
   "Living Area": "Living Area",
-  Bedroom: "Bedroom",
+  "Bedroom": "Bedroom",
   "Kitchen & Dining Area": "Kitchen Area",
   "Work & Study Area": "Work/Study Area",
   "Bathroom & Laundry Area": "Bathroom Area",
@@ -64,11 +64,11 @@ const databaseToUiArea: Record<string, string> = {
  */
 const areaColors: Record<string, string> = {
   "Living Area": Colors.light.primary,
-  Bedroom: "#9B59B6",
+  "Bedroom": "#9B59B6",
   "Kitchen Area": Colors.light.secondary,
   "Work/Study Area": "#4A90E2",
   "Bathroom Area": "#16A085",
-  Porch: "#E67E22",
+  "Porch": "#E67E22",
   "Custom Appliances": Colors.light.primary,
 };
 
@@ -142,12 +142,10 @@ export default function ApplianceModal({
 
     setAppliances(
       (data ?? []).map((item) => ({
-        id: item.app_id,
-        name: item.appliance_name,
-        watts: item.wattage,
-        area:
-          databaseToUiArea[item.area] ??
-          item.area,
+        id: String(item.app_id),
+        name: String(item.appliance_name),
+        watts: String(item.wattage),
+        area: databaseToUiArea[item.area] ?? item.area,
       })),
     );
   };
@@ -187,8 +185,8 @@ export default function ApplianceModal({
     setSelected((current) =>
       current.includes(id)
         ? current.filter(
-            (item) => item !== id,
-          )
+          (item) => item !== id,
+        )
         : [...current, id],
     );
   };
@@ -958,58 +956,58 @@ export default function ApplianceModal({
                 item.area ===
                 "Custom Appliances",
             ) && (
-              <View style={styles.section}>
-                <AppText
-                  variant="body"
-                  style={styles.sectionTitle}
-                >
-                  Custom Appliances
-                </AppText>
+                <View style={styles.section}>
+                  <AppText
+                    variant="body"
+                    style={styles.sectionTitle}
+                  >
+                    Custom Appliances
+                  </AppText>
 
-                <View style={styles.grid}>
-                  {filteredAppliances
-                    .filter(
-                      (item) =>
-                        item.area ===
-                        "Custom Appliances",
-                    )
-                    .map((appliance) => {
-                      const isSelected =
-                        selected.includes(
-                          appliance.id,
+                  <View style={styles.grid}>
+                    {filteredAppliances
+                      .filter(
+                        (item) =>
+                          item.area ===
+                          "Custom Appliances",
+                      )
+                      .map((appliance) => {
+                        const isSelected =
+                          selected.includes(
+                            appliance.id,
+                          );
+
+                        return (
+                          <ApplianceBox
+                            key={appliance.id}
+                            name={appliance.name}
+                            wattage={appliance.watts}
+                            color={
+                              Colors.light.primary
+                            }
+                            selected={isSelected}
+                            isCustom
+                            onPress={() =>
+                              toggleAppliance(
+                                appliance.id,
+                              )
+                            }
+                            onEdit={() =>
+                              openCustomEditor(
+                                appliance,
+                              )
+                            }
+                            onDelete={() =>
+                              handleCustomDelete(
+                                appliance.id,
+                              )
+                            }
+                          />
                         );
-
-                      return (
-                        <ApplianceBox
-                          key={appliance.id}
-                          name={appliance.name}
-                          wattage={appliance.watts}
-                          color={
-                            Colors.light.primary
-                          }
-                          selected={isSelected}
-                          isCustom
-                          onPress={() =>
-                            toggleAppliance(
-                              appliance.id,
-                            )
-                          }
-                          onEdit={() =>
-                            openCustomEditor(
-                              appliance,
-                            )
-                          }
-                          onDelete={() =>
-                            handleCustomDelete(
-                              appliance.id,
-                            )
-                          }
-                        />
-                      );
-                    })}
+                      })}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
             {/* Appliance Categories */}
             {sections.map((section) => {
