@@ -15,9 +15,7 @@ import Svg, {
 } from "react-native-svg";
 
 import AppText from "@/components/ui/AppText";
-
 import { Colors } from "@/constants/colors";
-
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -56,20 +54,19 @@ type DoDStatus =
   | "Safe"
   | "Unsafe";
 
+type NonBatteryChartType =
+  Exclude<ChartType, "battery">;
+
 // ============================================================
 // MONITORING DATA
 // ============================================================
 
 interface MonitoringData {
-
   battery_level: number;
-
   battery_status: BatteryStatus;
-
   time_remaining: string;
 
   solar_input: number;
-
   solar_status: SolarStatus;
 
   current_load: number;
@@ -77,17 +74,27 @@ interface MonitoringData {
   device_status: DeviceStatus;
 
   battery_temperature: number;
-
   battery_temperature_status:
-  TemperatureStatus;
+    TemperatureStatus;
 
   dod_status: DoDStatus;
 
   solar_temp: number;
-
   solar_temperature_status:
-  TemperatureStatus;
+    TemperatureStatus;
+}
 
+// ============================================================
+// CARD DATA
+// ============================================================
+
+interface CardData {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value?: string;
+  badge?: string;
+  badgeStyle?: object;
+  badgeTextStyle?: object;
 }
 
 // ============================================================
@@ -95,9 +102,7 @@ interface MonitoringData {
 // ============================================================
 
 interface ChartCardProps {
-
   type: ChartType;
-
 }
 
 // ============================================================
@@ -105,9 +110,7 @@ interface ChartCardProps {
 // ============================================================
 
 const RING_SIZE = 150;
-
 const RADIUS = 60;
-
 const STROKE = 11;
 
 const CENTER =
@@ -115,9 +118,6 @@ const CENTER =
 
 const CIRCUMFERENCE =
   2 * Math.PI * RADIUS;
-
-// Battery becomes unsafe at
-// 20% remaining battery.
 
 const LOW_BATTERY_THRESHOLD = 20;
 
@@ -149,68 +149,51 @@ export default function ChartCard({
 
     let mounted = true;
 
-    let realtimeChannel:
-      | ReturnType<
-        typeof supabase.channel
-      >
-      | null = null;
-
     const loadMonitoring =
       async () => {
 
-        // ------------------------------------------------------
-        // GET CURRENT USER
-        // ------------------------------------------------------
+        try {
 
-        const {
-          data: {
-            user,
-          },
-          error: userError,
-        } =
-          await supabase
-            .auth
-            .getUser();
+          // ----------------------------------------------------
+          // GET CURRENT USER
+          // ----------------------------------------------------
 
-        // Prevent async operations from
-        // continuing after component cleanup.
+          const {
+            data: { user },
+            error: userError,
+          } =
+            await supabase.auth.getUser();
 
-        if (!mounted) {
-          return;
-        }
+          if (!mounted) {
+            return;
+          }
 
-        if (userError) {
+          if (userError) {
 
-          console.error(
-            "Error getting user:",
-            userError.message
-          );
+            console.error(
+              "Error getting user:",
+              userError.message,
+            );
 
-          setMonitoring(null);
+            setMonitoring(null);
+            return;
+          }
 
-          setLoading(false);
+          if (!user) {
 
-          return;
-        }
+            setMonitoring(null);
 
-        if (!user) {
+            return;
+          }
 
-          setMonitoring(null);
+          // ----------------------------------------------------
+          // GET INITIAL MONITORING DATA
+          // ----------------------------------------------------
 
-          setLoading(false);
-
-          return;
-        }
-
-        // ------------------------------------------------------
-        // GET MONITORING DATA
-        // ------------------------------------------------------
-
-        const {
-          data,
-          error,
-        } =
-          await supabase
+          const {
+            data,
+            error,
+          } = await supabase
             .from("monitoring")
             .select(`
               battery_level,
@@ -228,158 +211,169 @@ export default function ChartCard({
             `)
             .eq(
               "user_id",
-              user.id
+              user.id,
             )
             .maybeSingle();
 
-        // Again check whether the component
-        // was already unmounted.
+          if (!mounted) {
+            return;
+          }
 
-        if (!mounted) {
-          return;
-        }
+          if (error) {
 
-        if (error) {
+            console.error(
+              "Error loading monitoring data:",
+              error.message,
+            );
+
+            setMonitoring(null);
+
+            return;
+          }
+
+          setMonitoring(
+            data as MonitoringData | null,
+          );
+
+          // ----------------------------------------------------
+          // SUPABASE REALTIME
+          // ----------------------------------------------------
+          //
+          // Listen for changes to this user's
+          // monitoring row.
+          //
+          // "*" allows the component to respond to:
+          //
+          // INSERT
+          // UPDATE
+          //
+          // UPDATE is the expected event for the
+          // current ESP32 implementation.
+          //
+          // ----------------------------------------------------
+
+          const channel =
+            supabase
+              .channel(
+                `monitoring-${user.id}-${Date.now()}`,
+              )
+              .on(
+                "postgres_changes",
+                {
+                  event: "*",
+                  schema: "public",
+                  table: "monitoring",
+                  filter:
+                    `user_id=eq.${user.id}`,
+                },
+                (payload) => {
+
+                  if (!mounted) {
+                    return;
+                  }
+
+                  if (
+                    payload.eventType ===
+                    "DELETE"
+                  ) {
+
+                    setMonitoring(null);
+
+                    return;
+                  }
+
+                  setMonitoring(
+                    payload.new as MonitoringData,
+                  );
+                },
+              )
+              .subscribe(
+                (status) => {
+
+                  if (
+                    status ===
+                    "CHANNEL_ERROR"
+                  ) {
+
+                    console.error(
+                      "Monitoring Realtime channel error.",
+                    );
+
+                  }
+
+                  if (
+                    status ===
+                    "TIMED_OUT"
+                  ) {
+
+                    console.error(
+                      "Monitoring Realtime connection timed out.",
+                    );
+
+                  }
+
+                },
+              );
+
+          // ----------------------------------------------------
+          // CLEANUP CHANNEL
+          // ----------------------------------------------------
+
+          return () => {
+
+            supabase.removeChannel(
+              channel,
+            );
+
+          };
+
+        } catch (error) {
 
           console.error(
-            "Error loading monitoring data:",
-            error.message
+            "Unexpected monitoring error:",
+            error,
           );
 
-          setMonitoring(null);
+          if (mounted) {
 
-          setLoading(false);
+            setMonitoring(null);
 
-          return;
-        }
+          }
 
-        // ------------------------------------------------------
-        // SET INITIAL DATA
-        // ------------------------------------------------------
+        } finally {
 
-        setMonitoring(
-          data as MonitoringData | null
-        );
-
-        setLoading(false);
-
-        // ------------------------------------------------------
-        // STOP IF COMPONENT WAS CLEANED UP
-        // ------------------------------------------------------
-
-        if (!mounted) {
-          return;
-        }
-
-        // ------------------------------------------------------
-        // SUPABASE REALTIME
-        // ------------------------------------------------------
-        //
-        // A unique channel name prevents React
-        // development / Strict Mode from trying
-        // to reuse a previously subscribed channel.
-        //
-        // IMPORTANT:
-        //
-        // .on() is called BEFORE .subscribe().
-        //
-        // This prevents:
-        //
-        // "cannot add postgres changes callbacks
-        // after subscribe()"
-        //
-        // ------------------------------------------------------
-
-        const channelName =
-          `monitoring-${user.id}-${Date.now()}-${Math.random()
-            .toString(36)
-            .substring(2, 9)}`;
-
-        realtimeChannel =
-          supabase.channel(
-            channelName
-          );
-
-        // Configure callback BEFORE subscribing.
-
-        realtimeChannel.on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "monitoring",
-            filter:
-              `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-
-            if (!mounted) {
-              return;
-            }
-
-            setMonitoring(
-              payload.new as MonitoringData
-            );
+          if (mounted) {
 
             setLoading(false);
 
           }
-        );
 
-        // Subscribe only after all callbacks
-        // have been registered.
-
-        realtimeChannel.subscribe(
-          (status) => {
-
-            if (!mounted) {
-              return;
-            }
-
-            if (
-              status === "CHANNEL_ERROR"
-            ) {
-
-              console.error(
-                "Monitoring Realtime channel error."
-              );
-
-            }
-
-            if (
-              status === "TIMED_OUT"
-            ) {
-
-              console.error(
-                "Monitoring Realtime connection timed out."
-              );
-
-            }
-
-          }
-        );
+        }
 
       };
 
-    loadMonitoring();
+    let cleanupChannel:
+      | (() => void)
+      | undefined;
 
-    // --------------------------------------------------------
+    loadMonitoring()
+      .then((cleanup) => {
+
+        cleanupChannel = cleanup;
+
+      });
+
+    // ==========================================================
     // CLEANUP
-    // --------------------------------------------------------
+    // ==========================================================
 
     return () => {
 
       mounted = false;
 
-      if (
-        realtimeChannel
-      ) {
+      if (cleanupChannel) {
 
-        supabase.removeChannel(
-          realtimeChannel
-        );
-
-        realtimeChannel = null;
+        cleanupChannel();
 
       }
 
@@ -399,15 +393,8 @@ export default function ChartCard({
     const progress =
       Math.max(
         0,
-        Math.min(
-          100,
-          level
-        )
+        Math.min(100, level),
       ) / 100;
-
-    // --------------------------------------------------------
-    // LOW BATTERY CHECK
-    // --------------------------------------------------------
 
     const isLowBattery =
       level <=
@@ -417,26 +404,6 @@ export default function ChartCard({
       isLowBattery
         ? "#EF4444"
         : Colors.light.primary;
-
-    // --------------------------------------------------------
-    // GAUGE PROGRESS
-    // --------------------------------------------------------
-    //
-    // Database battery level determines
-    // the exact gauge position:
-    //
-    // 0%   = 12 o'clock
-    // 25%  = 9 o'clock
-    // 50%  = 6 o'clock
-    // 75%  = 3 o'clock
-    // 100% = back to 12 o'clock
-    //
-    // The gauge moves counterclockwise.
-    //
-    // This remains based entirely on
-    // the battery_level from Supabase.
-    //
-    // --------------------------------------------------------
 
     const dashOffset =
       CIRCUMFERENCE *
@@ -476,7 +443,7 @@ export default function ChartCard({
               fill="none"
             />
 
-            {/* Battery Progress Ring */}
+            {/* Battery Progress */}
 
             <Circle
               cx={CENTER}
@@ -512,15 +479,13 @@ export default function ChartCard({
               style={[
                 styles.batteryPercentage,
                 isLowBattery &&
-                styles.lowBatteryText,
+                  styles.lowBatteryText,
               ]}
             >
 
-              {
-                loading
-                  ? "—"
-                  : `${level}%`
-              }
+              {loading
+                ? "—"
+                : `${level}%`}
 
             </AppText>
 
@@ -535,11 +500,17 @@ export default function ChartCard({
 
             </AppText>
 
-            <View style={styles.batteryStatus}>
+            <View
+              style={
+                styles.batteryStatus
+              }
+            >
 
               <AppText
                 variant="caption"
-                style={styles.batteryStatusText}
+                style={
+                  styles.batteryStatusText
+                }
               >
 
                 {
@@ -565,13 +536,11 @@ export default function ChartCard({
 
           Time Remaining:{" "}
 
-          {
-            loading
-              ? "—"
-              : monitoring
+          {loading
+            ? "—"
+            : monitoring
                 ?.time_remaining ??
-              "—"
-          }
+              "—"}
 
         </AppText>
 
@@ -589,7 +558,7 @@ export default function ChartCard({
     getCardData(
       type,
       monitoring,
-      loading
+      loading,
     );
 
   const isOffline =
@@ -613,7 +582,11 @@ export default function ChartCard({
       <Ionicons
         name={data.icon}
         size={23}
-        color={Colors.light.primary}
+        color={
+          isOffline
+            ? Colors.light.error
+            : Colors.light.primary
+        }
         style={styles.icon}
       />
 
@@ -631,24 +604,27 @@ export default function ChartCard({
       {data.value !==
         undefined && (
 
-          <AppText
-            variant="heading"
-            style={[
-              styles.monitorValue,
-              isOffline &&
+        <AppText
+          variant="heading"
+          style={[
+            styles.monitorValue,
+
+            isOffline &&
               styles.offlineValue,
-              isSafe &&
+
+            isSafe &&
               styles.safeValue,
-              isUnsafe &&
+
+            isUnsafe &&
               styles.unsafeValue,
-            ]}
-          >
+          ]}
+        >
 
-            {data.value}
+          {data.value}
 
-          </AppText>
+        </AppText>
 
-        )}
+      )}
 
       {/* Status Badge */}
 
@@ -688,19 +664,12 @@ export default function ChartCard({
 // ============================================================
 
 function getCardData(
-
-  type: Exclude<
-    ChartType,
-    "battery"
-  >,
-
+  type: NonBatteryChartType,
   monitoring:
     | MonitoringData
     | null,
-
-  loading: boolean
-
-) {
+  loading: boolean,
+): CardData {
 
   switch (type) {
 
@@ -710,16 +679,14 @@ function getCardData(
 
     case "solar": {
 
-      const solarStatus:
-        SolarStatus =
+      const solarStatus =
         monitoring?.solar_status ??
         "Low";
 
       return {
 
         icon:
-          "sunny-outline" as keyof
-          typeof Ionicons.glyphMap,
+          "sunny-outline",
 
         label:
           "Solar Input",
@@ -733,24 +700,17 @@ function getCardData(
           solarStatus,
 
         badgeStyle:
-
           solarStatus === "High"
             ? styles.normalBadge
-
             : solarStatus ===
-              "Moderate"
-
+                "Moderate"
               ? styles.moderateBadge
-
               : styles.lowBadge,
 
         badgeTextStyle:
-
           solarStatus ===
-            "Moderate"
-
+          "Moderate"
             ? styles.darkBadgeText
-
             : styles.lightBadgeText,
 
       };
@@ -766,14 +726,12 @@ function getCardData(
       return {
 
         icon:
-          "flash-outline" as keyof
-          typeof Ionicons.glyphMap,
+          "flash-outline",
 
         label:
           "Load Now",
 
         value:
-
           loading
             ? "—"
             : `${monitoring?.current_load ?? 0}W`,
@@ -784,55 +742,41 @@ function getCardData(
     // DEVICE STATUS
     // ========================================================
 
-    case "device": {
-
-      const deviceStatus:
-        DeviceStatus =
-        monitoring?.device_status ??
-        "Offline";
+    case "device":
 
       return {
 
         icon:
-          "hardware-chip-outline" as keyof
-          typeof Ionicons.glyphMap,
+          "hardware-chip-outline",
 
         label:
           "Device",
 
         value:
-          deviceStatus,
+          monitoring?.device_status ??
+          "Offline",
 
       };
-
-    }
 
     // ========================================================
     // DEPTH OF DISCHARGE
     // ========================================================
 
-    case "dod": {
-
-      const dodStatus:
-        DoDStatus =
-        monitoring?.dod_status ??
-        "Safe";
+    case "dod":
 
       return {
 
         icon:
-          "shield-checkmark-outline" as keyof
-          typeof Ionicons.glyphMap,
+          "shield-checkmark-outline",
 
         label:
           "DoD Status",
 
         value:
-          dodStatus,
+          monitoring?.dod_status ??
+          "Safe",
 
       };
-
-    }
 
     // ========================================================
     // BATTERY TEMPERATURE
@@ -840,8 +784,7 @@ function getCardData(
 
     case "temperature": {
 
-      const tempStatus:
-        TemperatureStatus =
+      const status =
         monitoring
           ?.battery_temperature_status ??
         "Normal";
@@ -849,36 +792,29 @@ function getCardData(
       return {
 
         icon:
-          "thermometer-outline" as keyof
-          typeof Ionicons.glyphMap,
+          "thermometer-outline",
 
         label:
           "Battery Temp",
 
         value:
-
           loading
             ? "—"
             : `${monitoring
-              ?.battery_temperature ??
-            0}°C`,
+                ?.battery_temperature ??
+              0}°C`,
 
         badge:
-          tempStatus,
+          status,
 
         badgeStyle:
-
           getTemperatureBadgeStyle(
-            tempStatus
+            status,
           ),
 
         badgeTextStyle:
-
-          tempStatus ===
-            "Moderate"
-
+          status === "Moderate"
             ? styles.darkBadgeText
-
             : styles.lightBadgeText,
 
       };
@@ -891,8 +827,7 @@ function getCardData(
 
     case "solar_temperature": {
 
-      const solarTempStatus:
-        TemperatureStatus =
+      const status =
         monitoring
           ?.solar_temperature_status ??
         "Normal";
@@ -900,36 +835,29 @@ function getCardData(
       return {
 
         icon:
-          "thermometer-outline" as keyof
-          typeof Ionicons.glyphMap,
+          "thermometer-outline",
 
         label:
           "Solar Panel Temp",
 
         value:
-
           loading
             ? "—"
             : `${monitoring
-              ?.solar_temp ??
-            0}°C`,
+                ?.solar_temp ??
+              0}°C`,
 
         badge:
-          solarTempStatus,
+          status,
 
         badgeStyle:
-
           getTemperatureBadgeStyle(
-            solarTempStatus
+            status,
           ),
 
         badgeTextStyle:
-
-          solarTempStatus ===
-            "Moderate"
-
+          status === "Moderate"
             ? styles.darkBadgeText
-
             : styles.lightBadgeText,
 
       };
@@ -941,34 +869,28 @@ function getCardData(
 }
 
 // ============================================================
-// TEMPERATURE BADGE HELPER
+// TEMPERATURE BADGE STYLE
 // ============================================================
 
 function getTemperatureBadgeStyle(
-
-  status: TemperatureStatus
-
+  status: TemperatureStatus,
 ) {
 
-  if (
-    status ===
-    "Alarming"
-  ) {
+  switch (status) {
 
-    return styles.alarmingBadge;
+    case "Normal":
 
-  }
+      return styles.normalBadge;
 
-  if (
-    status ===
-    "Moderate"
-  ) {
+    case "Moderate":
 
-    return styles.moderateBadge;
+      return styles.moderateBadge;
+
+    case "Alarming":
+
+      return styles.alarmingBadge;
 
   }
-
-  return styles.normalBadge;
 
 }
 
@@ -978,7 +900,9 @@ function getTemperatureBadgeStyle(
 
 const styles = StyleSheet.create({
 
-  /* Battery */
+  // ==========================================================
+  // BATTERY
+  // ==========================================================
 
   batterySection: {
 
@@ -1006,9 +930,19 @@ const styles = StyleSheet.create({
 
     position: "absolute",
 
+    top: 0,
+
+    left: 0,
+
+    right: 0,
+
+    bottom: 0,
+
     alignItems: "center",
 
     justifyContent: "center",
+
+    paddingHorizontal: 14,
 
   },
 
@@ -1016,23 +950,35 @@ const styles = StyleSheet.create({
 
     color: "#000000",
 
-    fontSize: 26,
+    fontSize: 27,
 
-    fontWeight: "700",
+    fontWeight: "800",
+
+    lineHeight: 30,
+
+  },
+
+  lowBatteryText: {
+
+    color: Colors.light.error,
 
   },
 
   batteryLabel: {
 
-    color: "#000000",
+    color:
+      Colors.light.textSecondary,
 
-    marginTop: -2,
+    fontWeight: "600",
+
+    marginTop: 1,
 
   },
 
   batteryStatus: {
 
-    backgroundColor: Colors.light.primary,
+    backgroundColor:
+      Colors.light.primary,
 
     borderRadius: 10,
 
@@ -1040,7 +986,7 @@ const styles = StyleSheet.create({
 
     paddingVertical: 3,
 
-    marginTop: 3,
+    marginTop: 4,
 
   },
 
@@ -1054,19 +1000,16 @@ const styles = StyleSheet.create({
 
   remainingText: {
 
-    color: Colors.light.textSecondary,
+    color:
+      Colors.light.textSecondary,
 
-    marginTop: 8,
-
-  },
-
-  lowBatteryText: {
-
-    color: "#EF4444",
+    marginTop: 6,
 
   },
 
-  /* Monitoring Cards */
+  // ==========================================================
+  // MONITORING CARDS
+  // ==========================================================
 
   monitorCard: {
 
@@ -1074,11 +1017,13 @@ const styles = StyleSheet.create({
 
     minHeight: 95,
 
-    backgroundColor: Colors.glass.white,
+    backgroundColor:
+      Colors.glass.white,
 
     borderWidth: 3,
 
-    borderColor: Colors.light.primary,
+    borderColor:
+      Colors.light.primary,
 
     borderRadius: 16,
 
@@ -1124,23 +1069,28 @@ const styles = StyleSheet.create({
 
   offlineValue: {
 
-    color: Colors.light.error,
+    color:
+      Colors.light.error,
 
   },
 
   safeValue: {
 
-    color: Colors.light.primary,
+    color:
+      Colors.light.primary,
 
   },
 
   unsafeValue: {
 
-    color: Colors.light.error,
+    color:
+      Colors.light.error,
 
   },
 
-  /* Status Badges */
+  // ==========================================================
+  // STATUS BADGES
+  // ==========================================================
 
   statusBadge: {
 
@@ -1164,25 +1114,29 @@ const styles = StyleSheet.create({
 
   normalBadge: {
 
-    backgroundColor: Colors.light.primary,
+    backgroundColor:
+      Colors.light.primary,
 
   },
 
   moderateBadge: {
 
-    backgroundColor: Colors.light.secondary,
+    backgroundColor:
+      Colors.light.secondary,
 
   },
 
   alarmingBadge: {
 
-    backgroundColor: Colors.light.error,
+    backgroundColor:
+      Colors.light.error,
 
   },
 
   lowBadge: {
 
-    backgroundColor: Colors.light.error,
+    backgroundColor:
+      Colors.light.error,
 
   },
 
