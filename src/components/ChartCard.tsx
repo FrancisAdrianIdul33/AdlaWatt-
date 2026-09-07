@@ -15,7 +15,9 @@ import Svg, {
 } from "react-native-svg";
 
 import AppText from "@/components/ui/AppText";
+
 import { Colors } from "@/constants/colors";
+
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -32,9 +34,10 @@ type ChartType =
   | "dod";
 
 type TemperatureStatus =
-  | "Normal"
-  | "Moderate"
-  | "Alarming";
+  | "Nominal"
+  | "Elevated"
+  | "High"
+  | "Critical";
 
 type DeviceStatus =
   | "Online"
@@ -79,7 +82,7 @@ interface MonitoringData {
 
   dod_status: DoDStatus;
 
-  solar_temp: number;
+  solar_temperature: number;
   solar_temperature_status:
     TemperatureStatus;
 }
@@ -90,10 +93,15 @@ interface MonitoringData {
 
 interface CardData {
   icon: keyof typeof Ionicons.glyphMap;
+
   label: string;
+
   value?: string;
+
   badge?: string;
+
   badgeStyle?: object;
+
   badgeTextStyle?: object;
 }
 
@@ -110,7 +118,9 @@ interface ChartCardProps {
 // ============================================================
 
 const RING_SIZE = 150;
+
 const RADIUS = 60;
+
 const STROKE = 11;
 
 const CENTER =
@@ -176,6 +186,7 @@ export default function ChartCard({
             );
 
             setMonitoring(null);
+
             return;
           }
 
@@ -206,7 +217,7 @@ export default function ChartCard({
               battery_temperature,
               battery_temperature_status,
               dod_status,
-              solar_temp,
+              solar_temperature,
               solar_temperature_status
             `)
             .eq(
@@ -237,19 +248,6 @@ export default function ChartCard({
 
           // ----------------------------------------------------
           // SUPABASE REALTIME
-          // ----------------------------------------------------
-          //
-          // Listen for changes to this user's
-          // monitoring row.
-          //
-          // "*" allows the component to respond to:
-          //
-          // INSERT
-          // UPDATE
-          //
-          // UPDATE is the expected event for the
-          // current ESP32 implementation.
-          //
           // ----------------------------------------------------
 
           const channel =
@@ -298,7 +296,6 @@ export default function ChartCard({
                     console.error(
                       "Monitoring Realtime channel error.",
                     );
-
                   }
 
                   if (
@@ -309,9 +306,7 @@ export default function ChartCard({
                     console.error(
                       "Monitoring Realtime connection timed out.",
                     );
-
                   }
-
                 },
               );
 
@@ -324,7 +319,6 @@ export default function ChartCard({
             supabase.removeChannel(
               channel,
             );
-
           };
 
         } catch (error) {
@@ -337,7 +331,6 @@ export default function ChartCard({
           if (mounted) {
 
             setMonitoring(null);
-
           }
 
         } finally {
@@ -345,11 +338,8 @@ export default function ChartCard({
           if (mounted) {
 
             setLoading(false);
-
           }
-
         }
-
       };
 
     let cleanupChannel:
@@ -360,7 +350,6 @@ export default function ChartCard({
       .then((cleanup) => {
 
         cleanupChannel = cleanup;
-
       });
 
     // ==========================================================
@@ -374,9 +363,7 @@ export default function ChartCard({
       if (cleanupChannel) {
 
         cleanupChannel();
-
       }
-
     };
 
   }, []);
@@ -408,6 +395,18 @@ export default function ChartCard({
     const dashOffset =
       CIRCUMFERENCE *
       (1 - progress);
+
+    // --------------------------------------------------------
+    // BATTERY GAUGE DIRECTION
+    //
+    // 0%   = 12 o'clock
+    // 25%  = 9 o'clock
+    // 50%  = 6 o'clock
+    // 75%  = 3 o'clock
+    // 100% = back to 12 o'clock
+    //
+    // Counterclockwise direction.
+    // --------------------------------------------------------
 
     const batteryTransform =
       `translate(${RING_SIZE} 0) ` +
@@ -545,9 +544,7 @@ export default function ChartCard({
         </AppText>
 
       </View>
-
     );
-
   }
 
   // ==========================================================
@@ -623,7 +620,6 @@ export default function ChartCard({
           {data.value}
 
         </AppText>
-
       )}
 
       {/* Status Badge */}
@@ -650,13 +646,10 @@ export default function ChartCard({
           </AppText>
 
         </View>
-
       )}
 
     </View>
-
   );
-
 }
 
 // ============================================================
@@ -700,6 +693,7 @@ function getCardData(
           solarStatus,
 
         badgeStyle:
+
           solarStatus === "High"
             ? styles.normalBadge
             : solarStatus ===
@@ -708,13 +702,12 @@ function getCardData(
               : styles.lowBadge,
 
         badgeTextStyle:
+
           solarStatus ===
           "Moderate"
             ? styles.darkBadgeText
             : styles.lightBadgeText,
-
       };
-
     }
 
     // ========================================================
@@ -735,7 +728,6 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring?.current_load ?? 0}W`,
-
       };
 
     // ========================================================
@@ -755,7 +747,6 @@ function getCardData(
         value:
           monitoring?.device_status ??
           "Offline",
-
       };
 
     // ========================================================
@@ -775,7 +766,6 @@ function getCardData(
         value:
           monitoring?.dod_status ??
           "Safe",
-
       };
 
     // ========================================================
@@ -787,7 +777,7 @@ function getCardData(
       const status =
         monitoring
           ?.battery_temperature_status ??
-        "Normal";
+        "Nominal";
 
       return {
 
@@ -802,7 +792,7 @@ function getCardData(
             ? "—"
             : `${monitoring
                 ?.battery_temperature ??
-              0}°C`,
+                0}°C`,
 
         badge:
           status,
@@ -813,12 +803,10 @@ function getCardData(
           ),
 
         badgeTextStyle:
-          status === "Moderate"
-            ? styles.darkBadgeText
-            : styles.lightBadgeText,
-
+          getTemperatureBadgeTextStyle(
+            status,
+          ),
       };
-
     }
 
     // ========================================================
@@ -830,7 +818,7 @@ function getCardData(
       const status =
         monitoring
           ?.solar_temperature_status ??
-        "Normal";
+        "Nominal";
 
       return {
 
@@ -844,8 +832,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-                ?.solar_temp ??
-              0}°C`,
+                ?.solar_temperature ??
+                0}°C`,
 
         badge:
           status,
@@ -856,16 +844,12 @@ function getCardData(
           ),
 
         badgeTextStyle:
-          status === "Moderate"
-            ? styles.darkBadgeText
-            : styles.lightBadgeText,
-
+          getTemperatureBadgeTextStyle(
+            status,
+          ),
       };
-
     }
-
   }
-
 }
 
 // ============================================================
@@ -878,20 +862,42 @@ function getTemperatureBadgeStyle(
 
   switch (status) {
 
-    case "Normal":
+    case "Nominal":
+      return styles.nominalTemperatureBadge;
 
-      return styles.normalBadge;
+    case "Elevated":
+      return styles.elevatedTemperatureBadge;
 
-    case "Moderate":
+    case "High":
+      return styles.highTemperatureBadge;
 
-      return styles.moderateBadge;
-
-    case "Alarming":
-
-      return styles.alarmingBadge;
-
+    case "Critical":
+      return styles.criticalTemperatureBadge;
   }
+}
 
+// ============================================================
+// TEMPERATURE BADGE TEXT STYLE
+// ============================================================
+
+function getTemperatureBadgeTextStyle(
+  status: TemperatureStatus,
+) {
+
+  switch (status) {
+
+    case "Nominal":
+      return styles.nominalTemperatureBadgeText;
+
+    case "Elevated":
+      return styles.elevatedTemperatureBadgeText;
+
+    case "High":
+      return styles.highTemperatureBadgeText;
+
+    case "Critical":
+      return styles.criticalTemperatureBadgeText;
+  }
 }
 
 // ============================================================
@@ -911,7 +917,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
 
     marginBottom: 14,
-
   },
 
   batteryCircle: {
@@ -923,7 +928,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
 
     justifyContent: "center",
-
   },
 
   batteryCenter: {
@@ -943,7 +947,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
 
     paddingHorizontal: 14,
-
   },
 
   batteryPercentage: {
@@ -955,13 +958,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
 
     lineHeight: 30,
-
   },
 
   lowBatteryText: {
 
     color: Colors.light.error,
-
   },
 
   batteryLabel: {
@@ -972,7 +973,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
 
     marginTop: 1,
-
   },
 
   batteryStatus: {
@@ -987,7 +987,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
 
     marginTop: 4,
-
   },
 
   batteryStatusText: {
@@ -995,7 +994,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
 
     fontSize: 9,
-
   },
 
   remainingText: {
@@ -1004,7 +1002,6 @@ const styles = StyleSheet.create({
       Colors.light.textSecondary,
 
     marginTop: 6,
-
   },
 
   // ==========================================================
@@ -1034,13 +1031,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
 
     paddingVertical: 10,
-
   },
 
   icon: {
 
     marginBottom: 3,
-
   },
 
   monitorLabel: {
@@ -1050,7 +1045,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
 
     fontWeight: "600",
-
   },
 
   monitorValue: {
@@ -1064,28 +1058,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
 
     marginTop: 3,
-
   },
 
   offlineValue: {
 
     color:
       Colors.light.error,
-
   },
 
   safeValue: {
 
     color:
       Colors.light.primary,
-
   },
 
   unsafeValue: {
 
     color:
       Colors.light.error,
-
   },
 
   // ==========================================================
@@ -1101,7 +1091,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
 
     borderRadius: 10,
-
   },
 
   statusBadgeText: {
@@ -1109,47 +1098,99 @@ const styles = StyleSheet.create({
     fontSize: 9,
 
     fontWeight: "600",
-
   },
 
   normalBadge: {
 
     backgroundColor:
       Colors.light.primary,
-
   },
 
   moderateBadge: {
 
     backgroundColor:
       Colors.light.secondary,
-
   },
 
   alarmingBadge: {
 
     backgroundColor:
       Colors.light.error,
-
   },
 
   lowBadge: {
 
     backgroundColor:
       Colors.light.error,
-
   },
 
   lightBadgeText: {
 
     color: "#FFFFFF",
-
   },
 
   darkBadgeText: {
 
     color: "#000000",
-
   },
 
+  // ==========================================================
+  // TEMPERATURE BADGES
+  // ==========================================================
+
+  nominalTemperatureBadge: {
+
+    backgroundColor: "#E4EAD9",
+
+    borderWidth: 1,
+
+    borderColor: "#14532D",
+  },
+
+  nominalTemperatureBadgeText: {
+
+    color: "#14532D",
+  },
+
+  elevatedTemperatureBadge: {
+
+    backgroundColor: "#EBE8CD",
+
+    borderWidth: 1,
+
+    borderColor: "#713F12",
+  },
+
+  elevatedTemperatureBadgeText: {
+
+    color: "#713F12",
+  },
+
+  highTemperatureBadge: {
+
+    backgroundColor: "#EFE2CC",
+
+    borderWidth: 1,
+
+    borderColor: "#7C2D12",
+  },
+
+  highTemperatureBadgeText: {
+
+    color: "#7C2D12",
+  },
+
+  criticalTemperatureBadge: {
+
+    backgroundColor: "#EFE0DC",
+
+    borderWidth: 1,
+
+    borderColor: "#7F1D1D",
+  },
+
+  criticalTemperatureBadgeText: {
+
+    color: "#7F1D1D",
+  },
 });
