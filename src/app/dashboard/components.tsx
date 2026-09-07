@@ -11,23 +11,17 @@ import {
 } from "react-native";
 
 import ComponentStatusBox from "@/components/forms/ComponentStatusBox";
-
 import Copyright from "@/components/forms/Copyright";
 
 import NavBar from "@/components/layout/Navbar";
-
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-
 import Sidebar from "@/components/layout/Sidebar";
 
 import AppText from "@/components/ui/AppText";
-
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
-
 import { supabase } from "@/lib/supabase";
-
 
 // ============================================
 // COMPONENT IMAGE MAPPING
@@ -35,45 +29,64 @@ import { supabase } from "@/lib/supabase";
 
 const componentImages: Record<string, any> = {
   "Buck Converter": require(
-    "@/assets/images/components/Buck Converter.png"
+    "@/assets/images/components/Buck Converter.png",
   ),
 
   DS18B20: require(
-    "@/assets/images/components/DS18B20.png"
+    "@/assets/images/components/DS18B20.png",
   ),
 
   ESP32: require(
-    "@/assets/images/components/ESP32.png"
+    "@/assets/images/components/ESP32.png",
   ),
 
   "INA228 (Input)": require(
-    "@/assets/images/components/INA228.png"
+    "@/assets/images/components/INA228.png",
   ),
 
   "INA228 (Output)": require(
-    "@/assets/images/components/INA228.png"
+    "@/assets/images/components/INA228.png",
   ),
 
   "LCD2004 with I2C": require(
-    "@/assets/images/components/LCD2004.png"
+    "@/assets/images/components/LCD2004.png",
   ),
 
   "I2C OLED 1.3-inch": require(
-    "@/assets/images/components/OLED 1.3Inch.png"
+    "@/assets/images/components/OLED 1.3Inch.png",
   ),
 
   "Relay Module 5V 1 Channel": require(
-    "@/assets/images/components/Relay.png"
+    "@/assets/images/components/Relay.png",
   ),
 
   "Voltage Sensor": require(
-    "@/assets/images/components/Voltage Sensor.png"
+    "@/assets/images/components/Voltage Sensor.png",
   ),
 };
 
+// ============================================
+// TYPES
+// ============================================
+
+type ComponentData = {
+  component_id: string;
+  component_name: string;
+  status: boolean;
+};
+
+type DeviceStatus =
+  | "Online"
+  | "Offline"
+  | "online"
+  | "offline"
+  | null;
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function ComponentsScreen() {
-
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
 
@@ -83,32 +96,34 @@ export default function ComponentsScreen() {
     >("All");
 
   const [components, setComponents] =
-    useState<
-      {
-        component_id: string;
-        component_name: string;
-        status: boolean;
-      }[]
-    >([]);
+    useState<ComponentData[]>([]);
 
+  // ESP32 status from monitoring table
+  const [deviceStatus, setDeviceStatus] =
+    useState<DeviceStatus>(null);
 
   // ============================================
-  // LOAD COMPONENTS + REALTIME
+  // LOAD COMPONENTS + ESP32 STATUS + REALTIME
   // ============================================
 
   useEffect(() => {
-
     let cancelled = false;
 
-    let channel:
+    let componentsChannel:
       | ReturnType<typeof supabase.channel>
       | null = null;
 
+    let monitoringChannel:
+      | ReturnType<typeof supabase.channel>
+      | null = null;
+
+    // ==========================================
+    // LOAD COMPONENTS
+    // ==========================================
 
     const loadComponents = async (
       userId: string,
     ) => {
-
       const { data, error } =
         await supabase
           .from("components")
@@ -116,158 +131,227 @@ export default function ComponentsScreen() {
             "component_id, component_name, status",
           )
           .eq("user_id", userId)
-          .order(
-            "component_name",
-            {
-              ascending: true,
-            },
-          );
+          .order("component_name", {
+            ascending: true,
+          });
 
-
-      if (cancelled) {
-        return;
-      }
-
+      if (cancelled) return;
 
       if (error) {
-
         console.error(
           "Error loading components:",
           error.message,
         );
-
         return;
-
       }
-
 
       setComponents(data ?? []);
-
     };
 
+    // ==========================================
+    // LOAD ESP32 DEVICE STATUS
+    // ==========================================
+
+    const loadDeviceStatus = async (
+      userId: string,
+    ) => {
+      const { data, error } =
+        await supabase
+          .from("monitoring")
+          .select("device_status")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error(
+          "Error loading device status:",
+          error.message,
+        );
+
+        setDeviceStatus(null);
+        return;
+      }
+
+      setDeviceStatus(
+        data?.device_status ?? null,
+      );
+    };
+
+    // ==========================================
+    // SETUP
+    // ==========================================
 
     const setup = async () => {
-
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
 
+      if (cancelled) return;
 
-      if (cancelled) {
+      if (userError) {
+        console.error(
+          "Error getting user:",
+          userError.message,
+        );
         return;
       }
-
 
       if (!user) {
-
         setComponents([]);
-
-        return;
-
-      }
-
-
-      // Load initial component data
-
-      await loadComponents(user.id);
-
-
-      if (cancelled) {
+        setDeviceStatus(null);
         return;
       }
 
+      // ========================================
+      // LOAD INITIAL DATA
+      // ========================================
 
-      const newChannel =
+      await Promise.all([
+        loadComponents(user.id),
+        loadDeviceStatus(user.id),
+      ]);
+
+      if (cancelled) return;
+
+      // ========================================
+      // COMPONENTS REALTIME
+      // ========================================
+
+      const newComponentsChannel =
         supabase.channel(
-          `components-${user.id}`,
+          `components-${user.id}-${Date.now()}`,
         );
 
+      newComponentsChannel
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "components",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            if (!cancelled) {
+              loadComponents(user.id);
+            }
+          },
+        )
+        .subscribe((status, error) => {
+          console.log(
+            "Components Realtime status:",
+            status,
+            error,
+          );
 
-      newChannel.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "components",
-          filter:
-            `user_id=eq.${user.id}`,
-        },
-        () => {
-
-          if (cancelled) {
-            return;
+          if (
+            status === "CHANNEL_ERROR"
+          ) {
+            console.error(
+              "Components Realtime channel error:",
+              error,
+            );
           }
+        });
 
+      componentsChannel =
+        newComponentsChannel;
 
-          loadComponents(user.id);
+      // ========================================
+      // MONITORING REALTIME
+      // ========================================
 
-        },
-      );
-
-
-      if (cancelled) {
-
-        supabase.removeChannel(
-          newChannel,
+      const newMonitoringChannel =
+        supabase.channel(
+          `monitoring-${user.id}-${Date.now()}`,
         );
 
-        return;
+      newMonitoringChannel
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "monitoring",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (cancelled) return;
 
-      }
+            const updatedStatus =
+              payload.new.device_status;
 
+            setDeviceStatus(
+              updatedStatus as DeviceStatus,
+            );
+          },
+        )
+        .subscribe((status, error) => {
+          console.log(
+            "Monitoring Realtime status:",
+            status,
+            error,
+          );
 
-      channel = newChannel;
+          if (
+            status === "CHANNEL_ERROR"
+          ) {
+            console.error(
+              "Monitoring Realtime channel error:",
+              error,
+            );
+          }
+        });
 
-      channel.subscribe();
-
+      monitoringChannel =
+        newMonitoringChannel;
     };
-
 
     setup();
 
-
-    // ============================================
+    // ==========================================
     // CLEANUP
-    // ============================================
+    // ==========================================
 
     return () => {
-
       cancelled = true;
 
-
-      if (channel) {
-
+      if (componentsChannel) {
         supabase.removeChannel(
-          channel,
+          componentsChannel,
         );
-
-        channel = null;
-
       }
 
+      if (monitoringChannel) {
+        supabase.removeChannel(
+          monitoringChannel,
+        );
+      }
     };
-
   }, []);
 
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
-
     <ScreenContainer2>
-
       <NavBar
         onMenuPress={() =>
           setSidebarVisible(true)
         }
       />
 
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
+        {/* Header */}
 
         <View style={styles.card}>
-
           <AppText
             variant="heading"
             style={styles.title}
@@ -275,21 +359,17 @@ export default function ComponentsScreen() {
             Components
           </AppText>
 
-
           <AppText
             variant="caption"
             style={styles.subtitle}
           >
             Monitor AdlaWatt system components.
           </AppText>
-
         </View>
-
 
         {/* STATUS FILTER */}
 
         <View style={styles.statusToggle}>
-
           {(
             [
               "All",
@@ -297,7 +377,6 @@ export default function ComponentsScreen() {
               "Inactive",
             ] as const
           ).map((option) => (
-
             <Pressable
               key={option}
               onPress={() =>
@@ -313,36 +392,28 @@ export default function ComponentsScreen() {
                       : Colors.light.primary,
                 },
 
-                pressed &&
-                styles.pressed,
+                pressed && styles.pressed,
               ]}
             >
-
               <AppText
                 variant="caption"
                 style={[
                   styles.statusText,
 
                   statusFilter === option &&
-                  styles.activeStatusText,
+                    styles.activeStatusText,
                 ]}
               >
                 {option}
               </AppText>
-
             </Pressable>
-
           ))}
-
         </View>
-
 
         {/* COMPONENT GRID */}
 
         <View style={styles.componentGrid}>
-
           {(() => {
-
             const filteredComponents =
               [...components]
                 .sort((a, b) =>
@@ -351,6 +422,9 @@ export default function ComponentsScreen() {
                   ),
                 )
                 .filter((component) => {
+                  // ==================================
+                  // ALL FILTER
+                  // ==================================
 
                   if (
                     statusFilter === "All"
@@ -358,93 +432,115 @@ export default function ComponentsScreen() {
                     return true;
                   }
 
+                  // ==================================
+                  // CHECK IF COMPONENT IS ESP32
+                  // ==================================
+
+                  const isESP32 =
+                    component.component_name ===
+                    "ESP32";
+
+                  // ==================================
+                  // ESP32 STATUS COMES FROM
+                  // MONITORING.DEVICE_STATUS
+                  // ==================================
+
+                  const isActive = isESP32
+                    ? String(
+                        deviceStatus,
+                      ).toLowerCase() ===
+                      "online"
+                    : component.status;
+
+                  // ==================================
+                  // ACTIVE / INACTIVE FILTER
+                  // ==================================
 
                   return statusFilter ===
                     "Active"
-                    ? component.status
-                    : !component.status;
-
+                    ? isActive
+                    : !isActive;
                 });
 
-
-            // ============================================
+            // ========================================
             // EMPTY STATE
-            // ============================================
+            // ========================================
 
             if (
               filteredComponents.length === 0
             ) {
-
               return (
-
                 <EmptyState
                   title={
                     statusFilter === "All"
                       ? "No Components"
-                      : statusFilter === "Active"
+                      : statusFilter ===
+                          "Active"
                         ? "No Active Components"
                         : "No Inactive Components"
                   }
                   description={
                     statusFilter === "All"
                       ? "No components are available for this account."
-                      : statusFilter === "Active"
+                      : statusFilter ===
+                          "Active"
                         ? "No components are currently active."
                         : "No components are currently inactive."
                   }
                   icon="hardware-chip-outline"
                 />
-
               );
-
             }
 
-
-            // ============================================
+            // ========================================
             // COMPONENT CARDS
-            // ============================================
+            // ========================================
 
             return filteredComponents.map(
               (component) => {
-
-                const status =
+                const isESP32 =
                   component.component_name ===
-                    "ESP32"
-                    ? component.status
-                      ? "Connected"
-                      : "Not Connected"
-                    : component.status
-                      ? "Active"
-                      : "Inactive";
+                  "ESP32";
 
+                // ESP32 connection status
+                // comes from monitoring table.
+                const isConnected =
+                  String(
+                    deviceStatus,
+                  ).toLowerCase() ===
+                  "online";
+
+                const status = isESP32
+                  ? isConnected
+                    ? "Connected"
+                    : "Not Connected"
+                  : component.status
+                    ? "Active"
+                    : "Inactive";
 
                 return (
-
                   <ComponentStatusBox
-                    key={component.component_id}
-                    name={component.component_name}
+                    key={
+                      component.component_id
+                    }
+                    name={
+                      component.component_name
+                    }
                     status={status}
                     imageSource={
                       componentImages[
-                      component.component_name
+                        component.component_name
                       ]
                     }
                   />
-
                 );
-
               },
             );
-
           })()}
-
         </View>
 
-
         <Copyright />
-
       </ScrollView>
-
 
       <Sidebar
         visible={sidebarVisible}
@@ -452,12 +548,13 @@ export default function ComponentsScreen() {
           setSidebarVisible(false)
         }
       />
-
     </ScreenContainer2>
-
   );
-
 }
+
+// ============================================
+// STYLES
+// ============================================
 
 
 const styles = StyleSheet.create({
