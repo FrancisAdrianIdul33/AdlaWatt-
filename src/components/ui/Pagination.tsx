@@ -99,50 +99,55 @@ export default function Pagination({
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
+    width: "80%", // Adjust overall pagination width
+    alignSelf: "center", // Always centers the pagination
+
     flexDirection: "row",
     alignItems: "stretch",
-    gap: 10,
-    marginTop: 22,
-    marginBottom: 8,
+    justifyContent: "center",
+
+    gap: 6,
+    marginTop: 16,
+    marginBottom: 6,
   },
 
   navigationBox: {
     flex: 1,
-    minHeight: 72,
+    minHeight: 58,
     backgroundColor: Colors.glass.white,
     borderWidth: 3,
     borderColor: Colors.light.primary,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 2,
   },
 
   pageBox: {
     flex: 2,
-    minHeight: 72,
+    minHeight: 58,
     backgroundColor: Colors.glass.white,
     borderWidth: 3,
     borderColor: Colors.light.primary,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
 
   navigationText: {
     color: "#000000",
     fontWeight: "600",
+    fontSize: 12,
   },
 
   pageText: {
     color: "#000000",
     fontWeight: "700",
     textAlign: "center",
+    fontSize: 12,
   },
 
   disabledBox: {
