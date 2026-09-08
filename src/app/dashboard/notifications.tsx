@@ -26,6 +26,8 @@ import NotificationCard, {
   NotificationType,
 } from "@/components/NotificationCard";
 
+import Pagination from "@/components/ui/Pagination";
+
 import AppText from "@/components/ui/AppText";
 
 import EmptyState from "@/components/ui/EmptyState";
@@ -63,6 +65,15 @@ export default function NotificationsScreen() {
 
   const [typeDropdownVisible, setTypeDropdownVisible] =
     useState(false);
+
+  // ============================================
+  // PAGINATION
+  // ============================================
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const notificationsPerPage = 10;
 
   // ============================================
   // LOAD CURRENT USER'S NOTIFICATIONS
@@ -227,17 +238,41 @@ export default function NotificationsScreen() {
   ]);
 
   // ============================================
+  // PAGINATION CALCULATIONS
+  // ============================================
+
+  const totalPages = Math.ceil(
+    filteredNotifications.length /
+      notificationsPerPage,
+  );
+
+  const pageStart =
+    (currentPage - 1) *
+    notificationsPerPage;
+
+  const currentPageNotifications =
+    totalPages === 0
+      ? []
+      : filteredNotifications.slice(
+          pageStart,
+          pageStart + notificationsPerPage,
+        );
+
+  const displayCurrentPage =
+    totalPages === 0 ? 0 : currentPage;
+
+  // ============================================
   // RECENT / EARLIER
   // ============================================
 
   const recentNotifications =
-    filteredNotifications.filter(
+    currentPageNotifications.filter(
       (notification) =>
         !notification.isRead,
     );
 
   const earlierNotifications =
-    filteredNotifications.filter(
+    currentPageNotifications.filter(
       (notification) =>
         notification.isRead,
     );
@@ -250,7 +285,7 @@ export default function NotificationsScreen() {
     value: TimeFilter,
   ) => {
     setTimeFilter(value);
-
+    setCurrentPage(1);
     setTimeDropdownVisible(false);
   };
 
@@ -258,7 +293,7 @@ export default function NotificationsScreen() {
     value: "All" | NotificationType,
   ) => {
     setTypeFilter(value);
-
+    setCurrentPage(1);
     setTypeDropdownVisible(false);
   };
 
@@ -621,13 +656,29 @@ export default function NotificationsScreen() {
         )}
 
         {/* Empty State */}
-        {filteredNotifications.length === 0 && (
+        {currentPageNotifications.length === 0 && (
           <EmptyState
             icon="notifications-off-outline"
             title="No Notifications"
             description="No notifications found for the selected filters."
           />
         )}
+
+        {/* Pagination - Always Visible */}
+        <Pagination
+          currentPage={displayCurrentPage}
+          totalPages={totalPages}
+          onPrevious={() =>
+            setCurrentPage((page) =>
+              Math.max(1, page - 1),
+            )
+          }
+          onNext={() =>
+            setCurrentPage((page) =>
+              Math.min(totalPages, page + 1),
+            )
+          }
+        />
 
         <Copyright />
       </ScrollView>
