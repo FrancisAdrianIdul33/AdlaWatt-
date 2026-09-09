@@ -1,9 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React, {
-  useEffect,
-  useState,
-} from "react";
+import React from "react";
 
 import {
   StyleSheet,
@@ -18,7 +15,7 @@ import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
 
-import { supabase } from "@/lib/supabase";
+import { MonitoringData } from "@/services/monitoringService";
 
 // ============================================================
 // TYPES
@@ -61,33 +58,6 @@ type NonBatteryChartType =
   Exclude<ChartType, "battery">;
 
 // ============================================================
-// MONITORING DATA
-// ============================================================
-
-interface MonitoringData {
-  battery_level: number;
-  battery_status: BatteryStatus;
-  time_remaining: string;
-
-  solar_input: number;
-  solar_status: SolarStatus;
-
-  current_load: number;
-
-  device_status: DeviceStatus;
-
-  battery_temperature: number;
-  battery_temperature_status:
-    TemperatureStatus;
-
-  dod_status: DoDStatus;
-
-  solar_temperature: number;
-  solar_temperature_status:
-    TemperatureStatus;
-}
-
-// ============================================================
 // CARD DATA
 // ============================================================
 
@@ -111,6 +81,8 @@ interface CardData {
 
 interface ChartCardProps {
   type: ChartType;
+  monitoring: MonitoringData | null;
+  loading: boolean;
 }
 
 // ============================================================
@@ -137,236 +109,9 @@ const LOW_BATTERY_THRESHOLD = 20;
 
 export default function ChartCard({
   type,
+  monitoring,
+  loading,
 }: ChartCardProps) {
-
-  const [
-    monitoring,
-    setMonitoring,
-  ] = useState<
-    MonitoringData | null
-  >(null);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  // ==========================================================
-  // LOAD MONITORING DATA + REALTIME
-  // ==========================================================
-
-  useEffect(() => {
-
-    let mounted = true;
-
-    const loadMonitoring =
-      async () => {
-
-        try {
-
-          // ----------------------------------------------------
-          // GET CURRENT USER
-          // ----------------------------------------------------
-
-          const {
-            data: { user },
-            error: userError,
-          } =
-            await supabase.auth.getUser();
-
-          if (!mounted) {
-            return;
-          }
-
-          if (userError) {
-
-            console.error(
-              "Error getting user:",
-              userError.message,
-            );
-
-            setMonitoring(null);
-
-            return;
-          }
-
-          if (!user) {
-
-            setMonitoring(null);
-
-            return;
-          }
-
-          // ----------------------------------------------------
-          // GET INITIAL MONITORING DATA
-          // ----------------------------------------------------
-
-          const {
-            data,
-            error,
-          } = await supabase
-            .from("monitoring")
-            .select(`
-              battery_level,
-              battery_status,
-              time_remaining,
-              solar_input,
-              solar_status,
-              current_load,
-              device_status,
-              battery_temperature,
-              battery_temperature_status,
-              dod_status,
-              solar_temperature,
-              solar_temperature_status
-            `)
-            .eq(
-              "user_id",
-              user.id,
-            )
-            .maybeSingle();
-
-          if (!mounted) {
-            return;
-          }
-
-          if (error) {
-
-            console.error(
-              "Error loading monitoring data:",
-              error.message,
-            );
-
-            setMonitoring(null);
-
-            return;
-          }
-
-          setMonitoring(
-            data as MonitoringData | null,
-          );
-
-          // ----------------------------------------------------
-          // SUPABASE REALTIME
-          // ----------------------------------------------------
-
-          const channel =
-            supabase
-              .channel(
-                `monitoring-${user.id}-${Date.now()}`,
-              )
-              .on(
-                "postgres_changes",
-                {
-                  event: "*",
-                  schema: "public",
-                  table: "monitoring",
-                  filter:
-                    `user_id=eq.${user.id}`,
-                },
-                (payload) => {
-
-                  if (!mounted) {
-                    return;
-                  }
-
-                  if (
-                    payload.eventType ===
-                    "DELETE"
-                  ) {
-
-                    setMonitoring(null);
-
-                    return;
-                  }
-
-                  setMonitoring(
-                    payload.new as MonitoringData,
-                  );
-                },
-              )
-              .subscribe(
-                (status) => {
-
-                  if (
-                    status ===
-                    "CHANNEL_ERROR"
-                  ) {
-
-                    console.error(
-                      "Monitoring Realtime channel error.",
-                    );
-                  }
-
-                  if (
-                    status ===
-                    "TIMED_OUT"
-                  ) {
-
-                    console.error(
-                      "Monitoring Realtime connection timed out.",
-                    );
-                  }
-                },
-              );
-
-          // ----------------------------------------------------
-          // CLEANUP CHANNEL
-          // ----------------------------------------------------
-
-          return () => {
-
-            supabase.removeChannel(
-              channel,
-            );
-          };
-
-        } catch (error) {
-
-          console.error(
-            "Unexpected monitoring error:",
-            error,
-          );
-
-          if (mounted) {
-
-            setMonitoring(null);
-          }
-
-        } finally {
-
-          if (mounted) {
-
-            setLoading(false);
-          }
-        }
-      };
-
-    let cleanupChannel:
-      | (() => void)
-      | undefined;
-
-    loadMonitoring()
-      .then((cleanup) => {
-
-        cleanupChannel = cleanup;
-      });
-
-    // ==========================================================
-    // CLEANUP
-    // ==========================================================
-
-    return () => {
-
-      mounted = false;
-
-      if (cleanupChannel) {
-
-        cleanupChannel();
-      }
-    };
-
-  }, []);
 
   // ==========================================================
   // BATTERY CARD

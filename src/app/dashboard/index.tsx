@@ -7,31 +7,32 @@ import {
 } from "react-native";
 
 import ActivityCard from "@/components/ActivityCard";
-
 import AppRecCard from "@/components/AppRecCard";
-
 import ChartCard from "@/components/ChartCard";
-
 import Copyright from "@/components/forms/Copyright";
-
 import NavBar from "@/components/layout/Navbar";
-
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-
 import Sidebar from "@/components/layout/Sidebar";
-
 import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
+
+import {
+  useMonitoring,
+} from "@/services/monitoringService";
 
 export default function DashboardScreen() {
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
 
+  const {
+    monitoring,
+    loading,
+  } = useMonitoring();
+
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
-
       <NavBar
         onMenuPress={() =>
           setSidebarVisible(true)
@@ -39,7 +40,6 @@ export default function DashboardScreen() {
       />
 
       {/* Dashboard */}
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={
@@ -48,7 +48,6 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Dashboard Header */}
-
         <View style={styles.headerCard}>
           <AppText
             variant="heading"
@@ -66,7 +65,6 @@ export default function DashboardScreen() {
         </View>
 
         {/* Real-Time Monitoring */}
-
         <View style={styles.section}>
           <AppText
             variant="body"
@@ -77,39 +75,60 @@ export default function DashboardScreen() {
 
           <View style={styles.monitorGrid}>
             {/* Battery - Full Row */}
-
             <View
               style={
                 styles.batteryCardContainer
               }
             >
-              <ChartCard type="battery" />
+              <ChartCard
+                type="battery"
+                monitoring={monitoring}
+                loading={loading}
+              />
             </View>
 
             {/* Row 1 */}
+            <ChartCard
+              type="solar"
+              monitoring={monitoring}
+              loading={loading}
+            />
 
-            <ChartCard type="solar" />
-
-            <ChartCard type="load" />
+            <ChartCard
+              type="load"
+              monitoring={monitoring}
+              loading={loading}
+            />
 
             {/* Row 2 */}
+            <ChartCard
+              type="device"
+              monitoring={monitoring}
+              loading={loading}
+            />
 
-            <ChartCard type="device" />
-
-            <ChartCard type="dod" />
+            <ChartCard
+              type="dod"
+              monitoring={monitoring}
+              loading={loading}
+            />
 
             {/* Row 3 */}
-
-            <ChartCard type="temperature" />
+            <ChartCard
+              type="temperature"
+              monitoring={monitoring}
+              loading={loading}
+            />
 
             <ChartCard
               type="solar_temperature"
+              monitoring={monitoring}
+              loading={loading}
             />
           </View>
         </View>
 
         {/* Appliance Recommendation */}
-
         <View style={styles.section}>
           <AppText
             variant="body"
@@ -122,7 +141,6 @@ export default function DashboardScreen() {
         </View>
 
         {/* Recent Activity */}
-
         <View style={styles.section}>
           <ActivityCard />
         </View>
@@ -131,7 +149,6 @@ export default function DashboardScreen() {
       </ScrollView>
 
       {/* Sidebar */}
-
       <Sidebar
         visible={sidebarVisible}
         onClose={() =>
