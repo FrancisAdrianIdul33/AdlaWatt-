@@ -17,8 +17,8 @@ import {
 } from "react-native";
 
 import ApplianceModal from "@/components/forms/ApplianceModal";
-import EmptyState from "@/components/ui/EmptyState";
 import AppText from "@/components/ui/AppText";
+import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
@@ -594,7 +594,6 @@ export default function AppRecCard({
     </>
   );
 }
-
 const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
@@ -603,16 +602,43 @@ const styles = StyleSheet.create({
   },
 
   // ============================================
-  // FIXED APPLIANCE CAROUSEL
+  // FIXED RECOMMENDATION CONTAINER
+  //
+  // This represents your imaginary box.
+  // Everything inside follows this fixed space.
+  // ============================================
+
+  fixedRecommendationContainer: {
+    width: "100%",
+
+    // Fixed total height based on your
+    // intended Get Started layout.
+    height: 380,
+
+    justifyContent: "space-between",
+  },
+
+  // ============================================
+  // TOP SECTION
+  //
+  // Always sticks to the top.
+  // ============================================
+
+  recommendationTopSection: {
+    width: "100%",
+  },
+
+  // ============================================
+  // APPLIANCE CAROUSEL / EMPTY STATE SLOT
   // ============================================
 
   applianceRow: {
     width: "100%",
+    height: 240,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "flex-start",
     gap: 12,
-    minHeight: 220,
   },
 
   applianceBox: {
@@ -688,16 +714,17 @@ const styles = StyleSheet.create({
 
   // ============================================
   // CAROUSEL INDICATOR
+  //
+  // Always remains directly below top content.
   // ============================================
 
   indicator: {
+    width: "100%",
+    height: 33,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    minHeight: 7,
-    marginTop: 10,
-    marginBottom: 16,
   },
 
   dot: {
@@ -707,25 +734,35 @@ const styles = StyleSheet.create({
   },
 
   // ============================================
+  // BOTTOM SECTION
+  //
+  // Always sticks to bottom of the fixed container.
+  // ============================================
+
+  recommendationBottomSection: {
+    width: "100%",
+    alignItems: "center",
+  },
+
+  // ============================================
   // STATUS TOGGLE
   // ============================================
 
   toggle: {
     width: "100%",
     maxWidth: 360,
-    minHeight: 46,
+    height: 51,
     flexDirection: "row",
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
     borderColor: Colors.light.border,
     borderRadius: Radius.md,
     padding: 3,
-    marginTop: 2,
   },
 
   toggleButton: {
     flex: 1,
-    minHeight: 40,
+    height: 41,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
@@ -748,7 +785,7 @@ const styles = StyleSheet.create({
   viewAll: {
     width: "100%",
     maxWidth: 360,
-    minHeight: 46,
+    height: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -774,8 +811,7 @@ const styles = StyleSheet.create({
     minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor:
-      "rgba(255, 165, 0, 0.08)",
+    backgroundColor: "rgba(255, 165, 0, 0.08)",
     borderWidth: 1,
     borderColor: Colors.light.secondary,
     borderRadius: Radius.md,
@@ -805,11 +841,14 @@ const styles = StyleSheet.create({
 
   // ============================================
   // EMPTY STATE
+  //
+  // Occupies the same top content slot.
   // ============================================
 
   recommendationEmptyState: {
+
     width: "100%",
-    marginBottom: 14,
+    height: 275,
   },
 
   // ============================================
@@ -818,6 +857,7 @@ const styles = StyleSheet.create({
 
   getStartedBox: {
     width: "100%",
+    height: 275,
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: Colors.light.border,
@@ -825,6 +865,7 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
     paddingHorizontal: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   getStartedTitle: {
@@ -835,7 +876,7 @@ const styles = StyleSheet.create({
   },
 
   addAppliancesButton: {
-    minHeight: 46,
+    height: 46,
     width: "100%",
     paddingHorizontal: 18,
     flexDirection: "row",
