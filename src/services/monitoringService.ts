@@ -161,13 +161,13 @@ export const subscribeToMonitoring = async (
       if (
         status === "CHANNEL_ERROR"
       ) {
-        console.error(
+        console.warn(
           "Monitoring Realtime channel error.",
         );
       }
 
       if (status === "TIMED_OUT") {
-        console.error(
+        console.warn(
           "Monitoring Realtime connection timed out.",
         );
       }
