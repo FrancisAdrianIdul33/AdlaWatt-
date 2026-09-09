@@ -14,17 +14,26 @@ import {
 } from "react-native";
 
 import Copyright from "@/components/forms/Copyright";
+
 import NavBar from "@/components/layout/Navbar";
+
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
+
 import Sidebar from "@/components/layout/Sidebar";
+
 import NotificationCard, {
   NotificationCardData,
   NotificationType,
 } from "@/components/NotificationCard";
+
+import Pagination from "@/components/ui/Pagination";
+
 import AppText from "@/components/ui/AppText";
+
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+
 import { supabase } from "@/lib/supabase";
 
 type TimeFilter =
@@ -57,8 +66,14 @@ export default function NotificationsScreen() {
   const [typeDropdownVisible, setTypeDropdownVisible] =
     useState(false);
 
+  // ============================================
+  // PAGINATION
+  // ============================================
+
   const [currentPage, setCurrentPage] =
     useState(1);
+
+  const notificationsPerPage = 10;
 
   // ============================================
   // LOAD CURRENT USER'S NOTIFICATIONS
@@ -90,6 +105,7 @@ export default function NotificationsScreen() {
           "Error loading notifications:",
           error.message,
         );
+
         setNotifications([]);
         return;
       }
@@ -104,6 +120,7 @@ export default function NotificationsScreen() {
             id: notification.notif_id,
             title: notification.title,
             message: notification.description,
+
             date: dateObject.toLocaleDateString(
               "en-US",
               {
@@ -112,6 +129,7 @@ export default function NotificationsScreen() {
                 year: "numeric",
               },
             ),
+
             time: dateObject.toLocaleTimeString(
               "en-US",
               {
@@ -119,9 +137,12 @@ export default function NotificationsScreen() {
                 minute: "2-digit",
               },
             ),
+
             type:
               notification.type as NotificationType,
+
             isRead: notification.read,
+
             timestamp: dateObject.getTime(),
           };
         });
@@ -138,8 +159,6 @@ export default function NotificationsScreen() {
 
   const totalNotifications =
     notifications.length;
-
-  const notificationsPerPage = 15;
 
   // ============================================
   // FILTER NOTIFICATIONS
@@ -219,29 +238,28 @@ export default function NotificationsScreen() {
   ]);
 
   // ============================================
-  // PAGINATION
+  // PAGINATION CALCULATIONS
   // ============================================
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(
-      filteredNotifications.length /
-        notificationsPerPage,
-    ),
+  const totalPages = Math.ceil(
+    filteredNotifications.length /
+      notificationsPerPage,
   );
 
   const pageStart =
     (currentPage - 1) *
     notificationsPerPage;
 
-  const pageEnd =
-    currentPage * notificationsPerPage;
-
   const currentPageNotifications =
-    filteredNotifications.slice(
-      pageStart,
-      pageEnd,
-    );
+    totalPages === 0
+      ? []
+      : filteredNotifications.slice(
+          pageStart,
+          pageStart + notificationsPerPage,
+        );
+
+  const displayCurrentPage =
+    totalPages === 0 ? 0 : currentPage;
 
   // ============================================
   // RECENT / EARLIER
@@ -327,6 +345,7 @@ export default function NotificationsScreen() {
       console.error(
         "No authenticated user found.",
       );
+
       return;
     }
 
@@ -341,6 +360,7 @@ export default function NotificationsScreen() {
         "Error marking notifications as read:",
         error.message,
       );
+
       return;
     }
 
@@ -395,7 +415,10 @@ export default function NotificationsScreen() {
             style={styles.totalText}
           >
             Total Notifications:{" "}
-            <AppText style={styles.totalNumber}>
+
+            <AppText
+              style={styles.totalNumber}
+            >
               {totalNotifications}
             </AppText>
           </AppText>
@@ -411,6 +434,7 @@ export default function NotificationsScreen() {
                 setTimeDropdownVisible(
                   !timeDropdownVisible,
                 );
+
                 setTypeDropdownVisible(false);
               }}
             >
@@ -480,6 +504,7 @@ export default function NotificationsScreen() {
                 setTypeDropdownVisible(
                   !typeDropdownVisible,
                 );
+
                 setTimeDropdownVisible(false);
               }}
             >
@@ -599,7 +624,9 @@ export default function NotificationsScreen() {
               Recent
             </AppText>
 
-            <View style={styles.notificationList}>
+            <View
+              style={styles.notificationList}
+            >
               {recentNotifications.map(
                 (notification) => (
                   <NotificationCard
@@ -612,17 +639,21 @@ export default function NotificationsScreen() {
           </View>
         )}
 
-       {/* Read Notifications */}
-{earlierNotifications.length > 0 && (
-  <View style={styles.notificationList}>
-    {earlierNotifications.map((notification) => (
-      <NotificationCard
-        key={notification.id}
-        notification={notification}
-      />
-    ))}
-  </View>
-)}
+        {/* Read Notifications */}
+        {earlierNotifications.length > 0 && (
+          <View
+            style={styles.notificationList}
+          >
+            {earlierNotifications.map(
+              (notification) => (
+                <NotificationCard
+                  key={notification.id}
+                  notification={notification}
+                />
+              ),
+            )}
+          </View>
+        )}
 
         {/* Empty State */}
         {currentPageNotifications.length === 0 && (
@@ -633,92 +664,21 @@ export default function NotificationsScreen() {
           />
         )}
 
-        {/* Pagination */}
-        {filteredNotifications.length >
-          notificationsPerPage && (
-          <View style={styles.pagination}>
-            {/* Previous */}
-            <Pressable
-              style={[
-                styles.pageButton,
-                currentPage === 1 &&
-                  styles.disabledPageButton,
-              ]}
-              disabled={currentPage === 1}
-              onPress={() =>
-                setCurrentPage(
-                  currentPage - 1,
-                )
-              }
-            >
-              <Ionicons
-                name="chevron-back-outline"
-                size={18}
-                color={
-                  currentPage === 1
-                    ? Colors.light.textSecondary
-                    : Colors.light.primary
-                }
-              />
-            </Pressable>
-
-            {/* Page Numbers */}
-            {Array.from(
-              { length: totalPages },
-              (_, index) => index + 1,
-            ).map((page) => (
-              <Pressable
-                key={page}
-                style={[
-                  styles.pageNumber,
-                  currentPage === page &&
-                    styles.activePageNumber,
-                ]}
-                onPress={() =>
-                  setCurrentPage(page)
-                }
-              >
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.pageNumberText,
-                    currentPage === page &&
-                      styles.activePageNumberText,
-                  ]}
-                >
-                  {page}
-                </AppText>
-              </Pressable>
-            ))}
-
-            {/* Next */}
-            <Pressable
-              style={[
-                styles.pageButton,
-                currentPage === totalPages &&
-                  styles.disabledPageButton,
-              ]}
-              disabled={
-                currentPage === totalPages
-              }
-              onPress={() =>
-                setCurrentPage(
-                  currentPage + 1,
-                )
-              }
-            >
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color={
-                  currentPage === totalPages
-                    ? Colors.light.textSecondary
-                    : Colors.light.primary
-                }
-              />
-            </Pressable>
-          </View>
-        )}
+        {/* Pagination - Always Visible */}
+        <Pagination
+          currentPage={displayCurrentPage}
+          totalPages={totalPages}
+          onPrevious={() =>
+            setCurrentPage((page) =>
+              Math.max(1, page - 1),
+            )
+          }
+          onNext={() =>
+            setCurrentPage((page) =>
+              Math.min(totalPages, page + 1),
+            )
+          }
+        />
 
         <Copyright />
       </ScrollView>
@@ -733,6 +693,7 @@ export default function NotificationsScreen() {
     </ScreenContainer2>
   );
 }
+
 const notificationDimensions = {
   borderWidth: 3,
   cardRadius: 16,
@@ -975,75 +936,5 @@ const styles = StyleSheet.create({
     width: "100%",
 
     gap: 12,
-  },
-
-  /* Pagination */
-
-  pagination: {
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    gap: 6,
-
-    marginTop: 22,
-
-    marginBottom: 8,
-  },
-
-  pageButton: {
-    width: 36,
-
-    height: 36,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    borderWidth: 2,
-
-    borderColor: Colors.light.primary,
-
-    borderRadius: 10,
-
-    backgroundColor:
-      Colors.glass.white,
-  },
-
-  disabledPageButton: {
-    borderColor:
-      Colors.light.textSecondary,
-
-    opacity: 0.45,
-  },
-
-  pageNumber: {
-    width: 36,
-
-    height: 36,
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    borderRadius: 10,
-  },
-
-  activePageNumber: {
-    backgroundColor: Colors.light.primary,
-  },
-
-  pageNumberText: {
-    color: Colors.light.primary,
-
-    fontWeight: "600",
-  },
-
-  activePageNumberText: {
-    color: "#FFFFFF",
-
-    fontWeight: "700",
   },
 });

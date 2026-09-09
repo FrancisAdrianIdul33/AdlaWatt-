@@ -17,6 +17,7 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
+import Pagination from "@/components/ui/Pagination";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -67,6 +68,15 @@ export default function ActivityLogsScreen() {
 
   const [totalActivityLogs, setTotalActivityLogs] =
     useState(0);
+
+  // ============================================
+  // PAGINATION
+  // ============================================
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const activityLogsPerPage = 10;
 
   // ============================================
   // LOAD CURRENT USER'S ACTIVITY LOGS
@@ -149,6 +159,7 @@ export default function ActivityLogsScreen() {
       );
 
       setActivityLogs(logs);
+
       setTotalActivityLogs(
         count ?? logs.length,
       );
@@ -206,6 +217,32 @@ export default function ActivityLogsScreen() {
   );
 
   // ============================================
+  // PAGINATED ACTIVITY LOGS
+  // ============================================
+
+  const totalPages =
+    filteredLogs.length === 0
+      ? 0
+      : Math.ceil(
+          filteredLogs.length /
+            activityLogsPerPage,
+        );
+
+  const pageStart =
+    (currentPage - 1) *
+    activityLogsPerPage;
+
+  const pageEnd =
+    currentPage *
+    activityLogsPerPage;
+
+  const currentPageLogs =
+    filteredLogs.slice(
+      pageStart,
+      pageEnd,
+    );
+
+  // ============================================
   // FILTER HANDLERS
   // ============================================
 
@@ -213,6 +250,7 @@ export default function ActivityLogsScreen() {
     filter: TimeFilter,
   ) => {
     setTimeFilter(filter);
+    setCurrentPage(1);
     setTimeDropdownVisible(false);
   };
 
@@ -220,6 +258,7 @@ export default function ActivityLogsScreen() {
     filter: "all" | ActivityType,
   ) => {
     setTypeFilter(filter);
+    setCurrentPage(1);
     setTypeDropdownVisible(false);
   };
 
@@ -286,6 +325,7 @@ export default function ActivityLogsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
+
         <View style={styles.headerCard}>
           <AppText
             variant="heading"
@@ -304,12 +344,14 @@ export default function ActivityLogsScreen() {
         </View>
 
         {/* Total Activity Logs */}
+
         <View style={styles.totalContainer}>
           <AppText
             variant="caption"
             style={styles.totalLabel}
           >
             Total Activity Logs:{" "}
+
             <AppText style={styles.totalValue}>
               {totalActivityLogs}
             </AppText>
@@ -317,19 +359,23 @@ export default function ActivityLogsScreen() {
         </View>
 
         {/* Filters */}
+
         <View style={styles.filterRow}>
           {/* Time Filter */}
+
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
                 setTimeDropdownVisible(
                   !timeDropdownVisible,
                 );
+
                 setTypeDropdownVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
-                pressed && styles.buttonPressed,
+                pressed &&
+                  styles.buttonPressed,
               ]}
             >
               <Ionicons
@@ -411,17 +457,20 @@ export default function ActivityLogsScreen() {
           </View>
 
           {/* Activity Type Filter */}
+
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
                 setTypeDropdownVisible(
                   !typeDropdownVisible,
                 );
+
                 setTimeDropdownVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
-                pressed && styles.buttonPressed,
+                pressed &&
+                  styles.buttonPressed,
               ]}
             >
               <Ionicons
@@ -532,70 +581,101 @@ export default function ActivityLogsScreen() {
           </View>
         </View>
 
-       {/* Activity Cards */}
-<View style={styles.activityList}>
-  {filteredLogs.length === 0 ? (
-    <EmptyState
-      icon="document-text-outline"
-      title="No Activity Logs"
-      description="No activities match the selected filters."
-    />
-  ) : (
-    filteredLogs.map((activity) => {
-      const icon =
-        activity.type === "info"
-          ? "information-circle-outline"
-          : activity.type === "warning"
-            ? "warning-outline"
-            : "alert-circle-outline";
+        {/* Activity Cards */}
 
-      const color =
-        activity.type === "info"
-          ? Colors.light.primary
-          : activity.type === "warning"
-            ? Colors.light.secondary
-            : Colors.light.error;
-
-      return (
-        <View
-          key={activity.id}
-          style={styles.activityCard}
-        >
-          <View style={styles.activityWrapper}>
-            <Ionicons
-              name={icon}
-              size={24}
-              color={color}
+        <View style={styles.activityList}>
+          {currentPageLogs.length === 0 ? (
+            <EmptyState
+              icon="document-text-outline"
+              title="No Activity Logs"
+              description="No activities match the selected filters."
             />
+          ) : (
+            currentPageLogs.map((activity) => {
+              const icon =
+                activity.type === "info"
+                  ? "information-circle-outline"
+                  : activity.type === "warning"
+                    ? "warning-outline"
+                    : "alert-circle-outline";
 
-            <View style={styles.activityContent}>
-              <AppText
-                variant="body"
-                style={styles.activityTitle}
-              >
-                {activity.title}
-              </AppText>
+              const color =
+                activity.type === "info"
+                  ? Colors.light.primary
+                  : activity.type === "warning"
+                    ? Colors.light.secondary
+                    : Colors.light.error;
 
-              <AppText
-                variant="caption"
-                style={styles.activityDescription}
-              >
-                {activity.details}
-              </AppText>
+              return (
+                <View
+                  key={activity.id}
+                  style={styles.activityCard}
+                >
+                  <View
+                    style={styles.activityWrapper}
+                  >
+                    <Ionicons
+                      name={icon}
+                      size={24}
+                      color={color}
+                    />
 
-              <AppText
-                variant="caption"
-                style={styles.activityTimestamp}
-              >
-                {activity.date} • {activity.time}
-              </AppText>
-            </View>
-          </View>
+                    <View
+                      style={styles.activityContent}
+                    >
+                      <AppText
+                        variant="body"
+                        style={styles.activityTitle}
+                      >
+                        {activity.title}
+                      </AppText>
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.activityDescription
+                        }
+                      >
+                        {activity.details}
+                      </AppText>
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.activityTimestamp
+                        }
+                      >
+                        {activity.date} •{" "}
+                        {activity.time}
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+              );
+            })
+          )}
         </View>
-      );
-    })
-  )}
-</View>
+
+        {/* Pagination */}
+
+        <Pagination
+          currentPage={
+            filteredLogs.length === 0
+              ? 0
+              : currentPage
+          }
+          totalPages={totalPages}
+          onPrevious={() =>
+            setCurrentPage((page) =>
+              Math.max(1, page - 1),
+            )
+          }
+          onNext={() =>
+            setCurrentPage((page) =>
+              Math.min(totalPages, page + 1),
+            )
+          }
+        />
 
         <Copyright />
       </ScrollView>
