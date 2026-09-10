@@ -37,7 +37,7 @@ export const Colors = {
   },
   gradient: {
     navBarStart: "#f5f9f5",
-    navBarEnd: "#22C55E",
+    navBarEnd: "#61e290",
   },
    glass: {
     white: "rgba(255, 255, 255, 0.50)",
