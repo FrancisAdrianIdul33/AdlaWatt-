@@ -1,19 +1,18 @@
-import { supabase } from "@/lib/supabase";
+import { Colors } from "@/constants/colors";
+import { Routes } from "@/constants/routes";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   Alert,
   Dimensions,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-
-import { Colors } from "@/constants/colors";
-import { Routes } from "@/constants/routes";
 
 interface SidebarProps {
   visible: boolean;
@@ -26,33 +25,9 @@ export default function Sidebar({
   visible,
   onClose,
 }: SidebarProps) {
-  const [username, setUsername] = useState("");
   const pathname = usePathname();
 
-  useEffect(() => {
-    const loadUsername = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
 
-      if (!user) {
-        setUsername("");
-        return;
-      }
-
-      const { data } = await supabase
-        .from("users")
-        .select("username")
-        .eq("id", user.id)
-        .single();
-
-      setUsername(data?.username ?? "");
-    };
-
-    if (visible) {
-      loadUsername();
-    }
-  }, [visible]);
 
   if (!visible) {
     return null;
@@ -110,9 +85,7 @@ export default function Sidebar({
         {
           text: "Exit",
           style: "destructive",
-          onPress: () => {
-            onClose();
-          },
+          onPress: onClose,
         },
       ],
     );
@@ -147,15 +120,17 @@ export default function Sidebar({
           </Pressable>
         </View>
 
+        {/* AdlaWatt Logo */}
+        <View style={sidebarStyles.logoContainer}>
+          <Image
+            source={require("@/assets/images/adlawatt-logo.png")}
+            style={sidebarStyles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         {/* Main navigation */}
-
-
         <View style={sidebarStyles.navigation}>
-          {username ? (
-            <Text style={sidebarStyles.username}>
-              User: {username}
-            </Text>
-          ) : null}
 
           <SidebarButton
             icon="home-outline"
@@ -256,13 +231,11 @@ function SidebarButton({
       onPress={onPress}
       style={({ pressed }) => [
         sidebarStyles.button,
-
         danger
           ? sidebarStyles.dangerButton
           : active
             ? sidebarStyles.activeButton
             : sidebarStyles.navigationButton,
-
         pressed && sidebarStyles.buttonPressed,
       ]}
     >
@@ -279,7 +252,6 @@ function SidebarButton({
       <Text
         style={[
           sidebarStyles.buttonText,
-
           danger
             ? sidebarStyles.dangerText
             : sidebarStyles.navigationText,
@@ -290,27 +262,24 @@ function SidebarButton({
     </Pressable>
   );
 }
-
 const sidebarDimensions = {
   width: screenWidth * 0.82,
-
   horizontalPadding: 18,
 
   // Space above the first navigation button
   navigationTopMargin: 25,
 
+  // Fixed logo area
+  logoContainerHeight: 105,
+  logoWidth: 150,
+  logoHeight: 70,
+
   buttonHeight: 50,
-
   buttonRadius: 14,
-
   buttonBorderWidth: 3.5,
-
   buttonSpacing: 12,
-
   dividerHeight: 3,
-
   dividerMargin: 20,
-
   overlayOpacity: 0.5,
 
   // Close icon
@@ -320,92 +289,80 @@ const sidebarDimensions = {
 const sidebarStyles = StyleSheet.create({
   overlayContainer: {
     position: "absolute",
-
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-
     zIndex: 1000,
-
     flexDirection: "row",
   },
 
   overlay: {
     flex: 1,
-
     backgroundColor: `rgba(0, 0, 0, ${sidebarDimensions.overlayOpacity})`,
   },
 
   sidebar: {
     width: sidebarDimensions.width,
-
     height: "100%",
-
     backgroundColor: Colors.light.background,
-
     paddingHorizontal:
       sidebarDimensions.horizontalPadding,
-
     paddingBottom: 24,
-
     elevation: 20,
-
     shadowColor: "#000",
-
     shadowOffset: {
       width: -3,
       height: 0,
     },
-
     shadowOpacity: 0.2,
-
     shadowRadius: 8,
   },
 
   closeContainer: {
     width: "100%",
-
     height: 72,
-
     alignItems: "flex-end",
-
     justifyContent: "center",
   },
 
   closeButton: {
     alignItems: "center",
-
     justifyContent: "center",
   },
 
+  /* Fixed logo area */
+  logoContainer: {
+    width: "100%",
+    height: sidebarDimensions.logoContainerHeight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+
+  logo: {
+    width: 250,
+    height: 250,
+  },
   navigation: {
     width: "100%",
-
     marginTop:
       sidebarDimensions.navigationTopMargin,
   },
 
   button: {
+    marginTop: 1,
     width: "100%",
-
     height: sidebarDimensions.buttonHeight,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     paddingHorizontal: 16,
-
     borderRadius:
       sidebarDimensions.buttonRadius,
-
     borderWidth:
       sidebarDimensions.buttonBorderWidth,
-
     marginBottom:
       sidebarDimensions.buttonSpacing,
-
     gap: 12,
   },
 
@@ -421,7 +378,6 @@ const sidebarStyles = StyleSheet.create({
 
   dangerButton: {
     backgroundColor: "#000000",
-
     borderColor: Colors.light.error,
   },
 
@@ -431,7 +387,6 @@ const sidebarStyles = StyleSheet.create({
 
   buttonText: {
     fontSize: 16,
-
     fontWeight: "600",
   },
 
@@ -445,24 +400,13 @@ const sidebarStyles = StyleSheet.create({
 
   divider: {
     width: "100%",
-
     height: sidebarDimensions.dividerHeight,
-
     backgroundColor: Colors.light.border,
-
     marginVertical:
       sidebarDimensions.dividerMargin,
   },
 
   bottomActions: {
     width: "100%",
-  },
-
-  username: {
-    color: "#000000",
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 20,
-    paddingHorizontal: 16,
   },
 });
