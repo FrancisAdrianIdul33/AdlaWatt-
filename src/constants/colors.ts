@@ -35,10 +35,6 @@ export const Colors = {
     warning: "#F59E0B",
     error: "#EF4444",
   },
-  gradient: {
-    navBarStart: "#f5f9f5",
-    navBarEnd: "#61e290",
-  },
    glass: {
     white: "rgba(255, 255, 255, 0.50)",
     whiteStrong: "rgba(255, 255, 255, 0.78)",
