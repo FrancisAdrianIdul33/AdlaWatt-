@@ -103,8 +103,8 @@ export default function AppRecCard({
       { length: count },
       (_, offset) =>
         filteredAppliances[
-          (index + offset) %
-            filteredAppliances.length
+        (index + offset) %
+        filteredAppliances.length
         ],
     );
   }, [filteredAppliances, index]);
@@ -464,7 +464,7 @@ export default function AppRecCard({
                       {
                         backgroundColor:
                           itemIndex ===
-                          index %
+                            index %
                             filteredAppliances.length
                             ? statusColor
                             : Colors.light.border,
@@ -512,7 +512,7 @@ export default function AppRecCard({
                   Colors.light.primary,
               },
               pressed &&
-                styles.pressed,
+              styles.pressed,
             ]}
           >
             <AppText
@@ -520,7 +520,7 @@ export default function AppRecCard({
               style={[
                 styles.toggleText,
                 mode === "advisable" &&
-                  styles.activeToggleText,
+                styles.activeToggleText,
               ]}
             >
               Advisable
@@ -540,7 +540,7 @@ export default function AppRecCard({
                   "#EF4444",
               },
               pressed &&
-                styles.pressed,
+              styles.pressed,
             ]}
           >
             <AppText
@@ -548,7 +548,7 @@ export default function AppRecCard({
               style={[
                 styles.toggleText,
                 mode === "notAdvisable" &&
-                  styles.activeToggleText,
+                styles.activeToggleText,
               ]}
             >
               Not Advisable
@@ -562,8 +562,8 @@ export default function AppRecCard({
             onViewAll
               ? onViewAll()
               : router.push(
-                  Routes.APPLIANCES,
-                )
+                Routes.APPLIANCES,
+              )
           }
           accessibilityRole="button"
           accessibilityLabel="View all appliances"
@@ -811,9 +811,9 @@ const styles = StyleSheet.create({
     minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 165, 0, 0.08)",
-    borderWidth: 1,
-    borderColor: Colors.light.secondary,
+    backgroundColor: Colors.glass.white,
+    borderWidth: 2,
+    borderColor: Colors.light.border,
     borderRadius: Radius.md,
     padding: 10,
     marginTop: 5,
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
   },
 
   tipTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 2,
@@ -841,8 +841,6 @@ const styles = StyleSheet.create({
 
   // ============================================
   // EMPTY STATE
-  //
-  // Occupies the same top content slot.
   // ============================================
 
   recommendationEmptyState: {
