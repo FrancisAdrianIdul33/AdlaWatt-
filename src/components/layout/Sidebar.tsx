@@ -351,7 +351,6 @@ const sidebarStyles = StyleSheet.create({
   },
 
   button: {
-    marginTop: 1,
     width: "100%",
     height: sidebarDimensions.buttonHeight,
     flexDirection: "row",

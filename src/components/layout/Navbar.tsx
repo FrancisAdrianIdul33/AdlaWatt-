@@ -6,14 +6,19 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { supabase } from "@/lib/supabase";
+
+import AppText from "@/components/ui/AppText";
 
 interface NavBarProps {
   onNotificationPress?: () => void;
   onMenuPress?: () => void;
 }
+
+type DeviceStatus = "Online" | "Offline";
 
 export default function NavBar({
   onNotificationPress,
@@ -22,9 +27,75 @@ export default function NavBar({
   const [hasUnreadNotifications, setHasUnreadNotifications] =
     useState(false);
 
+  const [deviceStatus, setDeviceStatus] =
+    useState<DeviceStatus>("Offline");
+
   /*
-   * Check if the authenticated user has
-   * at least one unread notification.
+   * Get device status from Supabase.
+   */
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const loadDeviceStatus = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setDeviceStatus("Offline");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("monitoring")
+        .select("device_status")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error loading device status:", error);
+        setDeviceStatus("Offline");
+        return;
+      }
+
+      setDeviceStatus(
+        data?.device_status === "Online"
+          ? "Online"
+          : "Offline",
+      );
+
+      channel = supabase
+        .channel(`navbar-device-status-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "monitoring",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            setDeviceStatus(
+              payload.new.device_status === "Online"
+                ? "Online"
+                : "Offline",
+            );
+          },
+        )
+        .subscribe();
+    };
+
+    loadDeviceStatus();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, []);
+
+  /*
+   * Check for unread notifications.
    */
   useEffect(() => {
     const checkUnreadNotifications = async () => {
@@ -69,11 +140,34 @@ export default function NavBar({
     router.push(Routes.NOTIFICATIONS);
   };
 
+  const isOnline = deviceStatus === "Online";
+
   return (
     <View style={navBarStyles.wrapper}>
       <View style={navBarStyles.container}>
+
+        {/* Device Status */}
+        <View style={navBarStyles.deviceStatus}>
+          <View
+            style={[
+              navBarStyles.statusDot,
+              isOnline
+                ? navBarStyles.onlineDot
+                : navBarStyles.offlineDot,
+            ]}
+          />
+
+          <AppText
+            variant="caption"
+            style={navBarStyles.statusText}
+          >
+            {deviceStatus}
+          </AppText>
+        </View>
+
         {/* Right-side actions */}
         <View style={navBarStyles.actions}>
+
           {/* Notification */}
           <Pressable
             onPress={handleNotificationPress}
@@ -105,6 +199,7 @@ export default function NavBar({
               color={Colors.light.text}
             />
           </Pressable>
+
         </View>
       </View>
 
@@ -123,8 +218,14 @@ const navBarDimensions = {
   menuIconSize: 31,
   notificationDotSize: 8,
   accentHeight: 3,
-};
 
+  // Device status capsule
+  deviceStatusWidth: 80,
+  deviceStatusHeight: 29,
+  deviceStatusRadius: 20,
+  statusDotSize: 9,
+  statusDotMargin: 8,
+};
 const navBarStyles = StyleSheet.create({
   wrapper: {
     width: "100%",
@@ -144,7 +245,7 @@ const navBarStyles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "space-between", // ← changed
     paddingHorizontal:
       navBarDimensions.horizontalPadding,
     backgroundColor: Colors.light.primary,
@@ -179,5 +280,38 @@ const navBarStyles = StyleSheet.create({
     width: "100%",
     height: navBarDimensions.accentHeight,
     backgroundColor: Colors.light.secondary,
+  },
+
+  // Device status capsule
+  deviceStatus: {
+    width: navBarDimensions.deviceStatusWidth,
+    height: navBarDimensions.deviceStatusHeight,
+    borderRadius: navBarDimensions.deviceStatusRadius,
+    backgroundColor: "#F0EAD6",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  statusDot: {
+    width: navBarDimensions.statusDotSize,
+    height: navBarDimensions.statusDotSize,
+    borderRadius: navBarDimensions.statusDotSize / 2,
+    marginRight: navBarDimensions.statusDotMargin,
+  },
+
+  onlineDot: {
+    backgroundColor: "#00A86B",
+  },
+
+  offlineDot: {
+    backgroundColor: Colors.light.error,
+  },
+
+  statusText: {
+    color: "#000000",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
   },
 });
