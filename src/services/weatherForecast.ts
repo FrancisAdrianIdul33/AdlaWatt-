@@ -1,9 +1,14 @@
-// services/weatherForecast.ts
-
 import * as Location from "expo-location";
+import { fetchWeatherApi } from "openmeteo";
+import { Platform } from "react-native";
 
-const OPEN_METEO_FORECAST_URL =
+const OPEN_METEO_URL =
   "https://api.open-meteo.com/v1/forecast";
+
+const REVERSE_GEOCODE_URL =
+  "https://api.bigdatacloud.net/data/reverse-geocode-client";
+
+const TIMEZONE = "Asia/Manila";
 
 export type UserLocation = {
   city: string;
@@ -38,8 +43,13 @@ export type WeatherCondition =
   | "Thunderstorm with slight hail"
   | "Thunderstorm with heavy hail";
 
+export type HourlyWeather = {
+  time: Date[];
+  temperature: number[];
+};
+
 export type CurrentWeather = {
-  time: string;
+  time: Date;
   temperature: number;
   temperatureUnit: string;
   weatherCode: number;
@@ -50,21 +60,18 @@ export type CurrentWeather = {
 export type WeatherForecast = {
   location: UserLocation;
   weather: CurrentWeather;
+  hourly: HourlyWeather;
   timezone: string;
   timezoneAbbreviation: string;
+  utcOffsetSeconds: number;
+  elevation: number;
 };
 
-type OpenMeteoResponse = {
-  timezone: string;
-  timezone_abbreviation: string;
-  current?: {
-    time: string;
-    temperature_2m: number;
-    weather_code: number;
-  };
-  current_units?: {
-    temperature_2m?: string;
-  };
+type ReverseGeocodeResponse = {
+  city?: string;
+  locality?: string;
+  principalSubdivision?: string;
+  countryName?: string;
 };
 
 function getPhilippineSeason(
@@ -84,9 +91,9 @@ function getPhilippineSeason(
 }
 
 function getWeatherCondition(
-  weatherCode: number,
+  code: number,
 ): WeatherCondition {
-  switch (weatherCode) {
+  switch (code) {
     case 0:
       return "Clear sky";
 
@@ -141,7 +148,7 @@ function getWeatherCondition(
 
     default:
       throw new Error(
-        `Unsupported Open-Meteo weather code: ${weatherCode}`,
+        `Unsupported Open-Meteo weather code: ${code}`,
       );
   }
 }
@@ -153,7 +160,7 @@ async function getUserLocation(): Promise<UserLocation> {
   if (!permission.granted) {
     if (!permission.canAskAgain) {
       throw new Error(
-        "Location permission was permanently denied. Enable it in your device settings.",
+        "Location permission was denied. Enable location access in your device or browser settings.",
       );
     }
 
@@ -167,13 +174,17 @@ async function getUserLocation(): Promise<UserLocation> {
 
   if (!servicesEnabled) {
     throw new Error(
-      "Location services are disabled. Enable GPS or location services and try again.",
+      "Location services are disabled. Please enable location services and try again.",
     );
   }
 
-  const position = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  });
+  const position =
+    await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+      ...(Platform.OS === "web"
+        ? { maximumAge: 0 }
+        : {}),
+    });
 
   const {
     latitude,
@@ -186,105 +197,229 @@ async function getUserLocation(): Promise<UserLocation> {
     !Number.isFinite(longitude)
   ) {
     throw new Error(
-      "The device returned invalid location coordinates.",
+      "The location service returned invalid coordinates.",
     );
   }
 
-  let city = "Unknown location";
-  let region: string | null = null;
-  let country: string | null = null;
-
-  try {
-    const addresses = await Location.reverseGeocodeAsync({
-      latitude,
-      longitude,
-    });
-
-    const address = addresses[0];
-
-    if (address) {
-      city =
-        address.city ??
-        address.district ??
-        address.subregion ??
-        address.region ??
-        "Unknown location";
-
-      region = address.region ?? null;
-      country = address.country ?? null;
-    }
-  } catch {
-    city = "Unknown location";
-  }
+  const cityData = await reverseGeocode(
+    latitude,
+    longitude,
+  );
 
   return {
-    city,
-    region,
-    country,
+    city: cityData.city,
+    region: cityData.region,
+    country: cityData.country,
     latitude,
     longitude,
     accuracy: accuracy ?? null,
   };
 }
 
+async function reverseGeocode(
+  latitude: number,
+  longitude: number,
+): Promise<{
+  city: string;
+  region: string | null;
+  country: string | null;
+}> {
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    localityLanguage: "en",
+  });
+
+  try {
+    const response = await fetch(
+      `${REVERSE_GEOCODE_URL}?${params.toString()}`,
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Reverse geocoding failed with status ${response.status}.`,
+      );
+    }
+
+    const data =
+      (await response.json()) as ReverseGeocodeResponse;
+
+    const city =
+      data.city?.trim() ||
+      data.locality?.trim();
+
+    if (!city) {
+      throw new Error(
+        "No city or locality was returned for the coordinates.",
+      );
+    }
+
+    return {
+      city,
+      region:
+        data.principalSubdivision?.trim() || null,
+      country:
+        data.countryName?.trim() || null,
+    };
+  } catch (error) {
+    console.warn(
+      "Reverse geocoding failed:",
+      error,
+    );
+
+    return {
+      city: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      region: null,
+      country: null,
+    };
+  }
+}
+
 export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   const location = await getUserLocation();
 
-  const queryParameters = new URLSearchParams({
-    latitude: String(location.latitude),
-    longitude: String(location.longitude),
+  const params = {
+    latitude: [location.latitude],
+    longitude: [location.longitude],
     current: "temperature_2m,weather_code",
-    temperature_unit: "celsius",
-    timezone: "auto",
-    forecast_days: "1",
-  });
+    hourly: "temperature_2m",
+    timezone: TIMEZONE,
+  };
 
-  const requestUrl =
-    `${OPEN_METEO_FORECAST_URL}?` +
-    queryParameters.toString();
+  let responses;
 
-  const response = await fetch(requestUrl);
+  try {
+    responses = await fetchWeatherApi(
+      OPEN_METEO_URL,
+      params,
+    );
+  } catch (error) {
+    console.error(
+      "Open-Meteo request failed:",
+      error,
+    );
 
-  if (!response.ok) {
-    let errorMessage =
-      `Open-Meteo request failed with status ${response.status}.`;
-
-    try {
-      const errorData = await response.json();
-
-      if (typeof errorData?.reason === "string") {
-        errorMessage = errorData.reason;
-      }
-    } catch {
-      // Keep the default error message.
-    }
-
-    throw new Error(errorMessage);
+    throw new Error(
+      "Unable to connect to the weather service. Check your internet connection.",
+    );
   }
 
-  const data =
-    (await response.json()) as OpenMeteoResponse;
+  const response = responses[0];
 
-  if (!data.current) {
+  if (!response) {
+    throw new Error(
+      "Open-Meteo returned no weather data.",
+    );
+  }
+
+  const latitude = response.latitude();
+  const longitude = response.longitude();
+  const elevation = response.elevation();
+  const timezone = response.timezone();
+  const timezoneAbbreviation =
+    response.timezoneAbbreviation();
+  const utcOffsetSeconds =
+    response.utcOffsetSeconds();
+
+  const current = response.current();
+
+  if (!current) {
     throw new Error(
       "Open-Meteo returned no current weather data.",
     );
   }
 
-  const weatherCode = data.current.weather_code;
+  const temperature =
+    current.variables(0)?.value();
+
+  const weatherCode =
+    current.variables(1)?.value();
+
+  if (
+    typeof temperature !== "number" ||
+    typeof weatherCode !== "number"
+  ) {
+    throw new Error(
+      "Open-Meteo returned incomplete current weather data.",
+    );
+  }
+
+  const hourly = response.hourly();
+
+  if (!hourly) {
+    throw new Error(
+      "Open-Meteo returned no hourly weather data.",
+    );
+  }
+
+  const hourlyTemperature =
+    hourly.variables(0)?.valuesArray();
+
+  if (!hourlyTemperature) {
+    throw new Error(
+      "Open-Meteo returned incomplete hourly weather data.",
+    );
+  }
+
+  const hourlyTime = Array.from(
+    {
+      length:
+        (Number(hourly.timeEnd()) -
+          Number(hourly.time())) /
+        hourly.interval(),
+    },
+    (_, index) =>
+      new Date(
+        (Number(hourly.time()) +
+          index * hourly.interval() +
+          utcOffsetSeconds) *
+          1000,
+      ),
+  );
 
   return {
-    location,
-    timezone: data.timezone,
-    timezoneAbbreviation: data.timezone_abbreviation,
+    location: {
+      ...location,
+      latitude,
+      longitude,
+    },
+
+    timezone:
+      timezone || TIMEZONE,
+
+    timezoneAbbreviation:
+      timezoneAbbreviation || "PHT",
+
+    utcOffsetSeconds,
+
+    elevation,
+
     weather: {
-      time: data.current.time,
-      temperature: data.current.temperature_2m,
-      temperatureUnit:
-        data.current_units?.temperature_2m ?? "°C",
+      time: new Date(
+        (Number(current.time()) +
+          utcOffsetSeconds) *
+          1000,
+      ),
+
+      // Always one decimal place.
+      temperature:
+        Number(temperature.toFixed(1)),
+
+      temperatureUnit: "°C",
+
       weatherCode,
-      condition: getWeatherCondition(weatherCode),
-      season: getPhilippineSeason(),
+
+      condition:
+        getWeatherCondition(weatherCode),
+
+      season:
+        getPhilippineSeason(),
+    },
+
+    hourly: {
+      time: hourlyTime,
+      temperature:
+        Array.from(hourlyTemperature),
     },
   };
 }
