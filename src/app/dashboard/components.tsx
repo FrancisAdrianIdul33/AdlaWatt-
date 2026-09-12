@@ -61,15 +61,15 @@ const componentImages: Record<string, any> = {
   ),
 
   DHT22: require(
-    "@/assets/images/adlawatt-icon.png",
+    "@/assets/images/components/DHT22.png",
   ),
 
   "5V DC Fan": require(
-    "@/assets/images/adlawatt-icon.png",
+    "@/assets/images/components/DC Fan.png",
   ),
 
   "SPI TFT Display": require(
-    "@/assets/images/adlawatt-icon.png",
+    "@/assets/images/components/SPI TFT Display.png",
   ),
 };
 
