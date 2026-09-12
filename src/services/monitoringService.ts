@@ -38,13 +38,21 @@ export interface MonitoringData {
   battery_level: number;
   battery_status: BatteryStatus;
   time_remaining: string;
+
+  voltage: number;
+  watt_hours: number;
+
   solar_input: number;
   solar_status: SolarStatus;
   current_load: number;
+
   device_status: DeviceStatus;
+
   battery_temperature: number;
   battery_temperature_status: TemperatureStatus;
+
   dod_status: DoDStatus;
+
   solar_temperature: number;
   solar_temperature_status: TemperatureStatus;
 }
@@ -55,6 +63,7 @@ export interface MonitoringData {
 
 export const getMonitoringData =
   async (): Promise<MonitoringData | null> => {
+
     const {
       data: { user },
       error: userError,
@@ -65,7 +74,6 @@ export const getMonitoringData =
         "Error getting user:",
         userError.message,
       );
-
       return null;
     }
 
@@ -79,13 +87,21 @@ export const getMonitoringData =
         battery_level,
         battery_status,
         time_remaining,
+
+        voltage,
+        watt_hours,
+
         solar_input,
         solar_status,
         current_load,
+
         device_status,
+
         battery_temperature,
         battery_temperature_status,
+
         dod_status,
+
         solar_temperature,
         solar_temperature_status
       `)
@@ -97,7 +113,6 @@ export const getMonitoringData =
         "Error loading monitoring data:",
         error.message,
       );
-
       return null;
     }
 
@@ -113,6 +128,7 @@ export const subscribeToMonitoring = async (
     data: MonitoringData | null,
   ) => void,
 ) => {
+
   const {
     data: { user },
     error,
@@ -123,7 +139,6 @@ export const subscribeToMonitoring = async (
       "Error getting user:",
       error.message,
     );
-
     return null;
   }
 
@@ -144,11 +159,11 @@ export const subscribeToMonitoring = async (
         filter: `user_id=eq.${user.id}`,
       },
       (payload) => {
+
         if (
           payload.eventType === "DELETE"
         ) {
           onChange(null);
-
           return;
         }
 
@@ -158,6 +173,7 @@ export const subscribeToMonitoring = async (
       },
     )
     .subscribe((status) => {
+
       if (
         status === "CHANNEL_ERROR"
       ) {
@@ -171,6 +187,7 @@ export const subscribeToMonitoring = async (
           "Monitoring Realtime connection timed out.",
         );
       }
+
     });
 
   return channel;
@@ -185,9 +202,11 @@ export const unsubscribeFromMonitoring = (
     typeof supabase.channel
   > | null,
 ) => {
+
   if (channel) {
     supabase.removeChannel(channel);
   }
+
 };
 
 // ============================================================
@@ -195,6 +214,7 @@ export const unsubscribeFromMonitoring = (
 // ============================================================
 
 export const useMonitoring = () => {
+
   const [
     monitoring,
     setMonitoring,
@@ -208,6 +228,7 @@ export const useMonitoring = () => {
   ] = useState(true);
 
   useEffect(() => {
+
     let mounted = true;
 
     let channel:
@@ -218,7 +239,9 @@ export const useMonitoring = () => {
 
     const initializeMonitoring =
       async () => {
+
         try {
+
           // ----------------------------------------------------
           // GET INITIAL MONITORING DATA
           // ----------------------------------------------------
@@ -239,6 +262,7 @@ export const useMonitoring = () => {
           channel =
             await subscribeToMonitoring(
               (updatedData) => {
+
                 if (!mounted) {
                   return;
                 }
@@ -246,9 +270,12 @@ export const useMonitoring = () => {
                 setMonitoring(
                   updatedData,
                 );
+
               },
             );
+
         } catch (error) {
+
           console.error(
             "Unexpected monitoring error:",
             error,
@@ -257,11 +284,15 @@ export const useMonitoring = () => {
           if (mounted) {
             setMonitoring(null);
           }
+
         } finally {
+
           if (mounted) {
             setLoading(false);
           }
+
         }
+
       };
 
     initializeMonitoring();
@@ -271,16 +302,20 @@ export const useMonitoring = () => {
     // ==========================================================
 
     return () => {
+
       mounted = false;
 
       unsubscribeFromMonitoring(
         channel,
       );
+
     };
+
   }, []);
 
   return {
     monitoring,
     loading,
   };
+
 };

@@ -27,6 +27,8 @@ import {
 
 type ChartType =
   | "battery"
+  | "voltage"
+  | "watt_hour"
   | "solar"
   | "load"
   | "weather"
@@ -59,6 +61,7 @@ interface WeatherData {
   temperature: number;
   description: WeatherCondition;
 }
+
 type NonBatteryChartType =
   Exclude<ChartType, "battery">;
 
@@ -68,15 +71,10 @@ type NonBatteryChartType =
 
 interface CardData {
   icon: keyof typeof Ionicons.glyphMap;
-
   label: string;
-
   value?: string;
-
   badge?: string;
-
   badgeStyle?: object;
-
   badgeTextStyle?: object;
 }
 
@@ -233,11 +231,9 @@ export default function ChartCard({
                 styles.lowBatteryText,
               ]}
             >
-
               {loading
                 ? "—"
                 : `${level}%`}
-
             </AppText>
 
             <AppText
@@ -246,9 +242,7 @@ export default function ChartCard({
                 styles.batteryLabel
               }
             >
-
               Battery
-
             </AppText>
 
             <View
@@ -263,13 +257,11 @@ export default function ChartCard({
                   styles.batteryStatusText
                 }
               >
-
                 {
                   monitoring
                     ?.battery_status ??
                   "Idle"
                 }
-
               </AppText>
 
             </View>
@@ -284,15 +276,12 @@ export default function ChartCard({
             styles.remainingText
           }
         >
-
           Time Remaining:{" "}
-
           {loading
             ? "—"
             : monitoring
               ?.time_remaining ??
             "—"}
-
         </AppText>
 
       </View>
@@ -310,6 +299,7 @@ export default function ChartCard({
       weather ?? null,
       loading,
     );
+
   const isSafe =
     type === "dod" &&
     data.value === "Safe";
@@ -319,7 +309,9 @@ export default function ChartCard({
     data.value === "Unsafe";
 
   return (
+
     <View style={styles.monitorCard}>
+
       <Ionicons
         name={data.icon}
         size={23}
@@ -341,18 +333,15 @@ export default function ChartCard({
             variant="heading"
             style={[
               styles.monitorValue,
-
               isSafe &&
               styles.safeValue,
-
               isUnsafe &&
               styles.unsafeValue,
             ]}
           >
-
             {data.value}
-
           </AppText>
+
         )}
 
       {/* Status Badge */}
@@ -373,12 +362,11 @@ export default function ChartCard({
               data.badgeTextStyle,
             ]}
           >
-
             {data.badge}
-
           </AppText>
 
         </View>
+
       )}
 
     </View>
@@ -397,6 +385,38 @@ function getCardData(
 ): CardData {
 
   switch (type) {
+
+    // ========================================================
+    // VOLTAGE
+    // ========================================================
+
+    case "voltage":
+      return {
+        icon:
+          "flash-outline",
+        label:
+          "Voltage",
+        value:
+          loading
+            ? "—"
+            : `${monitoring?.voltage ?? 0}V`,
+      };
+
+    // ========================================================
+    // WATT-HOUR
+    // ========================================================
+
+    case "watt_hour":
+      return {
+        icon:
+          "battery-charging-outline",
+        label:
+          "Watt-hour",
+        value:
+          loading
+            ? "—"
+            : `${monitoring?.watt_hours ?? 0}Wh`,
+      };
 
     // ========================================================
     // SOLAR INPUT
@@ -425,7 +445,6 @@ function getCardData(
           solarStatus,
 
         badgeStyle:
-
           solarStatus === "High"
             ? styles.normalBadge
             : solarStatus ===
@@ -434,11 +453,11 @@ function getCardData(
               : styles.lowBadge,
 
         badgeTextStyle:
-
           solarStatus ===
             "Moderate"
             ? styles.darkBadgeText
             : styles.lightBadgeText,
+
       };
     }
 
@@ -460,6 +479,7 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring?.current_load ?? 0}W`,
+
       };
 
     // ========================================================
@@ -467,23 +487,34 @@ function getCardData(
     // ========================================================
 
     case "weather": {
+
       const description =
         weather?.description ?? "Clear sky";
 
       return {
-        icon: getWeatherIcon(description),
-        label: weather?.city ?? "—",
+
+        icon:
+          getWeatherIcon(description),
+
+        label:
+          weather?.city ?? "—",
+
         value:
           loading
             ? "—"
             : weather
               ? `${weather.temperature}°C`
               : "—",
-        badge: description,
+
+        badge:
+          description,
+
         badgeStyle:
           getWeatherBadgeStyle(description),
+
         badgeTextStyle:
           getWeatherBadgeTextStyle(description),
+
       };
     }
 
@@ -504,6 +535,7 @@ function getCardData(
         value:
           monitoring?.dod_status ??
           "Safe",
+
       };
 
     // ========================================================
@@ -544,6 +576,7 @@ function getCardData(
           getTemperatureBadgeTextStyle(
             status,
           ),
+
       };
     }
 
@@ -585,11 +618,12 @@ function getCardData(
           getTemperatureBadgeTextStyle(
             status,
           ),
+
       };
     }
+
   }
 }
-
 
 // ============================================================
 // WEATHER ICON
@@ -598,16 +632,21 @@ function getCardData(
 function getWeatherIcon(
   description: WeatherCondition,
 ): keyof typeof Ionicons.glyphMap {
+
   switch (description) {
+
     case "Clear sky":
     case "Mainly clear":
+
       return "sunny-outline";
 
     case "Partly cloudy":
+
       return "partly-sunny-outline";
 
     case "Overcast":
     case "Fog":
+
       return "cloud-outline";
 
     case "Light drizzle":
@@ -619,12 +658,15 @@ function getWeatherIcon(
     case "Slight rain showers":
     case "Moderate rain showers":
     case "Violent rain showers":
+
       return "rainy-outline";
 
     case "Slight or moderate thunderstorm":
     case "Thunderstorm with slight hail":
     case "Thunderstorm with heavy hail":
+
       return "thunderstorm-outline";
+
   }
 }
 
@@ -635,18 +677,24 @@ function getWeatherIcon(
 function getWeatherBadgeStyle(
   description: WeatherCondition,
 ) {
+
   switch (description) {
+
     case "Clear sky":
     case "Mainly clear":
+
       return styles.clearWeatherBadge;
 
     case "Partly cloudy":
+
       return styles.partlyCloudyWeatherBadge;
 
     case "Overcast":
+
       return styles.overcastWeatherBadge;
 
     case "Fog":
+
       return styles.fogWeatherBadge;
 
     case "Light drizzle":
@@ -654,18 +702,22 @@ function getWeatherBadgeStyle(
     case "Dense intensity drizzle":
     case "Slight rain":
     case "Slight rain showers":
+
       return styles.yellowWeatherBadge;
 
     case "Moderate rain":
     case "Moderate rain showers":
     case "Slight or moderate thunderstorm":
+
       return styles.orangeWeatherBadge;
 
     case "Heavy intensity rain":
     case "Violent rain showers":
     case "Thunderstorm with slight hail":
     case "Thunderstorm with heavy hail":
+
       return styles.redWeatherBadge;
+
   }
 }
 
@@ -676,18 +728,24 @@ function getWeatherBadgeStyle(
 function getWeatherBadgeTextStyle(
   description: WeatherCondition,
 ) {
+
   switch (description) {
+
     case "Clear sky":
     case "Mainly clear":
+
       return styles.clearWeatherBadgeText;
 
     case "Partly cloudy":
+
       return styles.partlyCloudyWeatherBadgeText;
 
     case "Overcast":
+
       return styles.overcastWeatherBadgeText;
 
     case "Fog":
+
       return styles.fogWeatherBadgeText;
 
     case "Light drizzle":
@@ -695,18 +753,22 @@ function getWeatherBadgeTextStyle(
     case "Dense intensity drizzle":
     case "Slight rain":
     case "Slight rain showers":
+
       return styles.yellowWeatherBadgeText;
 
     case "Moderate rain":
     case "Moderate rain showers":
     case "Slight or moderate thunderstorm":
+
       return styles.orangeWeatherBadgeText;
 
     case "Heavy intensity rain":
     case "Violent rain showers":
     case "Thunderstorm with slight hail":
     case "Thunderstorm with heavy hail":
+
       return styles.redWeatherBadgeText;
+
   }
 }
 
@@ -721,16 +783,21 @@ function getTemperatureBadgeStyle(
   switch (status) {
 
     case "Nominal":
+
       return styles.nominalTemperatureBadge;
 
     case "Elevated":
+
       return styles.elevatedTemperatureBadge;
 
     case "High":
+
       return styles.highTemperatureBadge;
 
     case "Critical":
+
       return styles.criticalTemperatureBadge;
+
   }
 }
 
@@ -745,16 +812,21 @@ function getTemperatureBadgeTextStyle(
   switch (status) {
 
     case "Nominal":
+
       return styles.nominalTemperatureBadgeText;
 
     case "Elevated":
+
       return styles.elevatedTemperatureBadgeText;
 
     case "High":
+
       return styles.highTemperatureBadgeText;
 
     case "Critical":
+
       return styles.criticalTemperatureBadgeText;
+
   }
 }
 
