@@ -1,16 +1,18 @@
 import * as Location from "expo-location";
+
 import { fetchWeatherApi } from "openmeteo";
 
 // ============================================================
 // OPEN-METEO ECMWF IFS HRES 9 KM
 // ============================================================
 
-const OPEN_METEO_URL = "https://api.open-meteo.com/v1/ecmwf";
+const OPEN_METEO_URL =
+  "https://api.open-meteo.com/v1/ecmwf";
 
 const REVERSE_GEOCODE_URL =
   "https://api.bigdatacloud.net/data/reverse-geocode-client";
 
-const TIMEZONE = "Asia/Manila";
+const TIMEZONE = "auto";
 
 // ============================================================
 // TYPES
@@ -137,9 +139,6 @@ function getWeatherCondition(
 
     // --------------------------------------------------------
     // FREEZING DRIZZLE
-    //
-    // Not included in ChartCard's WeatherCondition list.
-    // Map to the closest supported drizzle condition.
     // --------------------------------------------------------
 
     case 56:
@@ -163,9 +162,6 @@ function getWeatherCondition(
 
     // --------------------------------------------------------
     // FREEZING RAIN
-    //
-    // Not included in ChartCard's WeatherCondition list.
-    // Map to the closest supported rain condition.
     // --------------------------------------------------------
 
     case 66:
@@ -176,9 +172,6 @@ function getWeatherCondition(
 
     // --------------------------------------------------------
     // SNOW
-    //
-    // Not relevant to the Philippines and not included in
-    // ChartCard's WeatherCondition list.
     // --------------------------------------------------------
 
     case 71:
@@ -202,9 +195,6 @@ function getWeatherCondition(
 
     // --------------------------------------------------------
     // SNOW SHOWERS
-    //
-    // Not relevant to the Philippines and not included in
-    // ChartCard's WeatherCondition list.
     // --------------------------------------------------------
 
     case 85:
@@ -314,13 +304,17 @@ async function getUserLocation(): Promise<UserLocation> {
     );
   }
 
+  // Highest available accuracy for the weather-location lookup.
   const location =
     await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
+      accuracy: Location.Accuracy.Highest,
+      mayShowUserSettingsDialog: true,
     });
 
-  const latitude = location.coords.latitude;
-  const longitude = location.coords.longitude;
+  const {
+    latitude,
+    longitude,
+  } = location.coords;
 
   if (
     !Number.isFinite(latitude) ||
@@ -367,9 +361,17 @@ function toLocalDate(
 // ============================================================
 
 export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
+  // ==========================================================
+  // 1. GET EXACT DEVICE COORDINATES
+  // ==========================================================
+
   const location = await getUserLocation();
 
-  const params = {
+  // ==========================================================
+  // 2. REQUEST ECMWF IFS HRES DATA
+  // ==========================================================
+
+  const params: any = {
     latitude: [location.latitude],
     longitude: [location.longitude],
 
@@ -379,6 +381,9 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
     ],
 
     timezone: TIMEZONE,
+
+    // Prefer a suitable land grid cell with similar elevation.
+    cell_selection: "land",
   };
 
   const responses = await fetchWeatherApi(
@@ -398,13 +403,13 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   const response = responses[0];
 
   // ==========================================================
-  // LOCATION / MODEL INFORMATION
+  // 3. MODEL INFORMATION
   // ==========================================================
 
-  const latitude =
+  const modelLatitude =
     response.latitude();
 
-  const longitude =
+  const modelLongitude =
     response.longitude();
 
   const elevation =
@@ -422,7 +427,7 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
     response.utcOffsetSeconds();
 
   // ==========================================================
-  // HOURLY DATA
+  // 4. HOURLY DATA
   // ==========================================================
 
   const hourly =
@@ -467,7 +472,7 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   }
 
   // ==========================================================
-  // HOURLY TIME RANGE
+  // 5. HOURLY TIME RANGE
   // ==========================================================
 
   const hourlyStart =
@@ -495,23 +500,34 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   }
 
   // ==========================================================
-  // FIND CURRENT LOCAL TIME
+  // 6. FIND CURRENT WEATHER HOUR
+  // ==========================================================
+  //
+  // Compare the raw Unix timestamps with the actual current
+  // Unix time. This avoids comparing a timezone-shifted Date
+  // against the device's absolute Date incorrectly.
+  //
   // ==========================================================
 
-  const now = new Date();
+  const nowUnixSeconds =
+    Date.now() / 1000;
 
   let currentIndex = 0;
   let smallestDifference = Infinity;
 
   for (
     let index = 0;
-    index < hourlyTimes.length;
+    index < temperatureValues.length;
     index++
   ) {
+    const timestamp =
+      hourlyStart +
+      index * hourlyInterval;
+
     const difference =
       Math.abs(
-        hourlyTimes[index].getTime() -
-          now.getTime()
+        timestamp -
+          nowUnixSeconds
       );
 
     if (
@@ -526,7 +542,7 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   }
 
   // ==========================================================
-  // CURRENT WEATHER
+  // 7. CURRENT WEATHER
   // ==========================================================
 
   const currentTemperature =
@@ -559,7 +575,7 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
 
   const currentTime =
     hourlyTimes[currentIndex] ||
-    now;
+    new Date();
 
   const condition =
     getWeatherCondition(
@@ -567,7 +583,7 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
     );
 
   // ==========================================================
-  // HOURLY WEATHER OBJECT
+  // 8. HOURLY WEATHER OBJECT
   // ==========================================================
 
   const hourlyWeather: HourlyWeather = {
@@ -583,22 +599,31 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   };
 
   // ==========================================================
-  // FINAL WEATHER RESULT
+  // 9. FINAL WEATHER RESULT
+  // ==========================================================
+  //
+  // IMPORTANT:
+  // Keep the USER'S GPS coordinates here.
+  //
+  // Open-Meteo's returned latitude/longitude represent the
+  // weather model grid location used for the forecast and can
+  // differ from the requested coordinates.
+  //
   // ==========================================================
 
   return {
     location: {
       ...location,
-      latitude,
-      longitude,
+
+      // Preserve the actual coordinates collected
+      // from the user's device.
+      latitude: location.latitude,
+      longitude: location.longitude,
     },
 
     timezone,
-
     timezoneAbbreviation,
-
     utcOffsetSeconds,
-
     elevation,
 
     weather: {
