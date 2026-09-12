@@ -275,9 +275,10 @@ const sidebarDimensions = {
   logoHeight: 70,
 
   buttonHeight: 50,
-  buttonRadius: 14,
+  buttonWidth: "100%",
+  buttonRadius: 15,
   buttonBorderWidth: 3.5,
-  buttonSpacing: 12,
+  buttonSpacing: 15,
   dividerHeight: 3,
   dividerMargin: 20,
   overlayOpacity: 0.5,
