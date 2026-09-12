@@ -17,6 +17,10 @@ import { Colors } from "@/constants/colors";
 
 import { MonitoringData } from "@/services/monitoringService";
 
+import {
+  type WeatherCondition,
+} from "@/services/weatherForecast";
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -25,7 +29,7 @@ type ChartType =
   | "battery"
   | "solar"
   | "load"
-  | "device"
+  | "weather"
   | "temperature"
   | "solar_temperature"
   | "dod";
@@ -35,10 +39,6 @@ type TemperatureStatus =
   | "Elevated"
   | "High"
   | "Critical";
-
-type DeviceStatus =
-  | "Online"
-  | "Offline";
 
 type BatteryStatus =
   | "Charging"
@@ -54,6 +54,11 @@ type DoDStatus =
   | "Safe"
   | "Unsafe";
 
+interface WeatherData {
+  city: string;
+  temperature: number;
+  description: WeatherCondition;
+}
 type NonBatteryChartType =
   Exclude<ChartType, "battery">;
 
@@ -82,6 +87,7 @@ interface CardData {
 interface ChartCardProps {
   type: ChartType;
   monitoring: MonitoringData | null;
+  weather?: WeatherData | null;
   loading: boolean;
 }
 
@@ -110,6 +116,7 @@ const LOW_BATTERY_THRESHOLD = 20;
 export default function ChartCard({
   type,
   monitoring,
+  weather,
   loading,
 }: ChartCardProps) {
 
@@ -223,7 +230,7 @@ export default function ChartCard({
               style={[
                 styles.batteryPercentage,
                 isLowBattery &&
-                  styles.lowBatteryText,
+                styles.lowBatteryText,
               ]}
             >
 
@@ -283,8 +290,8 @@ export default function ChartCard({
           {loading
             ? "—"
             : monitoring
-                ?.time_remaining ??
-              "—"}
+              ?.time_remaining ??
+            "—"}
 
         </AppText>
 
@@ -300,13 +307,9 @@ export default function ChartCard({
     getCardData(
       type,
       monitoring,
+      weather ?? null,
       loading,
     );
-
-  const isOffline =
-    type === "device" &&
-    data.value === "Offline";
-
   const isSafe =
     type === "dod" &&
     data.value === "Safe";
@@ -316,56 +319,41 @@ export default function ChartCard({
     data.value === "Unsafe";
 
   return (
-
-    <View
-      style={styles.monitorCard}
-    >
-
+    <View style={styles.monitorCard}>
       <Ionicons
         name={data.icon}
         size={23}
-        color={
-          isOffline
-            ? Colors.light.error
-            : Colors.light.primary
-        }
+        color={Colors.light.primary}
         style={styles.icon}
       />
 
       <AppText
         variant="caption"
-        style={
-          styles.monitorLabel
-        }
+        style={styles.monitorLabel}
       >
-
         {data.label}
-
       </AppText>
 
       {data.value !==
         undefined && (
 
-        <AppText
-          variant="heading"
-          style={[
-            styles.monitorValue,
+          <AppText
+            variant="heading"
+            style={[
+              styles.monitorValue,
 
-            isOffline &&
-              styles.offlineValue,
-
-            isSafe &&
+              isSafe &&
               styles.safeValue,
 
-            isUnsafe &&
+              isUnsafe &&
               styles.unsafeValue,
-          ]}
-        >
+            ]}
+          >
 
-          {data.value}
+            {data.value}
 
-        </AppText>
-      )}
+          </AppText>
+        )}
 
       {/* Status Badge */}
 
@@ -403,9 +391,8 @@ export default function ChartCard({
 
 function getCardData(
   type: NonBatteryChartType,
-  monitoring:
-    | MonitoringData
-    | null,
+  monitoring: MonitoringData | null,
+  weather: WeatherData | null,
   loading: boolean,
 ): CardData {
 
@@ -442,14 +429,14 @@ function getCardData(
           solarStatus === "High"
             ? styles.normalBadge
             : solarStatus ===
-                "Moderate"
+              "Moderate"
               ? styles.moderateBadge
               : styles.lowBadge,
 
         badgeTextStyle:
 
           solarStatus ===
-          "Moderate"
+            "Moderate"
             ? styles.darkBadgeText
             : styles.lightBadgeText,
       };
@@ -479,20 +466,26 @@ function getCardData(
     // DEVICE STATUS
     // ========================================================
 
-    case "device":
+    case "weather": {
+      const description =
+        weather?.description ?? "Clear sky";
 
       return {
-
-        icon:
-          "hardware-chip-outline",
-
-        label:
-          "Device",
-
+        icon: getWeatherIcon(description),
+        label: weather?.city ?? "—",
         value:
-          monitoring?.device_status ??
-          "Offline",
+          loading
+            ? "—"
+            : weather
+              ? `${weather.temperature}°C`
+              : "—",
+        badge: description,
+        badgeStyle:
+          getWeatherBadgeStyle(description),
+        badgeTextStyle:
+          getWeatherBadgeTextStyle(description),
       };
+    }
 
     // ========================================================
     // DEPTH OF DISCHARGE
@@ -536,8 +529,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-                ?.battery_temperature ??
-                0}°C`,
+              ?.battery_temperature ??
+            0}°C`,
 
         badge:
           status,
@@ -577,8 +570,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-                ?.solar_temperature ??
-                0}°C`,
+              ?.solar_temperature ??
+            0}°C`,
 
         badge:
           status,
@@ -594,6 +587,126 @@ function getCardData(
           ),
       };
     }
+  }
+}
+
+
+// ============================================================
+// WEATHER ICON
+// ============================================================
+
+function getWeatherIcon(
+  description: WeatherCondition,
+): keyof typeof Ionicons.glyphMap {
+  switch (description) {
+    case "Clear sky":
+    case "Mainly clear":
+      return "sunny-outline";
+
+    case "Partly cloudy":
+      return "partly-sunny-outline";
+
+    case "Overcast":
+    case "Fog":
+      return "cloud-outline";
+
+    case "Light drizzle":
+    case "Moderate drizzle":
+    case "Dense intensity drizzle":
+    case "Slight rain":
+    case "Moderate rain":
+    case "Heavy intensity rain":
+    case "Slight rain showers":
+    case "Moderate rain showers":
+    case "Violent rain showers":
+      return "rainy-outline";
+
+    case "Slight or moderate thunderstorm":
+    case "Thunderstorm with slight hail":
+    case "Thunderstorm with heavy hail":
+      return "thunderstorm-outline";
+  }
+}
+
+// ============================================================
+// WEATHER BADGE STYLE
+// ============================================================
+
+function getWeatherBadgeStyle(
+  description: WeatherCondition,
+) {
+  switch (description) {
+    case "Clear sky":
+    case "Mainly clear":
+      return styles.clearWeatherBadge;
+
+    case "Partly cloudy":
+      return styles.partlyCloudyWeatherBadge;
+
+    case "Overcast":
+      return styles.overcastWeatherBadge;
+
+    case "Fog":
+      return styles.fogWeatherBadge;
+
+    case "Light drizzle":
+    case "Moderate drizzle":
+    case "Dense intensity drizzle":
+    case "Slight rain":
+    case "Slight rain showers":
+      return styles.yellowWeatherBadge;
+
+    case "Moderate rain":
+    case "Moderate rain showers":
+    case "Slight or moderate thunderstorm":
+      return styles.orangeWeatherBadge;
+
+    case "Heavy intensity rain":
+    case "Violent rain showers":
+    case "Thunderstorm with slight hail":
+    case "Thunderstorm with heavy hail":
+      return styles.redWeatherBadge;
+  }
+}
+
+// ============================================================
+// WEATHER BADGE TEXT STYLE
+// ============================================================
+
+function getWeatherBadgeTextStyle(
+  description: WeatherCondition,
+) {
+  switch (description) {
+    case "Clear sky":
+    case "Mainly clear":
+      return styles.clearWeatherBadgeText;
+
+    case "Partly cloudy":
+      return styles.partlyCloudyWeatherBadgeText;
+
+    case "Overcast":
+      return styles.overcastWeatherBadgeText;
+
+    case "Fog":
+      return styles.fogWeatherBadgeText;
+
+    case "Light drizzle":
+    case "Moderate drizzle":
+    case "Dense intensity drizzle":
+    case "Slight rain":
+    case "Slight rain showers":
+      return styles.yellowWeatherBadgeText;
+
+    case "Moderate rain":
+    case "Moderate rain showers":
+    case "Slight or moderate thunderstorm":
+      return styles.orangeWeatherBadgeText;
+
+    case "Heavy intensity rain":
+    case "Violent rain showers":
+    case "Thunderstorm with slight hail":
+    case "Thunderstorm with heavy hail":
+      return styles.redWeatherBadgeText;
   }
 }
 
@@ -805,12 +918,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  offlineValue: {
-
-    color:
-      Colors.light.error,
-  },
-
   safeValue: {
 
     color:
@@ -937,5 +1044,86 @@ const styles = StyleSheet.create({
   criticalTemperatureBadgeText: {
 
     color: "#7F1D1D",
+  },
+
+  // ==========================================================
+  // WEATHER BADGES
+  // ==========================================================
+
+  // CLEAR
+  clearWeatherBadge: {
+    backgroundColor: "#DCFCE7",
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+  },
+
+  clearWeatherBadgeText: {
+    color: "#166534",
+  },
+
+  // PARTLY CLOUDY
+  partlyCloudyWeatherBadge: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+
+  partlyCloudyWeatherBadgeText: {
+    color: "#92400E",
+  },
+
+  // OVERCAST
+  overcastWeatherBadge: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+  },
+
+  overcastWeatherBadgeText: {
+    color: "#475569",
+  },
+
+  // FOG
+  fogWeatherBadge: {
+    backgroundColor: "#E2E8F0",
+    borderWidth: 1,
+    borderColor: "#94A3B8",
+  },
+
+  fogWeatherBadgeText: {
+    color: "#475569",
+  },
+
+  // PAGASA-STYLE YELLOW
+  yellowWeatherBadge: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FACC15",
+  },
+
+  yellowWeatherBadgeText: {
+    color: "#854D0E",
+  },
+
+  // PAGASA-STYLE ORANGE
+  orangeWeatherBadge: {
+    backgroundColor: "#FFEDD5",
+    borderWidth: 1,
+    borderColor: "#F97316",
+  },
+
+  orangeWeatherBadgeText: {
+    color: "#9A3412",
+  },
+
+  // PAGASA-STYLE RED
+  redWeatherBadge: {
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
+
+  redWeatherBadgeText: {
+    color: "#991B1B",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   ScrollView,
@@ -18,28 +18,162 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
 import {
+  getCurrentWeatherForUser,
+  type WeatherCondition,
+} from "@/services/weatherForecast";
+
+import {
   useMonitoring,
 } from "@/services/monitoringService";
 
+
+// ============================================================
+// TYPES
+// ============================================================
+
+type WeatherData = {
+  city: string;
+  temperature: number;
+  description: WeatherCondition;
+};
+
+
+// ============================================================
+// DASHBOARD SCREEN
+// ============================================================
+
 export default function DashboardScreen() {
+
+  // ==========================================================
+  // SIDEBAR STATE
+  // ==========================================================
+
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
+
+
+  // ==========================================================
+  // ADLAWATT MONITORING
+  //
+  // Source:
+  // Supabase / monitoringService
+  //
+  // This remains completely independent from weather.
+  // ==========================================================
 
   const {
     monitoring,
     loading,
   } = useMonitoring();
 
+
+  // ==========================================================
+  // WEATHER STATE
+  //
+  // Source:
+  // Open-Meteo API / weatherForecast.ts
+  //
+  // This has its own loading state so weather loading
+  // does not affect the Supabase monitoring cards.
+  // ==========================================================
+
+  const [weather, setWeather] =
+    useState<WeatherData | null>(null);
+
+  const [weatherLoading, setWeatherLoading] =
+    useState(true);
+
+
+  // ==========================================================
+  // LOAD CURRENT WEATHER
+  // ==========================================================
+
+  useEffect(() => {
+
+    let isMounted = true;
+
+    const loadWeather = async () => {
+
+      try {
+
+        setWeatherLoading(true);
+
+        const forecast =
+          await getCurrentWeatherForUser();
+
+        // Prevent state updates if the screen
+        // has already been unmounted.
+
+        if (!isMounted) {
+          return;
+        }
+
+        setWeather({
+          city: forecast.location.city,
+
+          temperature:
+            forecast.weather.temperature,
+
+          description:
+            forecast.weather.condition,
+        });
+
+      } catch (error) {
+
+        console.error(
+          "Failed to load weather:",
+          error,
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        // Weather failure should not affect
+        // Supabase monitoring data.
+
+        setWeather(null);
+
+      } finally {
+
+        if (isMounted) {
+          setWeatherLoading(false);
+        }
+
+      }
+    };
+
+    loadWeather();
+
+    return () => {
+      isMounted = false;
+    };
+
+  }, []);
+
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
     <ScreenContainer2>
-      {/* Fixed Navbar */}
+
+      {/* ==================================================== */}
+      {/* FIXED NAVBAR */}
+      {/* ==================================================== */}
+
       <NavBar
         onMenuPress={() =>
           setSidebarVisible(true)
         }
       />
 
-      {/* Dashboard */}
+
+      {/* ==================================================== */}
+      {/* DASHBOARD */}
+      {/* ==================================================== */}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={
@@ -47,8 +181,14 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Dashboard Header */}
+
+
+        {/* ================================================== */}
+        {/* DASHBOARD HEADER */}
+        {/* ================================================== */}
+
         <View style={styles.headerCard}>
+
           <AppText
             variant="heading"
             style={styles.headerTitle}
@@ -62,10 +202,16 @@ export default function DashboardScreen() {
           >
             Monitor your AdlaWatt system in real time.
           </AppText>
+
         </View>
 
-        {/* Real-Time Monitoring */}
+
+        {/* ================================================== */}
+        {/* REAL-TIME MONITORING */}
+        {/* ================================================== */}
+
         <View style={styles.section}>
+
           <AppText
             variant="body"
             style={styles.sectionTitle}
@@ -73,21 +219,34 @@ export default function DashboardScreen() {
             Real-Time Monitoring
           </AppText>
 
+
           <View style={styles.monitorGrid}>
-            {/* Battery - Full Row */}
+
+
+            {/* ============================================== */}
+            {/* BATTERY */}
+            {/* Source: Supabase */}
+            {/* ============================================== */}
+
             <View
               style={
                 styles.batteryCardContainer
               }
             >
+
               <ChartCard
                 type="battery"
                 monitoring={monitoring}
                 loading={loading}
               />
+
             </View>
 
-            {/* Row 1 */}
+
+            {/* ============================================== */}
+            {/* ROW 1 */}
+            {/* ============================================== */}
+
             <ChartCard
               type="solar"
               monitoring={monitoring}
@@ -100,11 +259,16 @@ export default function DashboardScreen() {
               loading={loading}
             />
 
-            {/* Row 2 */}
+
+            {/* ============================================== */}
+            {/* ROW 2 */}
+            {/* ============================================== */}
+
             <ChartCard
-              type="device"
+              type="weather"
               monitoring={monitoring}
-              loading={loading}
+              weather={weather}
+              loading={weatherLoading}
             />
 
             <ChartCard
@@ -113,7 +277,11 @@ export default function DashboardScreen() {
               loading={loading}
             />
 
-            {/* Row 3 */}
+
+            {/* ============================================== */}
+            {/* ROW 3 */}
+            {/* ============================================== */}
+
             <ChartCard
               type="temperature"
               monitoring={monitoring}
@@ -125,11 +293,18 @@ export default function DashboardScreen() {
               monitoring={monitoring}
               loading={loading}
             />
+
           </View>
+
         </View>
 
-        {/* Appliance Recommendation */}
+
+        {/* ================================================== */}
+        {/* APPLIANCE RECOMMENDATION */}
+        {/* ================================================== */}
+
         <View style={styles.section}>
+
           <AppText
             variant="body"
             style={styles.sectionTitle}
@@ -138,23 +313,41 @@ export default function DashboardScreen() {
           </AppText>
 
           <AppRecCard />
+
         </View>
 
-        {/* Recent Activity */}
+
+        {/* ================================================== */}
+        {/* RECENT ACTIVITY */}
+        {/* ================================================== */}
+
         <View style={styles.section}>
+
           <ActivityCard />
+
         </View>
+
+
+        {/* ================================================== */}
+        {/* COPYRIGHT */}
+        {/* ================================================== */}
 
         <Copyright />
+
       </ScrollView>
 
-      {/* Sidebar */}
+
+      {/* ==================================================== */}
+      {/* SIDEBAR */}
+      {/* ==================================================== */}
+
       <Sidebar
         visible={sidebarVisible}
         onClose={() =>
           setSidebarVisible(false)
         }
       />
+
     </ScreenContainer2>
   );
 }

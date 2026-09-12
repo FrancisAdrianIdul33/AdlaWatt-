@@ -32,7 +32,11 @@ const componentImages: Record<string, any> = {
     "@/assets/images/components/Buck Converter.png",
   ),
 
-  DS18B20: require(
+  "DS18B20 (Battery)": require(
+    "@/assets/images/components/DS18B20.png",
+  ),
+
+  "DS18B20 (Solar)": require(
     "@/assets/images/components/DS18B20.png",
   ),
 
@@ -48,20 +52,24 @@ const componentImages: Record<string, any> = {
     "@/assets/images/components/INA228.png",
   ),
 
-  "LCD2004 with I2C": require(
-    "@/assets/images/components/LCD2004.png",
-  ),
-
-  "I2C OLED 1.3-inch": require(
-    "@/assets/images/components/OLED 1.3Inch.png",
-  ),
-
   "Relay Module 5V 1 Channel": require(
     "@/assets/images/components/Relay.png",
   ),
 
   "Voltage Sensor": require(
     "@/assets/images/components/Voltage Sensor.png",
+  ),
+
+  DHT22: require(
+    "@/assets/images/components/DHT22.png",
+  ),
+
+  "5V DC Fan": require(
+    "@/assets/images/components/DC Fan.png",
+  ),
+
+  "SPI TFT Display": require(
+    "@/assets/images/components/SPI TFT Display.png",
   ),
 };
 
