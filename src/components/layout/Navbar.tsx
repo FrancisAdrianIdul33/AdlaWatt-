@@ -20,19 +20,15 @@ import AppText from "@/components/ui/AppText";
 
 import type { DeviceStatus } from "@/services/monitoringService";
 
-
 // ============================================================
 // NAVBAR PROPS
 // ============================================================
 
 interface NavBarProps {
   onNotificationPress?: () => void;
-
   onMenuPress?: () => void;
-
   deviceStatus?: DeviceStatus;
 }
-
 
 // ============================================================
 // NAVBAR
@@ -40,70 +36,51 @@ interface NavBarProps {
 
 export default function NavBar({
   onNotificationPress,
-
   onMenuPress,
-
   deviceStatus = "Offline",
 }: NavBarProps) {
-
   const [
     hasUnreadNotifications,
     setHasUnreadNotifications,
   ] = useState(false);
-
 
   // ==========================================================
   // CHECK FOR UNREAD NOTIFICATIONS
   // ==========================================================
 
   useEffect(() => {
-
     let mounted = true;
 
     const checkUnreadNotifications =
       async () => {
-
         const {
           data: { user },
         } = await supabase.auth.getUser();
-
 
         if (!mounted) {
           return;
         }
 
-
         if (!user) {
-
           setHasUnreadNotifications(false);
-
           return;
         }
-
 
         const {
           data,
           error,
         } = await supabase
-
           .from("notifications")
-
           .select("notif_id")
-
           .eq("user_id", user.id)
-
           .eq("read", false)
-
           .limit(1);
-
 
         if (!mounted) {
           return;
         }
 
-
         if (error) {
-
           console.error(
             "Error checking unread notifications:",
             error,
@@ -112,46 +89,32 @@ export default function NavBar({
           return;
         }
 
-
         setHasUnreadNotifications(
           (data?.length ?? 0) > 0,
         );
-
       };
-
 
     checkUnreadNotifications();
 
-
     return () => {
-
       mounted = false;
-
     };
-
   }, []);
-
 
   // ==========================================================
   // HANDLE NOTIFICATION PRESS
   // ==========================================================
 
   const handleNotificationPress = () => {
-
     if (onNotificationPress) {
-
       onNotificationPress();
-
       return;
     }
-
 
     router.push(
       Routes.NOTIFICATIONS,
     );
-
   };
-
 
   // ==========================================================
   // DEVICE STATUS
@@ -160,25 +123,21 @@ export default function NavBar({
   const isOnline =
     deviceStatus === "Online";
 
-
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <View
       style={
         navBarStyles.wrapper
       }
     >
-
       <View
         style={
           navBarStyles.container
         }
       >
-
         {/* ====================================================
             DEVICE STATUS
             ==================================================== */}
@@ -188,17 +147,14 @@ export default function NavBar({
             navBarStyles.deviceStatus
           }
         >
-
           <View
             style={[
               navBarStyles.statusDot,
-
               isOnline
                 ? navBarStyles.onlineDot
                 : navBarStyles.offlineDot,
             ]}
           />
-
 
           <AppText
             variant="caption"
@@ -208,9 +164,7 @@ export default function NavBar({
           >
             {deviceStatus}
           </AppText>
-
         </View>
-
 
         {/* ====================================================
             RIGHT-SIDE ACTIONS
@@ -221,7 +175,6 @@ export default function NavBar({
             navBarStyles.actions
           }
         >
-
           {/* ==================================================
               NOTIFICATION
               ================================================== */}
@@ -236,7 +189,6 @@ export default function NavBar({
             accessibilityRole="button"
             accessibilityLabel="Notifications"
           >
-
             <Ionicons
               name="notifications-outline"
               size={
@@ -247,19 +199,14 @@ export default function NavBar({
               }
             />
 
-
             {hasUnreadNotifications && (
-
               <View
                 style={
                   navBarStyles.notificationDot
                 }
               />
-
             )}
-
           </Pressable>
-
 
           {/* ==================================================
               MENU
@@ -273,7 +220,6 @@ export default function NavBar({
             accessibilityRole="button"
             accessibilityLabel="Menu"
           >
-
             <Ionicons
               name="menu-outline"
               size={
@@ -283,13 +229,9 @@ export default function NavBar({
                 Colors.light.text
               }
             />
-
           </Pressable>
-
         </View>
-
       </View>
-
 
       {/* ======================================================
           SECONDARY ACCENT LINE
@@ -300,11 +242,8 @@ export default function NavBar({
           navBarStyles.accentLine
         }
       />
-
     </View>
-
   );
-
 }
 
 const navBarDimensions = {

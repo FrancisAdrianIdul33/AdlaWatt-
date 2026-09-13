@@ -38,21 +38,15 @@ export interface MonitoringData {
   battery_level: number;
   battery_status: BatteryStatus;
   time_remaining: string;
-
   voltage: number;
   watt_hours: number;
-
   solar_input: number;
   solar_status: SolarStatus;
   current_load: number;
-
   device_status: DeviceStatus;
-
   battery_temperature: number;
   battery_temperature_status: TemperatureStatus;
-
   dod_status: DoDStatus;
-
   solar_temperature: number;
   solar_temperature_status: TemperatureStatus;
 }
@@ -74,6 +68,7 @@ export const getMonitoringData =
         "Error getting user:",
         userError.message,
       );
+
       return null;
     }
 
@@ -87,21 +82,15 @@ export const getMonitoringData =
         battery_level,
         battery_status,
         time_remaining,
-
         voltage,
         watt_hours,
-
         solar_input,
         solar_status,
         current_load,
-
         device_status,
-
         battery_temperature,
         battery_temperature_status,
-
         dod_status,
-
         solar_temperature,
         solar_temperature_status
       `)
@@ -113,11 +102,49 @@ export const getMonitoringData =
         "Error loading monitoring data:",
         error.message,
       );
+
       return null;
     }
 
     return data as MonitoringData | null;
   };
+
+
+// ============================================================
+// FETCH DEVICE STATUS ONLY
+// ============================================================
+
+export const getDeviceStatus =
+  async (): Promise<DeviceStatus> => {
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return "Offline";
+    }
+
+    const { data, error } = await supabase
+      .from("monitoring")
+      .select("device_status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (error) {
+      console.error(
+        "Error loading device status:",
+        error,
+      );
+
+      return "Offline";
+    }
+
+    return data?.device_status === "Online"
+      ? "Online"
+      : "Offline";
+  };
+
 
 // ============================================================
 // SUBSCRIBE TO MONITORING
@@ -139,6 +166,7 @@ export const subscribeToMonitoring = async (
       "Error getting user:",
       error.message,
     );
+
     return null;
   }
 
@@ -164,6 +192,7 @@ export const subscribeToMonitoring = async (
           payload.eventType === "DELETE"
         ) {
           onChange(null);
+
           return;
         }
 
@@ -182,16 +211,82 @@ export const subscribeToMonitoring = async (
         );
       }
 
-      if (status === "TIMED_OUT") {
+      if (
+        status === "TIMED_OUT"
+      ) {
         console.warn(
           "Monitoring Realtime connection timed out.",
         );
       }
-
     });
 
   return channel;
 };
+
+
+// ============================================================
+// SUBSCRIBE TO DEVICE STATUS ONLY
+// ============================================================
+
+export const subscribeToDeviceStatus = async (
+  onChange: (
+    status: DeviceStatus,
+  ) => void,
+) => {
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    onChange("Offline");
+
+    return null;
+  }
+
+  const channel = supabase
+    .channel(
+      `device-status-${user.id}-${Date.now()}`,
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "monitoring",
+        filter: `user_id=eq.${user.id}`,
+      },
+      (payload) => {
+
+        onChange(
+          payload.new?.device_status === "Online"
+            ? "Online"
+            : "Offline",
+        );
+      },
+    )
+    .subscribe((status) => {
+
+      if (
+        status === "CHANNEL_ERROR"
+      ) {
+        console.warn(
+          "Device status Realtime channel error.",
+        );
+      }
+
+      if (
+        status === "TIMED_OUT"
+      ) {
+        console.warn(
+          "Device status Realtime connection timed out.",
+        );
+      }
+    });
+
+  return channel;
+};
+
 
 // ============================================================
 // UNSUBSCRIBE
@@ -206,8 +301,24 @@ export const unsubscribeFromMonitoring = (
   if (channel) {
     supabase.removeChannel(channel);
   }
-
 };
+
+
+// ============================================================
+// UNSUBSCRIBE FROM DEVICE STATUS
+// ============================================================
+
+export const unsubscribeFromDeviceStatus = (
+  channel: ReturnType<
+    typeof supabase.channel
+  > | null,
+) => {
+
+  if (channel) {
+    supabase.removeChannel(channel);
+  }
+};
+
 
 // ============================================================
 // USE MONITORING HOOK
@@ -255,6 +366,7 @@ export const useMonitoring = () => {
 
           setMonitoring(data);
 
+
           // ----------------------------------------------------
           // SUBSCRIBE TO REALTIME MONITORING
           // ----------------------------------------------------
@@ -270,7 +382,6 @@ export const useMonitoring = () => {
                 setMonitoring(
                   updatedData,
                 );
-
               },
             );
 
@@ -290,12 +401,11 @@ export const useMonitoring = () => {
           if (mounted) {
             setLoading(false);
           }
-
         }
-
       };
 
     initializeMonitoring();
+
 
     // ==========================================================
     // CLEANUP
@@ -308,7 +418,6 @@ export const useMonitoring = () => {
       unsubscribeFromMonitoring(
         channel,
       );
-
     };
 
   }, []);
@@ -317,5 +426,115 @@ export const useMonitoring = () => {
     monitoring,
     loading,
   };
+};
 
+
+// ============================================================
+// USE DEVICE STATUS HOOK
+// ============================================================
+
+export const useDeviceStatus = () => {
+
+  const [
+    deviceStatus,
+    setDeviceStatus,
+  ] = useState<DeviceStatus>(
+    "Offline",
+  );
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  useEffect(() => {
+
+    let mounted = true;
+
+    let channel:
+      | ReturnType<
+          typeof supabase.channel
+        >
+      | null = null;
+
+    const initializeDeviceStatus =
+      async () => {
+
+        try {
+
+          // ----------------------------------------------------
+          // GET INITIAL DEVICE STATUS
+          // ----------------------------------------------------
+
+          const status =
+            await getDeviceStatus();
+
+          if (!mounted) {
+            return;
+          }
+
+          setDeviceStatus(status);
+
+
+          // ----------------------------------------------------
+          // SUBSCRIBE TO REALTIME DEVICE STATUS
+          // ----------------------------------------------------
+
+          channel =
+            await subscribeToDeviceStatus(
+              (updatedStatus) => {
+
+                if (!mounted) {
+                  return;
+                }
+
+                setDeviceStatus(
+                  updatedStatus,
+                );
+              },
+            );
+
+        } catch (error) {
+
+          console.error(
+            "Unexpected device status error:",
+            error,
+          );
+
+          if (mounted) {
+            setDeviceStatus(
+              "Offline",
+            );
+          }
+
+        } finally {
+
+          if (mounted) {
+            setLoading(false);
+          }
+        }
+      };
+
+    initializeDeviceStatus();
+
+
+    // ==========================================================
+    // CLEANUP
+    // ==========================================================
+
+    return () => {
+
+      mounted = false;
+
+      unsubscribeFromDeviceStatus(
+        channel,
+      );
+    };
+
+  }, []);
+
+  return {
+    deviceStatus,
+    loading,
+  };
 };

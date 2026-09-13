@@ -111,7 +111,6 @@ export default function DashboardScreen() {
         }
 
         setWeather({
-
           city:
             forecast.location.city,
 
@@ -120,7 +119,6 @@ export default function DashboardScreen() {
 
           description:
             forecast.weather.condition,
-
         });
 
       } catch (error) {
@@ -146,15 +144,12 @@ export default function DashboardScreen() {
         }
 
       }
-
     };
 
     loadWeather();
 
     return () => {
-
       isMounted = false;
-
     };
 
   }, []);
@@ -174,6 +169,11 @@ export default function DashboardScreen() {
       <NavBar
         onMenuPress={() =>
           setSidebarVisible(true)
+        }
+        deviceStatus={
+          monitoring?.device_status === "Online"
+            ? "Online"
+            : "Offline"
         }
       />
 
