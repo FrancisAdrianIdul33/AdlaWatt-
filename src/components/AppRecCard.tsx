@@ -607,6 +607,7 @@ export default function AppRecCard({
     </>
   );
 }
+
 const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
