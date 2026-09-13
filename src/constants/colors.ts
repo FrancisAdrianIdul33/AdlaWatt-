@@ -3,7 +3,7 @@
 export const Colors = {
   light: {
     primary: "#00A86B",
-    secondary: "#FFA500",
+    secondary: "#FFBF00",
 
     background: "#F0EAD6",
     surface: "#FFFFFF",
@@ -17,6 +17,8 @@ export const Colors = {
     success: "#22C55E",
     warning: "#F59E0B",
     error: "#EF4444",
+
+    color1: "#edeb44",
   },
 
   dark: {

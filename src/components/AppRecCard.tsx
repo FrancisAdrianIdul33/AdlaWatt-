@@ -51,6 +51,8 @@ const tips = [
   "Prioritize essential appliances during a power interruption.",
 ];
 
+
+
 export default function AppRecCard({
   onViewAll,
 }: AppRecCardProps) {
@@ -455,24 +457,35 @@ export default function AppRecCard({
 
             {/* Carousel Indicator */}
             <View style={styles.indicator}>
-              {filteredAppliances.map(
-                (item, itemIndex) => (
+              {Array.from({
+                length: Math.min(
+                  10,
+                  Math.ceil(filteredAppliances.length / 2),
+                ),
+              }).map((_, itemIndex) => {
+                const indicatorCount = Math.min(
+                  10,
+                  Math.ceil(filteredAppliances.length / 2),
+                );
+
+                const activeIndicator =
+                  Math.floor(index / 2) % indicatorCount;
+
+                return (
                   <View
-                    key={item.id}
+                    key={itemIndex}
                     style={[
                       styles.dot,
                       {
                         backgroundColor:
-                          itemIndex ===
-                            index %
-                            filteredAppliances.length
+                          itemIndex === activeIndicator
                             ? statusColor
                             : Colors.light.border,
                       },
                     ]}
                   />
-                ),
-              )}
+                );
+              })}
             </View>
           </>
         ) : (
@@ -594,6 +607,7 @@ export default function AppRecCard({
     </>
   );
 }
+
 const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
