@@ -163,9 +163,17 @@ export default function ChartCard({
       `scale(-1 1) ` +
       `rotate(-90 ${CENTER} ${CENTER})`;
 
+    // --------------------------------------------------------
+    // BATTERY STATUS
+    // --------------------------------------------------------
+
     const batteryStatus =
       monitoring?.battery_status ??
       "Idle";
+
+    // --------------------------------------------------------
+    // DEPTH OF DISCHARGE STATUS
+    // --------------------------------------------------------
 
     const dodStatus =
       monitoring?.dod_status ??
@@ -180,10 +188,13 @@ export default function ChartCard({
       dodStatus === "Unsafe";
 
     return (
-
       <View
         style={styles.batterySection}
       >
+
+        {/* ==================================================
+            BATTERY GAUGE
+            ================================================== */}
 
         <View
           style={styles.batteryCircle}
@@ -231,7 +242,9 @@ export default function ChartCard({
 
           </Svg>
 
-          {/* Battery Center */}
+          {/* ==================================================
+              BATTERY CENTER
+              ================================================== */}
 
           <View
             style={
@@ -244,7 +257,7 @@ export default function ChartCard({
               style={[
                 styles.batteryPercentage,
                 isLowBattery &&
-                styles.lowBatteryText,
+                  styles.lowBatteryText,
               ]}
             >
               {loading
@@ -256,6 +269,10 @@ export default function ChartCard({
 
         </View>
 
+        {/* ==================================================
+            TIME REMAINING
+            ================================================== */}
+
         <AppText
           variant="caption"
           style={
@@ -266,17 +283,21 @@ export default function ChartCard({
           {loading
             ? "—"
             : monitoring
-              ?.time_remaining ??
-            "—"}
+                ?.time_remaining ??
+              "—"}
         </AppText>
 
-        {/* Battery Status and DoD Status */}
+        {/* ==================================================
+            BATTERY STATUS AND DoD STATUS
+            ================================================== */}
 
         <View
           style={
             styles.batteryStatusRow
           }
         >
+
+          {/* Battery Status */}
 
           <View
             style={
@@ -294,6 +315,8 @@ export default function ChartCard({
             </AppText>
 
           </View>
+
+          {/* DoD Status */}
 
           <View
             style={[
@@ -357,7 +380,6 @@ export default function ChartCard({
       );
 
     return (
-
       <View
         style={[
           styles.monitorCard,
@@ -365,23 +387,37 @@ export default function ChartCard({
         ]}
       >
 
-        {/* Left Icon */}
+        {/* ==================================================
+            LEFT ICON PANEL
+            ================================================== */}
 
-        <View style={styles.iconAccentPanel}>
+        <View
+          style={
+            styles.iconAccentPanel
+          }
+        >
+
           <Ionicons
             name="flash-outline"
             size={40}
             color={Colors.light.primary}
           />
+
         </View>
 
-        {/* Battery Measurements */}
+        {/* ==================================================
+            BATTERY MEASUREMENTS
+            ================================================== */}
 
         <View
           style={
             styles.batteryMetrics
           }
         >
+
+          {/* ==================================================
+              VOLTAGE
+              ================================================== */}
 
           <View
             style={
@@ -409,6 +445,10 @@ export default function ChartCard({
 
           </View>
 
+          {/* ==================================================
+              WATT-HOUR
+              ================================================== */}
+
           <View
             style={
               styles.metricColumn
@@ -434,6 +474,10 @@ export default function ChartCard({
             </AppText>
 
           </View>
+
+          {/* ==================================================
+              CURRENT LOAD
+              ================================================== */}
 
           <View
             style={
@@ -492,7 +536,6 @@ export default function ChartCard({
       );
 
     return (
-
       <View
         style={[
           styles.monitorCard,
@@ -500,17 +543,27 @@ export default function ChartCard({
         ]}
       >
 
-        {/* Left Weather Icon */}
+        {/* ==================================================
+            LEFT WEATHER ICON PANEL
+            ================================================== */}
 
-        <View style={styles.iconAccentPanel}>
+        <View
+          style={
+            styles.iconAccentPanel
+          }
+        >
+
           <Ionicons
             name={weatherData.icon}
             size={40}
             color={Colors.light.primary}
           />
+
         </View>
 
-        {/* Solar and Weather Measurements */}
+        {/* ==================================================
+            SOLAR AND WEATHER MEASUREMENTS
+            ================================================== */}
 
         <View
           style={
@@ -518,7 +571,9 @@ export default function ChartCard({
           }
         >
 
-          {/* Solar Input */}
+          {/* ==================================================
+              SOLAR INPUT
+              ================================================== */}
 
           <View
             style={
@@ -544,8 +599,9 @@ export default function ChartCard({
               {solarData.value}
             </AppText>
 
-            {solarData.badge && (
+            {/* Solar Status Badge */}
 
+            {solarData.badge && (
               <View
                 style={[
                   styles.statusBadge,
@@ -564,12 +620,13 @@ export default function ChartCard({
                 </AppText>
 
               </View>
-
             )}
 
           </View>
 
-          {/* Weather */}
+          {/* ==================================================
+              WEATHER
+              ================================================== */}
 
           <View
             style={
@@ -595,8 +652,9 @@ export default function ChartCard({
               {weatherData.value}
             </AppText>
 
-            {weatherData.badge && (
+            {/* Weather Description Badge */}
 
+            {weatherData.badge && (
               <View
                 style={[
                   styles.statusBadge,
@@ -615,7 +673,6 @@ export default function ChartCard({
                 </AppText>
 
               </View>
-
             )}
 
           </View>
@@ -651,7 +708,6 @@ export default function ChartCard({
       );
 
     return (
-
       <View
         style={[
           styles.monitorCard,
@@ -659,19 +715,27 @@ export default function ChartCard({
         ]}
       >
 
-        {/* Left Temperature Icon */}
+        {/* ==================================================
+            LEFT TEMPERATURE ICON PANEL
+            ================================================== */}
 
-        <View style={styles.iconAccentPanel}>
+        <View
+          style={
+            styles.iconAccentPanel
+          }
+        >
+
           <Ionicons
             name="thermometer-outline"
             size={40}
             color={Colors.light.primary}
           />
+
         </View>
 
-
-
-        {/* Temperature Measurements */}
+        {/* ==================================================
+            TEMPERATURE MEASUREMENTS
+            ================================================== */}
 
         <View
           style={
@@ -679,7 +743,9 @@ export default function ChartCard({
           }
         >
 
-          {/* Battery Temperature */}
+          {/* ==================================================
+              BATTERY TEMPERATURE
+              ================================================== */}
 
           <View
             style={
@@ -705,8 +771,9 @@ export default function ChartCard({
               {batteryTemperatureData.value}
             </AppText>
 
-            {batteryTemperatureData.badge && (
+            {/* Battery Temperature Status */}
 
+            {batteryTemperatureData.badge && (
               <View
                 style={[
                   styles.statusBadge,
@@ -725,12 +792,13 @@ export default function ChartCard({
                 </AppText>
 
               </View>
-
             )}
 
           </View>
 
-          {/* Solar Panel Temperature */}
+          {/* ==================================================
+              SOLAR PANEL TEMPERATURE
+              ================================================== */}
 
           <View
             style={
@@ -756,8 +824,9 @@ export default function ChartCard({
               {solarTemperatureData.value}
             </AppText>
 
-            {solarTemperatureData.badge && (
+            {/* Solar Panel Temperature Status */}
 
+            {solarTemperatureData.badge && (
               <View
                 style={[
                   styles.statusBadge,
@@ -776,7 +845,6 @@ export default function ChartCard({
                 </AppText>
 
               </View>
-
             )}
 
           </View>
@@ -825,46 +893,68 @@ export default function ChartCard({
     data.value === "Unsafe";
 
   return (
+    <View
+      style={
+        styles.monitorCard
+      }
+    >
 
-    <View style={styles.monitorCard}>
+      {/* ==================================================
+          ICON PANEL
+          ================================================== */}
 
-      <View style={styles.iconAccentPanel}>
+      <View
+        style={
+          styles.iconAccentPanel
+        }
+      >
+
         <Ionicons
           name={data.icon}
           size={28}
           color={Colors.light.primary}
         />
+
       </View>
+
+      {/* ==================================================
+          LABEL
+          ================================================== */}
 
       <AppText
         variant="caption"
-        style={styles.monitorLabel}
+        style={
+          styles.monitorLabel
+        }
       >
         {data.label}
       </AppText>
 
+      {/* ==================================================
+          VALUE
+          ================================================== */}
+
       {data.value !==
         undefined && (
-
           <AppText
             variant="heading"
             style={[
               styles.monitorValue,
               isSafe &&
-              styles.safeValue,
+                styles.safeValue,
               isUnsafe &&
-              styles.unsafeValue,
+                styles.unsafeValue,
             ]}
           >
             {data.value}
           </AppText>
-
         )}
 
-      {/* Status Badge */}
+      {/* ==================================================
+          STATUS BADGE
+          ================================================== */}
 
       {data.badge && (
-
         <View
           style={[
             styles.statusBadge,
@@ -883,7 +973,6 @@ export default function ChartCard({
           </AppText>
 
         </View>
-
       )}
 
     </View>
@@ -908,11 +997,14 @@ function getCardData(
     // ========================================================
 
     case "voltage":
+
       return {
         icon:
           "flash-outline",
+
         label:
           "Voltage",
+
         value:
           loading
             ? "—"
@@ -924,11 +1016,14 @@ function getCardData(
     // ========================================================
 
     case "watt_hour":
+
       return {
         icon:
           "battery-charging-outline",
+
         label:
           "Watt-hour",
+
         value:
           loading
             ? "—"
@@ -946,7 +1041,6 @@ function getCardData(
         "Low";
 
       return {
-
         icon:
           "sunny-outline",
 
@@ -965,7 +1059,7 @@ function getCardData(
           solarStatus === "High"
             ? styles.normalBadge
             : solarStatus ===
-              "Moderate"
+                "Moderate"
               ? styles.moderateBadge
               : styles.lowBadge,
 
@@ -974,7 +1068,6 @@ function getCardData(
             "Moderate"
             ? styles.darkBadgeText
             : styles.lightBadgeText,
-
       };
     }
 
@@ -985,7 +1078,6 @@ function getCardData(
     case "load":
 
       return {
-
         icon:
           "flash-outline",
 
@@ -996,25 +1088,27 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring?.current_load ?? 0}W`,
-
       };
 
     // ========================================================
-    // DEVICE STATUS
+    // WEATHER
     // ========================================================
 
     case "weather": {
 
       const description =
-        weather?.description ?? "Clear sky";
+        weather?.description ??
+        "Clear sky";
 
       return {
-
         icon:
-          getWeatherIcon(description),
+          getWeatherIcon(
+            description,
+          ),
 
         label:
-          weather?.city ?? "—",
+          weather?.city ??
+          "—",
 
         value:
           loading
@@ -1027,11 +1121,14 @@ function getCardData(
           description,
 
         badgeStyle:
-          getWeatherBadgeStyle(description),
+          getWeatherBadgeStyle(
+            description,
+          ),
 
         badgeTextStyle:
-          getWeatherBadgeTextStyle(description),
-
+          getWeatherBadgeTextStyle(
+            description,
+          ),
       };
     }
 
@@ -1042,7 +1139,6 @@ function getCardData(
     case "dod":
 
       return {
-
         icon:
           "shield-checkmark-outline",
 
@@ -1052,7 +1148,6 @@ function getCardData(
         value:
           monitoring?.dod_status ??
           "Safe",
-
       };
 
     // ========================================================
@@ -1067,7 +1162,6 @@ function getCardData(
         "Nominal";
 
       return {
-
         icon:
           "thermometer-outline",
 
@@ -1078,8 +1172,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-              ?.battery_temperature ??
-            0}°C`,
+                ?.battery_temperature ??
+              0}°C`,
 
         badge:
           status,
@@ -1093,7 +1187,6 @@ function getCardData(
           getTemperatureBadgeTextStyle(
             status,
           ),
-
       };
     }
 
@@ -1109,7 +1202,6 @@ function getCardData(
         "Nominal";
 
       return {
-
         icon:
           "thermometer-outline",
 
@@ -1120,8 +1212,8 @@ function getCardData(
           loading
             ? "—"
             : `${monitoring
-              ?.solar_temperature ??
-            0}°C`,
+                ?.solar_temperature ??
+              0}°C`,
 
         badge:
           status,
@@ -1135,10 +1227,8 @@ function getCardData(
           getTemperatureBadgeTextStyle(
             status,
           ),
-
       };
     }
-
   }
 }
 
@@ -1183,7 +1273,6 @@ function getWeatherIcon(
     case "Thunderstorm with heavy hail":
 
       return "thunderstorm-outline";
-
   }
 }
 
@@ -1234,7 +1323,6 @@ function getWeatherBadgeStyle(
     case "Thunderstorm with heavy hail":
 
       return styles.redWeatherBadge;
-
   }
 }
 
@@ -1285,7 +1373,6 @@ function getWeatherBadgeTextStyle(
     case "Thunderstorm with heavy hail":
 
       return styles.redWeatherBadgeText;
-
   }
 }
 
@@ -1314,7 +1401,6 @@ function getTemperatureBadgeStyle(
     case "Critical":
 
       return styles.criticalTemperatureBadge;
-
   }
 }
 
@@ -1343,9 +1429,14 @@ function getTemperatureBadgeTextStyle(
     case "Critical":
 
       return styles.criticalTemperatureBadgeText;
-
   }
 }
+
+// ============================================================
+// STYLES
+//
+// Keep your existing styles here.
+// ============================================================
 
 // ============================================================
 // STYLES
