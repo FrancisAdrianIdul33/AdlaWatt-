@@ -45,6 +45,7 @@ export default function EmptyState({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
+    height: "90%",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: Colors.glass.white,
@@ -59,6 +60,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     fontWeight: "700",
     marginTop: 10,
+    
   },
 
   description: {

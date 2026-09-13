@@ -7,12 +7,19 @@ import {
 } from "react-native";
 
 import ActivityCard from "@/components/ActivityCard";
+
 import AppRecCard from "@/components/AppRecCard";
+
 import ChartCard from "@/components/ChartCard";
+
 import Copyright from "@/components/forms/Copyright";
+
 import NavBar from "@/components/layout/Navbar";
+
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
+
 import Sidebar from "@/components/layout/Sidebar";
+
 import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
@@ -26,7 +33,6 @@ import {
   useMonitoring,
 } from "@/services/monitoringService";
 
-
 // ============================================================
 // TYPES
 // ============================================================
@@ -36,7 +42,6 @@ type WeatherData = {
   temperature: number;
   description: WeatherCondition;
 };
-
 
 // ============================================================
 // DASHBOARD SCREEN
@@ -51,7 +56,6 @@ export default function DashboardScreen() {
   const [sidebarVisible, setSidebarVisible] =
     useState(false);
 
-
   // ==========================================================
   // ADLAWATT MONITORING
   //
@@ -65,7 +69,6 @@ export default function DashboardScreen() {
     monitoring,
     loading,
   } = useMonitoring();
-
 
   // ==========================================================
   // WEATHER STATE
@@ -82,7 +85,6 @@ export default function DashboardScreen() {
 
   const [weatherLoading, setWeatherLoading] =
     useState(true);
-
 
   // ==========================================================
   // LOAD CURRENT WEATHER
@@ -109,13 +111,16 @@ export default function DashboardScreen() {
         }
 
         setWeather({
-          city: forecast.location.city,
+
+          city:
+            forecast.location.city,
 
           temperature:
             forecast.weather.temperature,
 
           description:
             forecast.weather.condition,
+
         });
 
       } catch (error) {
@@ -141,27 +146,30 @@ export default function DashboardScreen() {
         }
 
       }
+
     };
 
     loadWeather();
 
     return () => {
+
       isMounted = false;
+
     };
 
   }, []);
-
 
   // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
+
     <ScreenContainer2>
 
-      {/* ==================================================== */}
-      {/* FIXED NAVBAR */}
-      {/* ==================================================== */}
+      {/* ====================================================
+          FIXED NAVBAR
+          ==================================================== */}
 
       <NavBar
         onMenuPress={() =>
@@ -169,10 +177,9 @@ export default function DashboardScreen() {
         }
       />
 
-
-      {/* ==================================================== */}
-      {/* DASHBOARD */}
-      {/* ==================================================== */}
+      {/* ====================================================
+          DASHBOARD
+          ==================================================== */}
 
       <ScrollView
         style={styles.scrollView}
@@ -182,12 +189,13 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
 
+        {/* ==================================================
+            DASHBOARD HEADER
+            ================================================== */}
 
-        {/* ================================================== */}
-        {/* DASHBOARD HEADER */}
-        {/* ================================================== */}
-
-        <View style={styles.headerCard}>
+        <View
+          style={styles.headerCard}
+        >
 
           <AppText
             variant="heading"
@@ -205,12 +213,13 @@ export default function DashboardScreen() {
 
         </View>
 
+        {/* ==================================================
+            REAL-TIME MONITORING
+            ================================================== */}
 
-        {/* ================================================== */}
-        {/* REAL-TIME MONITORING */}
-        {/* ================================================== */}
-
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+        >
 
           <AppText
             variant="body"
@@ -219,14 +228,14 @@ export default function DashboardScreen() {
             Real-Time Monitoring
           </AppText>
 
+          <View
+            style={styles.monitorGrid}
+          >
 
-          <View style={styles.monitorGrid}>
-
-
-            {/* ============================================== */}
-            {/* BATTERY */}
-            {/* Source: Supabase */}
-            {/* ============================================== */}
+            {/* ==============================================
+                BATTERY
+                Source: Supabase
+                ============================================== */}
 
             <View
               style={
@@ -242,54 +251,36 @@ export default function DashboardScreen() {
 
             </View>
 
+            {/* ==============================================
+                BATTERY MONITORING
+                Voltage + Watt-hour + Load Now
+                ============================================== */}
 
-            {/* ============================================== */}
-            {/* ROW 1 */}
-            {/* ============================================== */}
+            <ChartCard
+              type="voltage"
+              monitoring={monitoring}
+              loading={loading}
+            />
+
+            {/* ==============================================
+                SOLAR + WEATHER
+                Solar Input + Weather
+                ============================================== */}
 
             <ChartCard
               type="solar"
-              monitoring={monitoring}
-              loading={loading}
-            />
-
-            <ChartCard
-              type="load"
-              monitoring={monitoring}
-              loading={loading}
-            />
-
-
-            {/* ============================================== */}
-            {/* ROW 2 */}
-            {/* ============================================== */}
-
-            <ChartCard
-              type="weather"
               monitoring={monitoring}
               weather={weather}
               loading={weatherLoading}
             />
 
-            <ChartCard
-              type="dod"
-              monitoring={monitoring}
-              loading={loading}
-            />
-
-
-            {/* ============================================== */}
-            {/* ROW 3 */}
-            {/* ============================================== */}
+            {/* ==============================================
+                TEMPERATURE
+                Battery Temperature + Solar Panel Temperature
+                ============================================== */}
 
             <ChartCard
               type="temperature"
-              monitoring={monitoring}
-              loading={loading}
-            />
-
-            <ChartCard
-              type="solar_temperature"
               monitoring={monitoring}
               loading={loading}
             />
@@ -298,12 +289,13 @@ export default function DashboardScreen() {
 
         </View>
 
+        {/* ==================================================
+            APPLIANCE RECOMMENDATION
+            ================================================== */}
 
-        {/* ================================================== */}
-        {/* APPLIANCE RECOMMENDATION */}
-        {/* ================================================== */}
-
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+        >
 
           <AppText
             variant="body"
@@ -316,30 +308,29 @@ export default function DashboardScreen() {
 
         </View>
 
+        {/* ==================================================
+            RECENT ACTIVITY
+            ================================================== */}
 
-        {/* ================================================== */}
-        {/* RECENT ACTIVITY */}
-        {/* ================================================== */}
-
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+        >
 
           <ActivityCard />
 
         </View>
 
-
-        {/* ================================================== */}
-        {/* COPYRIGHT */}
-        {/* ================================================== */}
+        {/* ==================================================
+            COPYRIGHT
+            ================================================== */}
 
         <Copyright />
 
       </ScrollView>
 
-
-      {/* ==================================================== */}
-      {/* SIDEBAR */}
-      {/* ==================================================== */}
+      {/* ====================================================
+          SIDEBAR
+          ==================================================== */}
 
       <Sidebar
         visible={sidebarVisible}

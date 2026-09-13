@@ -151,6 +151,15 @@ export default function Sidebar({
           />
 
           <SidebarButton
+            icon="analytics-outline"
+            label="Analytics"
+            active={pathname === Routes.ANALYTICS}
+            onPress={() =>
+              handleNavigation(Routes.ANALYTICS)
+            }
+          />
+
+          <SidebarButton
             icon="hardware-chip-outline"
             label="Components"
             active={pathname === Routes.COMPONENTS}
