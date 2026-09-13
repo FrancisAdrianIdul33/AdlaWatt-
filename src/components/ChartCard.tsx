@@ -1488,7 +1488,7 @@ const styles = StyleSheet.create({
     backgroundColor:
       Colors.glass.white,
 
-    borderWidth: 2,
+    borderWidth: 3,
 
     borderColor:
       Colors.light.primary,
