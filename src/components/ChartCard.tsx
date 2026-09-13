@@ -267,7 +267,7 @@ export default function ChartCard({
             ? "—"
             : monitoring
               ?.time_remaining ??
-              "—"}
+            "—"}
         </AppText>
 
         {/* Battery Status and DoD Status */}
@@ -367,19 +367,12 @@ export default function ChartCard({
 
         {/* Left Icon */}
 
-        <View
-          style={
-            styles.cardIconContainer
-          }
-        >
-
+        <View style={styles.iconAccentPanel}>
           <Ionicons
             name="flash-outline"
             size={40}
             color={Colors.light.primary}
-            style={styles.cardIcon}
           />
-
         </View>
 
         {/* Battery Measurements */}
@@ -509,19 +502,12 @@ export default function ChartCard({
 
         {/* Left Weather Icon */}
 
-        <View
-          style={
-            styles.cardIconContainer
-          }
-        >
-
+        <View style={styles.iconAccentPanel}>
           <Ionicons
             name={weatherData.icon}
             size={40}
             color={Colors.light.primary}
-            style={styles.cardIcon}
           />
-
         </View>
 
         {/* Solar and Weather Measurements */}
@@ -675,20 +661,15 @@ export default function ChartCard({
 
         {/* Left Temperature Icon */}
 
-        <View
-          style={
-            styles.cardIconContainer
-          }
-        >
-
+        <View style={styles.iconAccentPanel}>
           <Ionicons
             name="thermometer-outline"
             size={40}
             color={Colors.light.primary}
-            style={styles.cardIcon}
           />
-
         </View>
+
+
 
         {/* Temperature Measurements */}
 
@@ -847,12 +828,13 @@ export default function ChartCard({
 
     <View style={styles.monitorCard}>
 
-      <Ionicons
-        name={data.icon}
-        size={23}
-        color={Colors.light.primary}
-        style={styles.icon}
-      />
+      <View style={styles.iconAccentPanel}>
+        <Ionicons
+          name={data.icon}
+          size={28}
+          color={Colors.light.primary}
+        />
+      </View>
 
       <AppText
         variant="caption"
@@ -864,20 +846,20 @@ export default function ChartCard({
       {data.value !==
         undefined && (
 
-        <AppText
-          variant="heading"
-          style={[
-            styles.monitorValue,
-            isSafe &&
-            styles.safeValue,
-            isUnsafe &&
-            styles.unsafeValue,
-          ]}
-        >
-          {data.value}
-        </AppText>
+          <AppText
+            variant="heading"
+            style={[
+              styles.monitorValue,
+              isSafe &&
+              styles.safeValue,
+              isUnsafe &&
+              styles.unsafeValue,
+            ]}
+          >
+            {data.value}
+          </AppText>
 
-      )}
+        )}
 
       {/* Status Badge */}
 
@@ -1931,4 +1913,18 @@ const styles = StyleSheet.create({
   redWeatherBadgeText: {
     color: "#991B1B",
   },
+
+ iconAccentPanel: {
+  width: 58,
+  alignSelf: "stretch",
+  backgroundColor: Colors.light.color1,
+  borderTopLeftRadius: 13,
+  borderBottomLeftRadius: 13,
+  alignItems: "center",
+  justifyContent: "center",
+  marginLeft: -12,
+  marginTop: -12,
+  marginBottom: -12,
+  marginRight: 12,
+},
 });
