@@ -1,7 +1,5 @@
 import { supabase } from "@/lib/supabase";
 
-
-
 export type NotificationType = "normal" | "alert";
 
 interface MonitoringData {
