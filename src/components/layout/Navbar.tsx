@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+
 import { router } from "expo-router";
+
 import React, { useEffect, useState } from "react";
+
 import {
   Pressable,
   StyleSheet,
@@ -8,205 +11,300 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+
 import { Routes } from "@/constants/routes";
+
 import { supabase } from "@/lib/supabase";
 
 import AppText from "@/components/ui/AppText";
 
+import type { DeviceStatus } from "@/services/monitoringService";
+
+
+// ============================================================
+// NAVBAR PROPS
+// ============================================================
+
 interface NavBarProps {
   onNotificationPress?: () => void;
+
   onMenuPress?: () => void;
+
+  deviceStatus?: DeviceStatus;
 }
 
-type DeviceStatus = "Online" | "Offline";
+
+// ============================================================
+// NAVBAR
+// ============================================================
 
 export default function NavBar({
   onNotificationPress,
+
   onMenuPress,
+
+  deviceStatus = "Offline",
 }: NavBarProps) {
-  const [hasUnreadNotifications, setHasUnreadNotifications] =
-    useState(false);
 
-  const [deviceStatus, setDeviceStatus] =
-    useState<DeviceStatus>("Offline");
+  const [
+    hasUnreadNotifications,
+    setHasUnreadNotifications,
+  ] = useState(false);
 
-  /*
-   * Get device status from Supabase.
-   */
+
+  // ==========================================================
+  // CHECK FOR UNREAD NOTIFICATIONS
+  // ==========================================================
+
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const loadDeviceStatus = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    let mounted = true;
 
-      if (!user) {
-        setDeviceStatus("Offline");
-        return;
-      }
+    const checkUnreadNotifications =
+      async () => {
 
-      const { data, error } = await supabase
-        .from("monitoring")
-        .select("device_status")
-        .eq("user_id", user.id)
-        .single();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (error) {
-        console.error("Error loading device status:", error);
-        setDeviceStatus("Offline");
-        return;
-      }
 
-      setDeviceStatus(
-        data?.device_status === "Online"
-          ? "Online"
-          : "Offline",
-      );
+        if (!mounted) {
+          return;
+        }
 
-      channel = supabase
-        .channel(`navbar-device-status-${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "monitoring",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            setDeviceStatus(
-              payload.new.device_status === "Online"
-                ? "Online"
-                : "Offline",
-            );
-          },
-        )
-        .subscribe();
-    };
 
-    loadDeviceStatus();
+        if (!user) {
 
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, []);
+          setHasUnreadNotifications(false);
 
-  /*
-   * Check for unread notifications.
-   */
-  useEffect(() => {
-    const checkUnreadNotifications = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+          return;
+        }
 
-      if (!user) {
-        setHasUnreadNotifications(false);
-        return;
-      }
 
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("notif_id")
-        .eq("user_id", user.id)
-        .eq("read", false)
-        .limit(1);
-
-      if (error) {
-        console.error(
-          "Error checking unread notifications:",
+        const {
+          data,
           error,
-        );
-        return;
-      }
+        } = await supabase
 
-      setHasUnreadNotifications(
-        (data?.length ?? 0) > 0,
-      );
-    };
+          .from("notifications")
+
+          .select("notif_id")
+
+          .eq("user_id", user.id)
+
+          .eq("read", false)
+
+          .limit(1);
+
+
+        if (!mounted) {
+          return;
+        }
+
+
+        if (error) {
+
+          console.error(
+            "Error checking unread notifications:",
+            error,
+          );
+
+          return;
+        }
+
+
+        setHasUnreadNotifications(
+          (data?.length ?? 0) > 0,
+        );
+
+      };
+
 
     checkUnreadNotifications();
+
+
+    return () => {
+
+      mounted = false;
+
+    };
+
   }, []);
 
+
+  // ==========================================================
+  // HANDLE NOTIFICATION PRESS
+  // ==========================================================
+
   const handleNotificationPress = () => {
+
     if (onNotificationPress) {
+
       onNotificationPress();
+
       return;
     }
 
-    router.push(Routes.NOTIFICATIONS);
+
+    router.push(
+      Routes.NOTIFICATIONS,
+    );
+
   };
 
-  const isOnline = deviceStatus === "Online";
+
+  // ==========================================================
+  // DEVICE STATUS
+  // ==========================================================
+
+  const isOnline =
+    deviceStatus === "Online";
+
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
-    <View style={navBarStyles.wrapper}>
-      <View style={navBarStyles.container}>
 
-        {/* Device Status */}
-        <View style={navBarStyles.deviceStatus}>
+    <View
+      style={
+        navBarStyles.wrapper
+      }
+    >
+
+      <View
+        style={
+          navBarStyles.container
+        }
+      >
+
+        {/* ====================================================
+            DEVICE STATUS
+            ==================================================== */}
+
+        <View
+          style={
+            navBarStyles.deviceStatus
+          }
+        >
+
           <View
             style={[
               navBarStyles.statusDot,
+
               isOnline
                 ? navBarStyles.onlineDot
                 : navBarStyles.offlineDot,
             ]}
           />
 
+
           <AppText
             variant="caption"
-            style={navBarStyles.statusText}
+            style={
+              navBarStyles.statusText
+            }
           >
             {deviceStatus}
           </AppText>
+
         </View>
 
-        {/* Right-side actions */}
-        <View style={navBarStyles.actions}>
 
-          {/* Notification */}
+        {/* ====================================================
+            RIGHT-SIDE ACTIONS
+            ==================================================== */}
+
+        <View
+          style={
+            navBarStyles.actions
+          }
+        >
+
+          {/* ==================================================
+              NOTIFICATION
+              ================================================== */}
+
           <Pressable
-            onPress={handleNotificationPress}
-            style={navBarStyles.iconButton}
+            onPress={
+              handleNotificationPress
+            }
+            style={
+              navBarStyles.iconButton
+            }
             accessibilityRole="button"
             accessibilityLabel="Notifications"
           >
+
             <Ionicons
               name="notifications-outline"
-              size={navBarDimensions.notificationIconSize}
-              color={Colors.light.text}
+              size={
+                navBarDimensions.notificationIconSize
+              }
+              color={
+                Colors.light.text
+              }
             />
 
+
             {hasUnreadNotifications && (
-              <View style={navBarStyles.notificationDot} />
+
+              <View
+                style={
+                  navBarStyles.notificationDot
+                }
+              />
+
             )}
+
           </Pressable>
 
-          {/* Menu */}
+
+          {/* ==================================================
+              MENU
+              ================================================== */}
+
           <Pressable
             onPress={onMenuPress}
-            style={navBarStyles.iconButton}
+            style={
+              navBarStyles.iconButton
+            }
             accessibilityRole="button"
             accessibilityLabel="Menu"
           >
+
             <Ionicons
               name="menu-outline"
-              size={navBarDimensions.menuIconSize}
-              color={Colors.light.text}
+              size={
+                navBarDimensions.menuIconSize
+              }
+              color={
+                Colors.light.text
+              }
             />
+
           </Pressable>
 
         </View>
+
       </View>
 
-      {/* Secondary accent line */}
-      <View style={navBarStyles.accentLine} />
+
+      {/* ======================================================
+          SECONDARY ACCENT LINE
+          ====================================================== */}
+
+      <View
+        style={
+          navBarStyles.accentLine
+        }
+      />
+
     </View>
+
   );
+
 }
 
 const navBarDimensions = {

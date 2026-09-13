@@ -1,410 +1,2951 @@
 import { supabase } from "@/lib/supabase";
+import type {
+  MonitoringData
+} from "@/services/monitoringService";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 export type NotificationType = "normal" | "alert";
 
-interface MonitoringData {
-  monitor_id: number;
+export interface NotificationData {
+  notif_id: string;
   user_id: string;
-  battery_level: number;
-  battery_status: "Charging" | "Discharging" | "Idle";
-  time_remaining: string;
-  solar_input: number;
-  solar_status: "Low" | "Moderate" | "High";
-  current_load: number;
-  device_status: "Online" | "Offline";
-  last_seen: string | null;
-  battery_temperature: number;
-  battery_temperature_status:
-    | "Nominal"
-    | "Elevated"
-    | "High"
-    | "Critical";
-  dod_status: "Safe" | "Unsafe";
-  solar_temperature: number;
-  solar_temperature_status:
-    | "Nominal"
-    | "Elevated"
-    | "High"
-    | "Critical";
+  title: string;
+  description: string;
+  type: NotificationType;
+  read: boolean;
+  created_at: string;
 }
 
-interface NotificationData {
+export interface NotificationRule {
   title: string;
   description: string;
   type: NotificationType;
 }
 
-interface PreviousState {
-  battery_level: number;
-  solar_input: number;
-  current_load: number;
-  device_status: string;
-  battery_status: string;
-  battery_temperature_status: string;
-  solar_temperature_status: string;
-  dod_status: string;
-}
+// ============================================================
+// CONFIGURATION
+// ============================================================
+//
+// These values are intentionally kept here so the notification
+// rules can be adjusted without changing the monitoring table.
+//
+// The monitoring table itself does not define safe-load or
+// safe-voltage thresholds, so those values are configurable
+// rather than assumed to be database constraints.
+// ============================================================
 
-/*
-|--------------------------------------------------------------------------
-| DUPLICATE PREVENTION
-|--------------------------------------------------------------------------
-|
-| Checks if the same notification title was recently created.
-| This prevents repeated notifications when monitoring data updates frequently.
-|
-*/
+const NOTIFICATION_COOLDOWN_MS = 10 * 60 * 1000;
 
-const NOTIFICATION_COOLDOWN_MINUTES = 10;
+const UPDATE_NOTIFICATION_COOLDOWN_MS =
+  5 * 60 * 1000;
 
-async function notificationExistsRecently(
-  userId: string,
-  title: string,
-  cooldownMinutes: number = NOTIFICATION_COOLDOWN_MINUTES
-): Promise<boolean> {
-  const cooldownDate = new Date(
-    Date.now() - cooldownMinutes * 60 * 1000
-  ).toISOString();
+const SOLAR_INPUT_MILESTONE_WATTS = 50;
 
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("notif_id")
-    .eq("user_id", userId)
-    .eq("title", title)
-    .gte("created_at", cooldownDate)
-    .limit(1);
+const CURRENT_LOAD_MILESTONE_WATTS = 50;
+
+const STALE_MONITORING_INTERVAL_MS =
+  10 * 1000;
+
+// ------------------------------------------------------------
+// OPTIONAL SAFE THRESHOLDS
+// ------------------------------------------------------------
+// Set these values when the actual system thresholds have been
+// finalized.
+//
+// The monitoring table does NOT define these thresholds.
+// Therefore, null means the corresponding notification rule
+// remains disabled.
+// ------------------------------------------------------------
+
+const SAFE_CURRENT_LOAD_THRESHOLD: number | null = null;
+
+const SAFE_BATTERY_VOLTAGE_MIN: number | null = null;
+
+const SAFE_BATTERY_VOLTAGE_MAX: number | null = null;
+
+
+// ============================================================
+// INTERNAL STATE
+// ============================================================
+
+let previousMonitoring: MonitoringData | null = null;
+
+let currentUserId: string | null = null;
+
+let monitoringChannel:
+  | ReturnType<typeof supabase.channel>
+  | null = null;
+
+let staleMonitoringTimer:
+  | ReturnType<typeof setInterval>
+  | null = null;
+
+let authSubscription:
+  | ReturnType<
+      typeof supabase.auth.onAuthStateChange
+    >["data"]["subscription"]
+  | null = null;
+
+let notificationServiceStarted = false;
+
+let notificationProcessing = false;
+
+const notificationCooldowns =
+  new Map<string, number>();
+
+const milestoneState = {
+  solarInputMilestone: 0,
+  currentLoadMilestone: 0,
+};
+
+
+// ============================================================
+// HELPER: CURRENT USER
+// ============================================================
+
+const getAuthenticatedUser = async () => {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   if (error) {
     console.error(
-      "Error checking duplicate notification:",
-      error.message
+      "Error getting authenticated user:",
+      error.message,
+    );
+
+    return null;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return user;
+};
+
+
+// ============================================================
+// FETCH CURRENT MONITORING DATA
+// ============================================================
+//
+// This follows the exact identity pattern used by
+// monitoringService.ts:
+//
+// Supabase Auth user.id
+//        ↓
+// monitoring.user_id
+//        ↓
+// user's monitoring row
+// ============================================================
+
+export const getCurrentMonitoringData =
+  async (): Promise<MonitoringData | null> => {
+    const user = await getAuthenticatedUser();
+
+    if (!user) {
+      return null;
+    }
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("monitoring")
+      .select(`
+        battery_level,
+        battery_status,
+        time_remaining,
+        voltage,
+        watt_hours,
+        solar_input,
+        solar_status,
+        current_load,
+        device_status,
+        battery_temperature,
+        battery_temperature_status,
+        dod_status,
+        solar_temperature,
+        solar_temperature_status
+      `)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "Error loading monitoring data for notifications:",
+        error.message,
+      );
+
+      return null;
+    }
+
+    return data as MonitoringData | null;
+  };
+
+
+// ============================================================
+// FETCH CURRENT MONITORING DATA WITH LAST-SEEN
+// ============================================================
+//
+// Notification logic for stale monitoring and missing
+// last_seen requires the last_seen value.
+//
+// This function intentionally uses the monitoring table
+// directly instead of relying on ChartCard.tsx.
+// ============================================================
+
+interface MonitoringNotificationData
+  extends MonitoringData {
+  last_seen: string | null;
+}
+
+const getCurrentMonitoringNotificationData =
+  async (): Promise<
+    MonitoringNotificationData | null
+  > => {
+    const user = await getAuthenticatedUser();
+
+    if (!user) {
+      return null;
+    }
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("monitoring")
+      .select(`
+        battery_level,
+        battery_status,
+        time_remaining,
+        voltage,
+        watt_hours,
+        solar_input,
+        solar_status,
+        current_load,
+        device_status,
+        battery_temperature,
+        battery_temperature_status,
+        dod_status,
+        solar_temperature,
+        solar_temperature_status,
+        last_seen
+      `)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "Error loading monitoring notification data:",
+        error.message,
+      );
+
+      return null;
+    }
+
+    return data as MonitoringNotificationData | null;
+  };
+
+
+// ============================================================
+// CREATE NOTIFICATION
+// ============================================================
+//
+// Notifications are always assigned to the authenticated
+// user's ID.
+//
+// This maintains:
+//
+// auth user.id
+//      ↓
+// notifications.user_id
+//
+// RLS also requires user_id = auth.uid().
+// ============================================================
+
+const createNotification = async (
+  userId: string,
+  rule: NotificationRule,
+): Promise<boolean> => {
+  const now = Date.now();
+
+  const cooldownKey =
+    `${userId}:${rule.type}:${rule.title}`;
+
+  const previousNotificationTime =
+    notificationCooldowns.get(cooldownKey);
+
+  if (
+    previousNotificationTime !== undefined &&
+    now - previousNotificationTime <
+      NOTIFICATION_COOLDOWN_MS
+  ) {
+    return false;
+  }
+
+  const {
+    data: existingNotification,
+    error: existingError,
+  } = await supabase
+    .from("notifications")
+    .select("notif_id, created_at")
+    .eq("user_id", userId)
+    .eq("title", rule.title)
+    .eq("type", rule.type)
+    .order("created_at", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error(
+      "Error checking previous notification:",
+      existingError.message,
     );
 
     return false;
   }
 
-  return !!data && data.length > 0;
-}
+  if (existingNotification) {
+    const lastCreatedAt =
+      new Date(
+        existingNotification.created_at,
+      ).getTime();
 
-/*
-|--------------------------------------------------------------------------
-| CREATE NOTIFICATION
-|--------------------------------------------------------------------------
-*/
+    if (
+      !Number.isNaN(lastCreatedAt) &&
+      now - lastCreatedAt <
+        NOTIFICATION_COOLDOWN_MS
+    ) {
+      notificationCooldowns.set(
+        cooldownKey,
+        lastCreatedAt,
+      );
 
-async function createNotification(
-  userId: string,
-  notification: NotificationData,
-  cooldownMinutes?: number
-): Promise<void> {
-  const exists = await notificationExistsRecently(
-    userId,
-    notification.title,
-    cooldownMinutes
-  );
-
-  if (exists) {
-    return;
+      return false;
+    }
   }
 
-  const { error } = await supabase
+  const {
+    error: insertError,
+  } = await supabase
     .from("notifications")
     .insert({
       user_id: userId,
-      title: notification.title,
-      description: notification.description,
-      type: notification.type,
+      title: rule.title,
+      description: rule.description,
+      type: rule.type,
       read: false,
     });
 
-  if (error) {
+  if (insertError) {
     console.error(
-      "Error creating notification:",
-      error.message
+      `Error creating notification "${rule.title}":`,
+      insertError.message,
     );
+
+    return false;
   }
-}
 
-/*
-|--------------------------------------------------------------------------
-| MAIN NOTIFICATION CHECKER
-|--------------------------------------------------------------------------
-*/
+  notificationCooldowns.set(
+    cooldownKey,
+    now,
+  );
 
-export async function checkMonitoringNotifications(
+  return true;
+};
+
+
+// ============================================================
+// CREATE NOTIFICATION WITHOUT COOLDOWN
+// ============================================================
+//
+// Used only where the service needs a special transition
+// behavior and the normal cooldown mechanism should not
+// interfere.
+// ============================================================
+
+const createNotificationWithCooldown = async (
+  userId: string,
+  rule: NotificationRule,
+  cooldownMs: number,
+): Promise<boolean> => {
+  const now = Date.now();
+
+  const cooldownKey =
+    `${userId}:${rule.type}:${rule.title}`;
+
+  const previousNotificationTime =
+    notificationCooldowns.get(cooldownKey);
+
+  if (
+    previousNotificationTime !== undefined &&
+    now - previousNotificationTime <
+      cooldownMs
+  ) {
+    return false;
+  }
+
+  const {
+    data: existingNotification,
+    error: existingError,
+  } = await supabase
+    .from("notifications")
+    .select("notif_id, created_at")
+    .eq("user_id", userId)
+    .eq("title", rule.title)
+    .eq("type", rule.type)
+    .order("created_at", {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error(
+      "Error checking notification cooldown:",
+      existingError.message,
+    );
+
+    return false;
+  }
+
+  if (existingNotification) {
+    const lastCreatedAt =
+      new Date(
+        existingNotification.created_at,
+      ).getTime();
+
+    if (
+      !Number.isNaN(lastCreatedAt) &&
+      now - lastCreatedAt <
+        cooldownMs
+    ) {
+      notificationCooldowns.set(
+        cooldownKey,
+        lastCreatedAt,
+      );
+
+      return false;
+    }
+  }
+
+  const {
+    error: insertError,
+  } = await supabase
+    .from("notifications")
+    .insert({
+      user_id: userId,
+      title: rule.title,
+      description: rule.description,
+      type: rule.type,
+      read: false,
+    });
+
+  if (insertError) {
+    console.error(
+      `Error creating notification "${rule.title}":`,
+      insertError.message,
+    );
+
+    return false;
+  }
+
+  notificationCooldowns.set(
+    cooldownKey,
+    now,
+  );
+
+  return true;
+};
+
+
+// ============================================================
+// NORMAL NOTIFICATION RULES
+// ============================================================
+
+// ------------------------------------------------------------
+// DEVICE ONLINE
+// ------------------------------------------------------------
+
+const checkDeviceOnline = async (
+  userId: string,
   current: MonitoringData,
-  previous?: PreviousState
-): Promise<void> {
-  const userId = current.user_id;
-
-  /*
-  |--------------------------------------------------------------------------
-  | DEVICE STATUS
-  |--------------------------------------------------------------------------
-  */
-
+  previous: MonitoringData | null,
+) => {
   if (
     current.device_status === "Online" &&
     previous?.device_status !== "Online"
   ) {
-    await createNotification(userId, {
-      title: "System Online",
-      description:
-        "Your AdlaWatt system is connected and monitoring is active.",
-      type: "normal",
-    });
+    await createNotification(
+      userId,
+      {
+        title: "Device Online",
+        description:
+          "The monitoring device status is Online.",
+        type: "normal",
+      },
+    );
   }
+};
 
+
+// ------------------------------------------------------------
+// DEVICE OFFLINE
+// ------------------------------------------------------------
+//
+// This normal notification represents an explicit transition
+// from Online to Offline.
+//
+// A separate alert is generated when the monitoring data is
+// stale or last_seen is missing.
+// ------------------------------------------------------------
+
+const checkDeviceOffline = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
   if (
     current.device_status === "Offline" &&
     previous?.device_status === "Online"
   ) {
-    await createNotification(userId, {
-      title: "System Offline",
-      description:
-        "Your AdlaWatt system is currently not sending monitoring data.",
-      type: "alert",
-    });
+    await createNotification(
+      userId,
+      {
+        title: "Device Offline",
+        description:
+          "The monitoring device status is Offline.",
+        type: "normal",
+      },
+    );
   }
+};
 
-  /*
-  |--------------------------------------------------------------------------
-  | BATTERY FULLY CHARGED
-  |--------------------------------------------------------------------------
-  */
 
-  if (
-    current.battery_level === 100 &&
-    previous?.battery_level !== 100
-  ) {
-    await createNotification(userId, {
-      title: "Battery Fully Charged",
-      description:
-        "The battery has reached 100% charge.",
-      type: "normal",
-    });
-  }
+// ------------------------------------------------------------
+// BATTERY CHARGING
+// ------------------------------------------------------------
 
-  /*
-  |--------------------------------------------------------------------------
-  | BATTERY CHARGING STATUS
-  |--------------------------------------------------------------------------
-  */
-
+const checkBatteryCharging = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
   if (
     current.battery_status === "Charging" &&
     previous?.battery_status !== "Charging"
   ) {
-    await createNotification(userId, {
-      title: "Battery Charging",
-      description:
-        "The battery is currently receiving power.",
-      type: "normal",
-    });
+    await createNotification(
+      userId,
+      {
+        title: "Battery Charging",
+        description:
+          "The battery status is Charging.",
+        type: "normal",
+      },
+    );
   }
+};
 
-  /*
-  |--------------------------------------------------------------------------
-  | BATTERY DISCHARGING STATUS
-  |--------------------------------------------------------------------------
-  */
 
+// ------------------------------------------------------------
+// BATTERY DISCHARGING
+// ------------------------------------------------------------
+
+const checkBatteryDischarging = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
   if (
     current.battery_status === "Discharging" &&
     previous?.battery_status !== "Discharging"
   ) {
-    await createNotification(userId, {
-      title: "Battery Discharging",
-      description:
-        "The battery is currently supplying power to connected appliances.",
-      type: "normal",
-    });
+    await createNotification(
+      userId,
+      {
+        title: "Battery Discharging",
+        description:
+          "The battery status is Discharging.",
+        type: "normal",
+      },
+    );
   }
+};
 
-  /*
-  |--------------------------------------------------------------------------
-  | 80% DOD / 20% SOC
-  |--------------------------------------------------------------------------
-  */
+
+// ------------------------------------------------------------
+// BATTERY IDLE
+// ------------------------------------------------------------
+
+const checkBatteryIdle = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    current.battery_status === "Idle" &&
+    previous?.battery_status !== "Idle"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Battery Idle",
+        description:
+          "The battery status is Idle.",
+        type: "normal",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY FULLY CHARGED
+// ------------------------------------------------------------
+//
+// 100% is NORMAL.
+//
+// It fires when the battery reaches 100% from a lower level.
+// ------------------------------------------------------------
+
+const checkBatteryFullyCharged = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    current.battery_level === 100 &&
+    previous !== null &&
+    previous.battery_level < 100
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Battery Fully Charged",
+        description:
+          "The battery level is 100%.",
+        type: "normal",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY LEVEL UPDATED
+// ------------------------------------------------------------
+//
+// This is intentionally cooldown-protected because the ESP32
+// can update the battery level repeatedly.
+// ------------------------------------------------------------
+
+const checkBatteryLevelUpdated = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    previous !== null &&
+    current.battery_level !== previous.battery_level
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Battery Level Updated",
+        description:
+          `The battery level has been updated with the latest percentage value from ${current.battery_level}%.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY TEMPERATURE STATUS
+// ------------------------------------------------------------
+
+const checkBatteryTemperatureStatus = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (previous === null) {
+    return;
+  }
 
   if (
-    current.battery_level <= 20 &&
-    previous &&
-    previous.battery_level > 20
+    current.battery_temperature_status ===
+      "Nominal" &&
+    previous.battery_temperature_status !==
+      "Nominal"
   ) {
-    await createNotification(userId, {
-      title: "Battery Reached Normal-Use Cutoff",
-      description:
-        "Battery level reached 20%. Consider reducing power usage.",
-      type: "alert",
-    });
+    await createNotification(
+      userId,
+      {
+        title:
+          "Battery Temperature Nominal",
+        description:
+          "The battery temperature status is Nominal.",
+        type: "normal",
+      },
+    );
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | BATTERY EMPTY
-  |--------------------------------------------------------------------------
-  */
 
   if (
-    current.battery_level === 0 &&
-    previous?.battery_level !== 0
+    current.battery_temperature_status ===
+      "Elevated" &&
+    previous.battery_temperature_status !==
+      "Elevated"
   ) {
-    await createNotification(userId, {
-      title: "Battery Empty",
-      description:
-        "The battery is empty. The BMS may disconnect the battery.",
-      type: "alert",
-    });
+    await createNotification(
+      userId,
+      {
+        title:
+          "Battery Temperature Elevated",
+        description:
+          "The battery temperature status is Elevated.",
+        type: "normal",
+      },
+    );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | DOD STATUS
-  |--------------------------------------------------------------------------
-  */
+  if (
+    current.battery_temperature_status ===
+      "High" &&
+    previous.battery_temperature_status !==
+      "High"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title:
+          "Battery Temperature High",
+        description:
+          "The battery temperature status is High. This is a normal status according to your notification rules.",
+        type: "normal",
+      },
+    );
+  }
+
+  if (
+    current.battery_temperature_status ===
+      "Critical" &&
+    previous.battery_temperature_status !==
+      "Critical"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title:
+          "Battery Temperature Critical",
+        description:
+          "The battery temperature status is Critical.",
+        type: "alert",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// SOLAR TEMPERATURE STATUS
+// ------------------------------------------------------------
+
+const checkSolarTemperatureStatus = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (previous === null) {
+    return;
+  }
+
+  if (
+    current.solar_temperature_status ===
+      "Nominal" &&
+    previous.solar_temperature_status !==
+      "Nominal"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title:
+          "Solar Temperature Nominal",
+        description:
+          "The solar temperature status is Nominal.",
+        type: "normal",
+      },
+    );
+  }
+
+  if (
+    current.solar_temperature_status ===
+      "Elevated" &&
+    previous.solar_temperature_status !==
+      "Elevated"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title:
+          "Solar Temperature Elevated",
+        description:
+          "The solar temperature status is Elevated.",
+        type: "normal",
+      },
+    );
+  }
+
+  if (
+    current.solar_temperature_status ===
+      "High" &&
+    previous.solar_temperature_status !==
+      "High"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title:
+          "Solar Temperature High",
+        description:
+          "The solar temperature status is High. This is a normal status according to your notification rules.",
+        type: "normal",
+      },
+    );
+  }
+
+  if (
+    current.solar_temperature_status ===
+      "Critical" &&
+    previous.solar_temperature_status !==
+      "Critical"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title:
+          "Solar Temperature Critical",
+        description:
+          "The solar temperature status is Critical.",
+        type: "alert",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// SOLAR STATUS
+// ------------------------------------------------------------
+
+const checkSolarStatus = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (previous === null) {
+    return;
+  }
+
+  if (
+    current.solar_status !==
+    previous.solar_status
+  ) {
+    const description =
+      current.solar_status === "Low"
+        ? "The solar status is Low."
+        : current.solar_status ===
+            "Moderate"
+          ? "The solar status is Moderate."
+          : "The solar status is High.";
+
+    await createNotification(
+      userId,
+      {
+        title:
+          `Solar Input ${current.solar_status}`,
+        description,
+        type: "normal",
+      },
+    );
+
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Solar Status Changed",
+        description:
+          `The solar_status changed to ${current.solar_status}.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// SOLAR INPUT DETECTED / NO SOLAR INPUT
+// ------------------------------------------------------------
+
+const checkSolarInputState = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (previous === null) {
+    return;
+  }
+
+  if (
+    previous.solar_input <= 0 &&
+    current.solar_input > 0
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Solar Input Detected",
+        description:
+          "The solar_input value is greater than zero.",
+        type: "normal",
+      },
+    );
+  }
+
+  if (
+    previous.solar_input > 0 &&
+    current.solar_input === 0
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "No Solar Input",
+        description:
+          "The solar_input value is zero.",
+        type: "normal",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// SOLAR INPUT MILESTONES
+// ------------------------------------------------------------
+//
+// Example:
+//
+// 0 W → 50 W
+// 50 W → 100 W
+// 100 W → 150 W
+//
+// A notification is created when a higher 50 W milestone
+// is reached.
+// ------------------------------------------------------------
+
+const checkSolarInputMilestone = async (
+  userId: string,
+  current: MonitoringData,
+) => {
+  const currentMilestone =
+    Math.floor(
+      current.solar_input /
+        SOLAR_INPUT_MILESTONE_WATTS,
+    ) *
+    SOLAR_INPUT_MILESTONE_WATTS;
+
+  if (
+    currentMilestone <= 0
+  ) {
+    milestoneState.solarInputMilestone = 0;
+    return;
+  }
+
+  if (
+    currentMilestone >
+    milestoneState.solarInputMilestone
+  ) {
+    milestoneState.solarInputMilestone =
+      currentMilestone;
+
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Solar Input Increased",
+        description:
+          `The solar input increased to ${current.solar_input} W and reached the ${currentMilestone} W milestone.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// CURRENT LOAD DETECTED / NO CURRENT LOAD
+// ------------------------------------------------------------
+
+const checkCurrentLoadState = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (previous === null) {
+    return;
+  }
+
+  if (
+    previous.current_load <= 0 &&
+    current.current_load > 0
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Current Load Detected",
+        description:
+          "The current_load value is greater than zero.",
+        type: "normal",
+      },
+    );
+  }
+
+  if (
+    previous.current_load > 0 &&
+    current.current_load === 0
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "No Current Load",
+        description:
+          "The current_load value is zero.",
+        type: "normal",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// CURRENT LOAD MILESTONES
+// ------------------------------------------------------------
+
+const checkCurrentLoadMilestone = async (
+  userId: string,
+  current: MonitoringData,
+) => {
+  const currentMilestone =
+    Math.floor(
+      current.current_load /
+        CURRENT_LOAD_MILESTONE_WATTS,
+    ) *
+    CURRENT_LOAD_MILESTONE_WATTS;
+
+  if (
+    currentMilestone <= 0
+  ) {
+    milestoneState.currentLoadMilestone = 0;
+    return;
+  }
+
+  if (
+    currentMilestone >
+    milestoneState.currentLoadMilestone
+  ) {
+    milestoneState.currentLoadMilestone =
+      currentMilestone;
+
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title:
+          "Power Consumption Increased",
+        description:
+          `The current load increased to ${current.current_load} W and reached the ${currentMilestone} W milestone.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY VOLTAGE UPDATED
+// ------------------------------------------------------------
+
+const checkBatteryVoltageUpdated = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    previous !== null &&
+    current.voltage !== previous.voltage
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Battery Voltage Updated",
+        description:
+          `The battery voltage value has been updated to ${current.voltage} V.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY RUNTIME UPDATED
+// ------------------------------------------------------------
+
+const checkBatteryRuntimeUpdated = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    previous !== null &&
+    current.time_remaining !==
+      previous.time_remaining
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Battery Runtime Updated",
+        description:
+          `The time_remaining value has been updated to ${current.time_remaining}.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// WATT-HOURS UPDATED
+// ------------------------------------------------------------
+
+const checkWattHoursUpdated = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    previous !== null &&
+    current.watt_hours !==
+      previous.watt_hours
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Watt-Hours Updated",
+        description:
+          `The watt_hours value has been updated to ${current.watt_hours} Wh.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// DEPTH OF DISCHARGE SAFE
+// ------------------------------------------------------------
+
+const checkDepthOfDischarge = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (previous === null) {
+    return;
+  }
+
+  if (
+    current.dod_status === "Safe" &&
+    previous.dod_status !== "Safe"
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Depth of Discharge Safe",
+        description:
+          "The dod_status value is Safe.",
+        type: "normal",
+      },
+    );
+
+    await createNotification(
+      userId,
+      {
+        title:
+          "Depth of Discharge Returned to Safe",
+        description:
+          "The dod_status value changed from Unsafe to Safe.",
+        type: "normal",
+      },
+    );
+  }
 
   if (
     current.dod_status === "Unsafe" &&
-    previous?.dod_status !== "Unsafe"
-  ) {
-    await createNotification(userId, {
-      title: "Unsafe Battery Discharge",
-      description:
-        "The battery has reached an unsafe depth of discharge.",
-      type: "alert",
-    });
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | BATTERY TEMPERATURE
-  |--------------------------------------------------------------------------
-  |
-  | High is NORMAL based on your clarification.
-  | Only Critical creates an ALERT.
-  |
-  */
-
-  if (
-    current.battery_temperature_status === "High" &&
-    previous?.battery_temperature_status !== "High"
-  ) {
-    await createNotification(userId, {
-      title: "Battery Temperature High",
-      description:
-        "Battery temperature is high but remains within the monitored range.",
-      type: "normal",
-    });
-  }
-
-  if (
-    current.battery_temperature_status === "Critical" &&
-    previous?.battery_temperature_status !== "Critical"
-  ) {
-    await createNotification(userId, {
-      title: "Critical Battery Temperature",
-      description:
-        "Battery temperature reached a critical level. Check the system.",
-      type: "alert",
-    });
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | SOLAR PANEL TEMPERATURE
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    current.solar_temperature_status === "High" &&
-    previous?.solar_temperature_status !== "High"
-  ) {
-    await createNotification(userId, {
-      title: "Solar Panel Temperature High",
-      description:
-        "Solar panel temperature is high but remains within the monitored range.",
-      type: "normal",
-    });
-  }
-
-  if (
-    current.solar_temperature_status === "Critical" &&
-    previous?.solar_temperature_status !== "Critical"
-  ) {
-    await createNotification(userId, {
-      title: "Critical Solar Panel Temperature",
-      description:
-        "Solar panel temperature reached a critical level.",
-      type: "alert",
-    });
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | SOLAR INPUT - EVERY 50W CHARGED
-  |--------------------------------------------------------------------------
-  |
-  | Example:
-  | 50W -> notification
-  | 100W -> notification
-  | 150W -> notification
-  |
-  */
-
-  const previousSolar = previous?.solar_input ?? 0;
-
-  const currentSolarMilestone =
-    Math.floor(current.solar_input / 50);
-
-  const previousSolarMilestone =
-    Math.floor(previousSolar / 50);
-
-  if (
-    currentSolarMilestone > previousSolarMilestone &&
-    current.solar_input >= 50
+    previous.dod_status !== "Unsafe"
   ) {
     await createNotification(
       userId,
       {
-        title: "Solar Energy Charging",
-        description: `Solar input reached ${current.solar_input.toFixed(
-          0
-        )}W.`,
-        type: "normal",
+        title: "Unsafe Depth of Discharge",
+        description:
+          "The dod_status value is Unsafe.",
+        type: "alert",
       },
-      5
     );
   }
+};
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD ACTIVITY - EVERY 50W DISCHARGED
-  |--------------------------------------------------------------------------
-  */
 
-  const previousLoad = previous?.current_load ?? 0;
+// ------------------------------------------------------------
+// BATTERY STATUS CHANGED
+// ------------------------------------------------------------
 
-  const currentLoadMilestone =
-    Math.floor(current.current_load / 50);
-
-  const previousLoadMilestone =
-    Math.floor(previousLoad / 50);
-
+const checkBatteryStatusChanged = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
   if (
-    currentLoadMilestone > previousLoadMilestone &&
-    current.current_load >= 50
+    previous !== null &&
+    current.battery_status !==
+      previous.battery_status
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Battery Status Changed",
+        description:
+          `The battery_status changed to ${current.battery_status}.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// DEVICE STATUS CHANGED
+// ------------------------------------------------------------
+
+const checkDeviceStatusChanged = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    previous !== null &&
+    current.device_status !==
+      previous.device_status
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Device Status Changed",
+        description:
+          `The device_status changed to ${current.device_status}.`,
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// MONITORING DATA UPDATED
+// ------------------------------------------------------------
+//
+// This is intentionally broad and cooldown-protected.
+// It will not create a notification for every ESP32
+// heartbeat.
+// ------------------------------------------------------------
+
+const checkMonitoringDataUpdated = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    previous !== null &&
+    JSON.stringify(current) !==
+      JSON.stringify(previous)
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title: "Monitoring Data Updated",
+        description:
+          "A monitoring record has been updated for the user.",
+        type: "normal",
+      },
+      UPDATE_NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ============================================================
+// ALERT NOTIFICATION RULES
+// ============================================================
+
+// ------------------------------------------------------------
+// BATTERY LEVEL AT RECOMMENDED CUTOFF
+// ------------------------------------------------------------
+//
+// 20% or lower = approximately 80% DoD.
+//
+// This is an ALERT.
+//
+// The notification is generated when the battery crosses
+// from above 20% to 20% or below.
+// ------------------------------------------------------------
+
+const checkBatteryRecommendedCutoff = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    current.battery_level <= 20 &&
+    previous !== null &&
+    previous.battery_level > 20
   ) {
     await createNotification(
       userId,
       {
-        title: "Power Load Detected",
-        description: `Current power usage reached ${current.current_load.toFixed(
-          0
-        )}W.`,
-        type: "normal",
+        title:
+          "Battery Level at Recommended Cutoff",
+        description:
+          "The battery level is 20% or lower, meaning approximately 80% DoD has been reached. This is the recommended normal-use cutoff and the battery should be recharged.",
+        type: "alert",
       },
-      5
     );
   }
-}
+};
+
+
+// ------------------------------------------------------------
+// BATTERY DISCHARGING AT LOW LEVEL
+// ------------------------------------------------------------
+
+const checkBatteryDischargingAtLowLevel =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.battery_level <= 20 &&
+      current.battery_status ===
+        "Discharging" &&
+      (
+        previous === null ||
+        previous.battery_level > 20 ||
+        previous.battery_status !==
+          "Discharging"
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Discharging at Low Level",
+          description:
+            "The battery level is at or below 20% while the battery status is Discharging.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// BATTERY DISCHARGING WITH UNSAFE DOD
+// ------------------------------------------------------------
+
+const checkBatteryDischargingWithUnsafeDoD =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.battery_status ===
+        "Discharging" &&
+      current.dod_status === "Unsafe" &&
+      (
+        previous === null ||
+        previous.battery_status !==
+          "Discharging" ||
+        previous.dod_status !==
+          "Unsafe"
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Discharging with Unsafe DoD",
+          description:
+            "The battery status is Discharging while dod_status is Unsafe.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// BATTERY RUNTIME DEPLETED
+// ------------------------------------------------------------
+
+const checkBatteryRuntimeDepleted = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    current.time_remaining === "0h 00m" &&
+    (
+      previous === null ||
+      previous.time_remaining !==
+        "0h 00m"
+    )
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Battery Runtime Depleted",
+        description:
+          "The time_remaining value is 0h 00m.",
+        type: "alert",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY VOLTAGE ZERO
+// ------------------------------------------------------------
+
+const checkBatteryVoltageZero = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    current.voltage === 0 &&
+    (
+      previous === null ||
+      previous.voltage !== 0
+    )
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "Battery Voltage Reading Zero",
+        description:
+          "The voltage value is 0. This may indicate a disconnected sensor, unavailable reading, or battery measurement problem.",
+        type: "alert",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY TEMPERATURE ZERO
+// ------------------------------------------------------------
+
+const checkBatteryTemperatureZero =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.battery_temperature ===
+        0 &&
+      (
+        previous === null ||
+        previous.battery_temperature !==
+          0
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Temperature Reading Zero",
+          description:
+            "The battery_temperature value is 0. This may indicate a missing or invalid temperature reading, depending on your sensor setup.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// SOLAR TEMPERATURE ZERO
+// ------------------------------------------------------------
+
+const checkSolarTemperatureZero =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.solar_temperature ===
+        0 &&
+      (
+        previous === null ||
+        previous.solar_temperature !==
+          0
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Solar Temperature Reading Zero",
+          description:
+            "The solar_temperature value is 0. This may indicate a missing or invalid temperature reading, depending on your sensor setup.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// BATTERY CHARGING NOT DETECTED
+// ------------------------------------------------------------
+//
+// This is evaluated when the battery is below 100% and
+// is not Charging while solar input indicates that charging
+// may reasonably be expected.
+// ------------------------------------------------------------
+
+const checkBatteryChargingNotDetected =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.battery_level < 100 &&
+      current.battery_status !==
+        "Charging" &&
+      current.solar_input > 0 &&
+      (
+        previous === null ||
+        previous.battery_status ===
+          "Charging" ||
+        previous.solar_input <= 0
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Charging Not Detected",
+          description:
+            "The battery level is below 100%, but the battery status is not Charging when charging is expected.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// SOLAR INPUT UNAVAILABLE
+// ------------------------------------------------------------
+//
+// This is only treated as an alert when the battery is
+// Charging, because the provided rule says solar charging
+// is expected in that condition.
+// ------------------------------------------------------------
+
+const checkSolarInputUnavailable =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.solar_input === 0 &&
+      current.battery_status ===
+        "Charging" &&
+      (
+        previous === null ||
+        previous.solar_input > 0 ||
+        previous.battery_status !==
+          "Charging"
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Solar Input Unavailable",
+          description:
+            "The solar_input value is 0 while solar charging is expected.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// LOW SOLAR INPUT DURING CHARGING
+// ------------------------------------------------------------
+
+const checkLowSolarInputDuringCharging =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      current.battery_status ===
+        "Charging" &&
+      current.solar_status === "Low" &&
+      (
+        previous === null ||
+        previous.battery_status !==
+          "Charging" ||
+        previous.solar_status !==
+          "Low"
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Low Solar Input During Charging",
+          description:
+            "The battery status is Charging, but the solar status is Low.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// HIGH CURRENT LOAD
+// ------------------------------------------------------------
+//
+// Disabled until the actual safe current-load threshold
+// has been configured.
+// ------------------------------------------------------------
+
+const checkHighCurrentLoad = async (
+  userId: string,
+  current: MonitoringData,
+  previous: MonitoringData | null,
+) => {
+  if (
+    SAFE_CURRENT_LOAD_THRESHOLD === null
+  ) {
+    return;
+  }
+
+  if (
+    current.current_load >
+      SAFE_CURRENT_LOAD_THRESHOLD &&
+    (
+      previous === null ||
+      previous.current_load <=
+        SAFE_CURRENT_LOAD_THRESHOLD
+    )
+  ) {
+    await createNotification(
+      userId,
+      {
+        title: "High Current Load",
+        description:
+          "The current_load value is above your configured safe load threshold.",
+        type: "alert",
+      },
+    );
+  }
+};
+
+
+// ------------------------------------------------------------
+// BATTERY VOLTAGE TOO LOW
+// ------------------------------------------------------------
+
+const checkBatteryVoltageTooLow =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      SAFE_BATTERY_VOLTAGE_MIN ===
+      null
+    ) {
+      return;
+    }
+
+    if (
+      current.voltage <
+        SAFE_BATTERY_VOLTAGE_MIN &&
+      (
+        previous === null ||
+        previous.voltage >=
+          SAFE_BATTERY_VOLTAGE_MIN
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Voltage Too Low",
+          description:
+            "The voltage value is below your configured safe battery-voltage threshold.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// BATTERY VOLTAGE TOO HIGH
+// ------------------------------------------------------------
+
+const checkBatteryVoltageTooHigh =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      SAFE_BATTERY_VOLTAGE_MAX ===
+      null
+    ) {
+      return;
+    }
+
+    if (
+      current.voltage >
+        SAFE_BATTERY_VOLTAGE_MAX &&
+      (
+        previous === null ||
+        previous.voltage <=
+          SAFE_BATTERY_VOLTAGE_MAX
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Voltage Too High",
+          description:
+            "The voltage value is above your configured safe battery-voltage threshold.",
+          type: "alert",
+        },
+      );
+    }
+  };
+
+
+// ------------------------------------------------------------
+// INVALID TIME REMAINING
+// ------------------------------------------------------------
+//
+// The database only requires non-whitespace text.
+// Therefore, this service performs basic validation without
+// assuming a particular runtime calculation format beyond
+// the expected "0h 00m" style.
+// ------------------------------------------------------------
+
+const isValidTimeRemaining = (
+  value: string,
+): boolean => {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0
+  ) {
+    return false;
+  }
+
+  const pattern =
+    /^\d+h\s+\d{2}m$/;
+
+  return pattern.test(value.trim());
+};
+
+
+const checkInvalidTimeRemaining =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (
+      !isValidTimeRemaining(
+        current.time_remaining,
+      )
+    ) {
+      await createNotificationWithCooldown(
+        userId,
+        {
+          title:
+            "Invalid Time Remaining",
+          description:
+            "The time_remaining field is empty or contains an invalid value.",
+          type: "alert",
+        },
+        NOTIFICATION_COOLDOWN_MS,
+      );
+
+      return;
+    }
+
+    if (
+      previous !== null &&
+      !isValidTimeRemaining(
+        previous.time_remaining,
+      )
+    ) {
+      await createNotification(
+        userId,
+        {
+          title:
+            "Battery Runtime Updated",
+          description:
+            `The time_remaining value has been updated to ${current.time_remaining}.`,
+          type: "normal",
+        },
+      );
+    }
+  };
+
+
+// ============================================================
+// PROCESS ALL MONITORING RULES
+// ============================================================
+
+const processMonitoringNotifications =
+  async (
+    userId: string,
+    current: MonitoringData,
+    previous: MonitoringData | null,
+  ) => {
+    if (notificationProcessing) {
+      return;
+    }
+
+    notificationProcessing = true;
+
+    try {
+      // --------------------------------------------------------
+      // NORMAL RULES
+      // --------------------------------------------------------
+
+      await checkDeviceOnline(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkDeviceOffline(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryCharging(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryDischarging(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryIdle(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryFullyCharged(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryLevelUpdated(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryTemperatureStatus(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkSolarTemperatureStatus(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkSolarStatus(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkSolarInputState(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkSolarInputMilestone(
+        userId,
+        current,
+      );
+
+      await checkCurrentLoadState(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkCurrentLoadMilestone(
+        userId,
+        current,
+      );
+
+      await checkBatteryVoltageUpdated(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryRuntimeUpdated(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkWattHoursUpdated(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkDepthOfDischarge(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryStatusChanged(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkDeviceStatusChanged(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkMonitoringDataUpdated(
+        userId,
+        current,
+        previous,
+      );
+
+
+      // --------------------------------------------------------
+      // ALERT RULES
+      // --------------------------------------------------------
+
+      await checkBatteryRecommendedCutoff(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryDischargingAtLowLevel(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryDischargingWithUnsafeDoD(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryRuntimeDepleted(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryVoltageZero(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryTemperatureZero(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkSolarTemperatureZero(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryChargingNotDetected(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkSolarInputUnavailable(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkLowSolarInputDuringCharging(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkHighCurrentLoad(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryVoltageTooLow(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkBatteryVoltageTooHigh(
+        userId,
+        current,
+        previous,
+      );
+
+      await checkInvalidTimeRemaining(
+        userId,
+        current,
+        previous,
+      );
+    } catch (error) {
+      console.error(
+        "Unexpected notification processing error:",
+        error,
+      );
+    } finally {
+      notificationProcessing = false;
+    }
+  };
+
+
+// ============================================================
+// HANDLE MONITORING UPDATE
+// ============================================================
+
+const handleMonitoringUpdate = async (
+  monitoringData:
+    MonitoringNotificationData,
+) => {
+  if (!currentUserId) {
+    return;
+  }
+
+  const currentMonitoring =
+    monitoringData as MonitoringData;
+
+  const previousMonitoringState =
+    previousMonitoring;
+
+  await processMonitoringNotifications(
+    currentUserId,
+    currentMonitoring,
+    previousMonitoringState,
+  );
+
+  previousMonitoring =
+    currentMonitoring;
+};
+
+
+// ============================================================
+// CHECK MISSING MONITORING RECORD
+// ============================================================
+
+const checkMonitoringRecordMissing =
+  async (
+    userId: string,
+  ) => {
+    const data =
+      await getCurrentMonitoringNotificationData();
+
+    if (data !== null) {
+      return;
+    }
+
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title:
+          "Monitoring Record Missing",
+        description:
+          "No monitoring record is available for the user.",
+        type: "alert",
+      },
+      NOTIFICATION_COOLDOWN_MS,
+    );
+  };
+
+
+// ============================================================
+// CHECK LAST-SEEN STATUS
+// ============================================================
+
+const checkLastSeenStatus = async (
+  userId: string,
+) => {
+  const data =
+    await getCurrentMonitoringNotificationData();
+
+  if (data === null) {
+    await checkMonitoringRecordMissing(
+      userId,
+    );
+
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // MISSING LAST-SEEN TIMESTAMP
+  // ----------------------------------------------------------
+
+  if (data.last_seen === null) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title:
+          "Missing Last-Seen Timestamp",
+        description:
+          "The last_seen value is null.",
+        type: "alert",
+      },
+      NOTIFICATION_COOLDOWN_MS,
+    );
+
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // INVALID LAST-SEEN TIMESTAMP
+  // ----------------------------------------------------------
+
+  const lastSeenTime =
+    new Date(
+      data.last_seen,
+    ).getTime();
+
+  if (Number.isNaN(lastSeenTime)) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title:
+          "Monitoring Data Stale",
+        description:
+          "The last_seen timestamp is invalid or older than the allowed monitoring interval.",
+        type: "alert",
+      },
+      NOTIFICATION_COOLDOWN_MS,
+    );
+
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // STALE MONITORING
+  // ----------------------------------------------------------
+
+  const elapsed =
+    Date.now() - lastSeenTime;
+
+  if (
+    elapsed >
+    STALE_MONITORING_INTERVAL_MS
+  ) {
+    await createNotificationWithCooldown(
+      userId,
+      {
+        title:
+          "Monitoring Data Stale",
+        description:
+          "The last_seen timestamp is older than the allowed monitoring interval.",
+        type: "alert",
+      },
+      NOTIFICATION_COOLDOWN_MS,
+    );
+  }
+};
+
+
+// ============================================================
+// START STALE MONITORING CHECK
+// ============================================================
+
+const startStaleMonitoringCheck = (
+  userId: string,
+) => {
+  if (staleMonitoringTimer) {
+    clearInterval(
+      staleMonitoringTimer,
+    );
+  }
+
+  staleMonitoringTimer =
+    setInterval(
+      () => {
+        checkLastSeenStatus(
+          userId,
+        ).catch((error) => {
+          console.error(
+            "Error checking monitoring freshness:",
+            error,
+          );
+        });
+      },
+      STALE_MONITORING_INTERVAL_MS,
+    );
+};
+
+
+// ============================================================
+// STOP STALE MONITORING CHECK
+// ============================================================
+
+const stopStaleMonitoringCheck = () => {
+  if (staleMonitoringTimer) {
+    clearInterval(
+      staleMonitoringTimer,
+    );
+
+    staleMonitoringTimer = null;
+  }
+};
+
+
+// ============================================================
+// RESET INTERNAL STATE
+// ============================================================
+
+const resetNotificationState = () => {
+  previousMonitoring = null;
+
+  currentUserId = null;
+
+  notificationProcessing = false;
+
+  notificationCooldowns.clear();
+
+  milestoneState.solarInputMilestone = 0;
+
+  milestoneState.currentLoadMilestone = 0;
+};
+
+
+// ============================================================
+// UNSUBSCRIBE FROM MONITORING
+// ============================================================
+
+export const unsubscribeFromNotificationMonitoring =
+  async () => {
+    if (monitoringChannel) {
+      await supabase.removeChannel(
+        monitoringChannel,
+      );
+
+      monitoringChannel = null;
+    }
+
+    stopStaleMonitoringCheck();
+
+    resetNotificationState();
+  };
+
+
+// ============================================================
+// START MONITORING NOTIFICATION WATCHER
+// ============================================================
+
+export const startMonitoringNotificationWatcher =
+  async () => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return null;
+    }
+
+    // ----------------------------------------------------------
+    // PREVENT DUPLICATE CHANNEL FOR SAME USER
+    // ----------------------------------------------------------
+
+    if (
+      monitoringChannel &&
+      currentUserId === user.id
+    ) {
+      return monitoringChannel;
+    }
+
+    // ----------------------------------------------------------
+    // REMOVE PREVIOUS CHANNEL IF USER CHANGED
+    // ----------------------------------------------------------
+
+    if (monitoringChannel) {
+      await supabase.removeChannel(
+        monitoringChannel,
+      );
+
+      monitoringChannel = null;
+    }
+
+    stopStaleMonitoringCheck();
+
+    resetNotificationState();
+
+    currentUserId = user.id;
+
+    // ----------------------------------------------------------
+    // GET INITIAL MONITORING DATA
+    // ----------------------------------------------------------
+
+    const initialMonitoring =
+      await getCurrentMonitoringNotificationData();
+
+    if (initialMonitoring === null) {
+      await checkMonitoringRecordMissing(
+        user.id,
+      );
+    } else {
+      // --------------------------------------------------------
+      // INITIAL STATE IS ONLY A BASELINE
+      // --------------------------------------------------------
+      //
+      // We intentionally do NOT process notifications against
+      // the initial state.
+      //
+      // This prevents the app from creating notifications
+      // immediately just because the system already happens
+      // to be at 20%, Critical, Offline, etc.
+      //
+      // Notifications are generated when a state subsequently
+      // changes or crosses a threshold.
+      // --------------------------------------------------------
+
+      previousMonitoring =
+        initialMonitoring as MonitoringData;
+
+      milestoneState.solarInputMilestone =
+        Math.floor(
+          initialMonitoring.solar_input /
+            SOLAR_INPUT_MILESTONE_WATTS,
+        ) *
+        SOLAR_INPUT_MILESTONE_WATTS;
+
+      milestoneState.currentLoadMilestone =
+        Math.floor(
+          initialMonitoring.current_load /
+            CURRENT_LOAD_MILESTONE_WATTS,
+        ) *
+        CURRENT_LOAD_MILESTONE_WATTS;
+    }
+
+    // ----------------------------------------------------------
+    // START LAST-SEEN MONITORING
+    // ----------------------------------------------------------
+
+    startStaleMonitoringCheck(
+      user.id,
+    );
+
+    // ----------------------------------------------------------
+    // SUBSCRIBE TO USER'S MONITORING ROW
+    // ----------------------------------------------------------
+
+    monitoringChannel = supabase
+      .channel(
+        `notification-monitoring-${user.id}-${Date.now()}`,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "monitoring",
+          filter:
+            `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const updatedData =
+            payload.new as MonitoringNotificationData;
+
+          await handleMonitoringUpdate(
+            updatedData,
+          );
+        },
+      )
+      .subscribe((status) => {
+        if (
+          status ===
+          "SUBSCRIBED"
+        ) {
+          console.log(
+            "Notification service monitoring watcher subscribed.",
+          );
+        }
+
+        if (
+          status ===
+          "CHANNEL_ERROR"
+        ) {
+          console.warn(
+            "Notification service Realtime channel error.",
+          );
+        }
+
+        if (
+          status ===
+          "TIMED_OUT"
+        ) {
+          console.warn(
+            "Notification service Realtime connection timed out.",
+          );
+        }
+
+        if (
+          status ===
+          "CLOSED"
+        ) {
+          console.warn(
+            "Notification service Realtime channel closed.",
+          );
+        }
+      });
+
+    return monitoringChannel;
+  };
+
+
+// ============================================================
+// STOP MONITORING NOTIFICATION WATCHER
+// ============================================================
+
+export const stopMonitoringNotificationWatcher =
+  async () => {
+    await unsubscribeFromNotificationMonitoring();
+  };
+
+
+// ============================================================
+// INITIALIZE NOTIFICATION SERVICE
+// ============================================================
+//
+// This function connects the notification service to the
+// Supabase authentication lifecycle.
+//
+// SIGNED_IN:
+// Start monitoring watcher for that user.
+//
+// SIGNED_OUT:
+// Stop the watcher and clear the previous state.
+//
+// TOKEN_REFRESHED:
+// Keep the current user's watcher active.
+//
+// USER_UPDATED:
+// Keep the current user's watcher active.
+// ============================================================
+
+export const initializeNotificationService =
+  async () => {
+    if (
+      notificationServiceStarted
+    ) {
+      return;
+    }
+
+    notificationServiceStarted =
+      true;
+
+    // ----------------------------------------------------------
+    // START FOR CURRENTLY AUTHENTICATED USER
+    // ----------------------------------------------------------
+
+    const currentUser =
+      await getAuthenticatedUser();
+
+    if (currentUser) {
+      await startMonitoringNotificationWatcher();
+    }
+
+    // ----------------------------------------------------------
+    // LISTEN FOR AUTH STATE CHANGES
+    // ----------------------------------------------------------
+
+    const {
+      data,
+    } =
+      supabase.auth.onAuthStateChange(
+        async (
+          event,
+          session,
+        ) => {
+          try {
+            if (
+              event ===
+              "SIGNED_IN"
+            ) {
+              if (
+                session?.user
+              ) {
+                await startMonitoringNotificationWatcher();
+              }
+
+              return;
+            }
+
+            if (
+              event ===
+              "SIGNED_OUT"
+            ) {
+              await stopMonitoringNotificationWatcher();
+
+              return;
+            }
+
+            if (
+              event ===
+              "USER_UPDATED"
+            ) {
+              if (
+                session?.user
+              ) {
+                await startMonitoringNotificationWatcher();
+              }
+
+              return;
+            }
+
+            if (
+              event ===
+              "TOKEN_REFRESHED"
+            ) {
+              if (
+                session?.user &&
+                currentUserId !==
+                  session.user.id
+              ) {
+                await startMonitoringNotificationWatcher();
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Notification service auth state error:",
+              error,
+            );
+          }
+        },
+      );
+
+    authSubscription =
+      data.subscription;
+  };
+
+
+// ============================================================
+// SHUTDOWN NOTIFICATION SERVICE
+// ============================================================
+
+export const shutdownNotificationService =
+  async () => {
+    await stopMonitoringNotificationWatcher();
+
+    if (
+      authSubscription
+    ) {
+      authSubscription.unsubscribe();
+
+      authSubscription = null;
+    }
+
+    notificationServiceStarted =
+      false;
+  };
+
+
+// ============================================================
+// GET USER NOTIFICATIONS
+// ============================================================
+//
+// This fetches notifications belonging only to the currently
+// authenticated user.
+//
+// It follows the same user identity concept used by
+// monitoringService.ts.
+// ============================================================
+
+export const getUserNotifications =
+  async (): Promise<
+    NotificationData[]
+  > => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return [];
+    }
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("notifications")
+      .select(`
+        notif_id,
+        user_id,
+        title,
+        description,
+        type,
+        read,
+        created_at
+      `)
+      .eq("user_id", user.id)
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        },
+      );
+
+    if (error) {
+      console.error(
+        "Error loading user notifications:",
+        error.message,
+      );
+
+      return [];
+    }
+
+    return (
+      data as NotificationData[]
+    );
+  };
+
+
+// ============================================================
+// GET UNREAD NOTIFICATIONS
+// ============================================================
+
+export const getUnreadNotifications =
+  async (): Promise<
+    NotificationData[]
+  > => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return [];
+    }
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("notifications")
+      .select(`
+        notif_id,
+        user_id,
+        title,
+        description,
+        type,
+        read,
+        created_at
+      `)
+      .eq("user_id", user.id)
+      .eq("read", false)
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        },
+      );
+
+    if (error) {
+      console.error(
+        "Error loading unread notifications:",
+        error.message,
+      );
+
+      return [];
+    }
+
+    return (
+      data as NotificationData[]
+    );
+  };
+
+
+// ============================================================
+// GET UNREAD NOTIFICATION COUNT
+// ============================================================
+
+export const getUnreadNotificationCount =
+  async (): Promise<number> => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return 0;
+    }
+
+    const {
+      count,
+      error,
+    } = await supabase
+      .from("notifications")
+      .select(
+        "notif_id",
+        {
+          count: "exact",
+          head: true,
+        },
+      )
+      .eq("user_id", user.id)
+      .eq("read", false);
+
+    if (error) {
+      console.error(
+        "Error loading unread notification count:",
+        error.message,
+      );
+
+      return 0;
+    }
+
+    return count ?? 0;
+  };
+
+
+// ============================================================
+// MARK NOTIFICATION AS READ
+// ============================================================
+//
+// RLS ensures that the user can only update a notification
+// whose user_id matches auth.uid().
+// ============================================================
+
+export const markNotificationAsRead =
+  async (
+    notificationId: string,
+  ): Promise<boolean> => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return false;
+    }
+
+    const {
+      error,
+    } = await supabase
+      .from("notifications")
+      .update({
+        read: true,
+      })
+      .eq(
+        "notif_id",
+        notificationId,
+      )
+      .eq(
+        "user_id",
+        user.id,
+      );
+
+    if (error) {
+      console.error(
+        "Error marking notification as read:",
+        error.message,
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+
+// ============================================================
+// MARK ALL USER NOTIFICATIONS AS READ
+// ============================================================
+
+export const markAllNotificationsAsRead =
+  async (): Promise<boolean> => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return false;
+    }
+
+    const {
+      error,
+    } = await supabase
+      .from("notifications")
+      .update({
+        read: true,
+      })
+      .eq(
+        "user_id",
+        user.id,
+      )
+      .eq(
+        "read",
+        false,
+      );
+
+    if (error) {
+      console.error(
+        "Error marking all notifications as read:",
+        error.message,
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+
+// ============================================================
+// DELETE USER NOTIFICATION
+// ============================================================
+//
+// This function is intentionally included only for a future
+// UI that may allow users to delete individual notifications.
+//
+// It remains protected by user_id = auth.uid().
+// ============================================================
+
+export const deleteNotification =
+  async (
+    notificationId: string,
+  ): Promise<boolean> => {
+    const user =
+      await getAuthenticatedUser();
+
+    if (!user) {
+      return false;
+    }
+
+    const {
+      error,
+    } = await supabase
+      .from("notifications")
+      .delete()
+      .eq(
+        "notif_id",
+        notificationId,
+      )
+      .eq(
+        "user_id",
+        user.id,
+      );
+
+    if (error) {
+      console.error(
+        "Error deleting notification:",
+        error.message,
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+
+// ============================================================
+// AUTO-INITIALIZATION
+// ============================================================
+//
+// Importing this service initializes the authentication-aware
+// monitoring watcher.
+//
+// The service remains independent from ChartCard.tsx.
+// ============================================================
+
+initializeNotificationService().catch(
+  (error) => {
+    console.error(
+      "Failed to initialize notification service:",
+      error,
+    );
+  },
+);
