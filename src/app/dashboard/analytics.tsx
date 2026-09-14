@@ -331,7 +331,7 @@ export default function AnalyticsScreen() {
             }
 
             const pdf =
-              generateAdlaWattPdf(
+              await generateAdlaWattPdf(
                 reportData,
               );
 
