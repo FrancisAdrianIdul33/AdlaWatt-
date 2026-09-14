@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 import { supabase } from "@/lib/supabase";
 
 import { jsPDF } from "jspdf";
@@ -3294,6 +3296,161 @@ export function getCsvReportFilename(
   reportData: AnalyticsReportData,
 ): string {
   return `adlawatt_${reportData.frequency.toLowerCase()}_report_${getReportDateFilename()}.csv`;
+}
+
+/* ============================================================
+   WEB DOWNLOAD HELPERS
+   ============================================================ */
+
+/**
+ * Downloads a CSV file directly through the browser.
+ *
+ * This is intentionally used only on web. It avoids
+ * expo-sharing's browser Share dialog and uses the browser's
+ * normal download mechanism instead.
+ */
+export function downloadCsvOnWeb(
+  csv: string,
+  filename: string,
+): void {
+  if (Platform.OS !== "web") {
+    throw new Error(
+      "downloadCsvOnWeb() can only be used on web.",
+    );
+  }
+
+  const blob =
+    new Blob(
+      [csv],
+      {
+        type: "text/csv;charset=utf-8;",
+      },
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob,
+    );
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.style.display = "none";
+
+  document.body.appendChild(
+    link,
+  );
+
+  link.click();
+
+  document.body.removeChild(
+    link,
+  );
+
+  URL.revokeObjectURL(
+    url,
+  );
+}
+
+/**
+ * Downloads a generated jsPDF document directly through the
+ * browser.
+ *
+ * jsPDF.save() uses the browser's file-download behavior on web.
+ */
+export function downloadPdfOnWeb(
+  pdf: jsPDF,
+  filename: string,
+): void {
+  if (Platform.OS !== "web") {
+    throw new Error(
+      "downloadPdfOnWeb() can only be used on web.",
+    );
+  }
+
+  pdf.save(
+    filename,
+  );
+}
+
+/* ============================================================
+   WEB REPORT EXPORT
+   ============================================================ */
+
+/**
+ * Builds and downloads the selected CSV report on web.
+ */
+export async function exportCsvReportOnWeb(
+  reportFrequency: ReportFrequency,
+  range: AnalyticsRange,
+): Promise<{
+  filename: string;
+  reportData: AnalyticsReportData;
+}> {
+  if (Platform.OS !== "web") {
+    throw new Error(
+      "exportCsvReportOnWeb() can only be used on web.",
+    );
+  }
+
+  const {
+    csv,
+    filename,
+    reportData,
+  } =
+    await buildCsvReport(
+      reportFrequency,
+      range,
+    );
+
+  downloadCsvOnWeb(
+    csv,
+    filename,
+  );
+
+  return {
+    filename,
+    reportData,
+  };
+}
+
+/**
+ * Builds and downloads the selected PDF report on web.
+ */
+export async function exportPdfReportOnWeb(
+  reportFrequency: ReportFrequency,
+  range: AnalyticsRange,
+): Promise<{
+  filename: string;
+  reportData: AnalyticsReportData;
+}> {
+  if (Platform.OS !== "web") {
+    throw new Error(
+      "exportPdfReportOnWeb() can only be used on web.",
+    );
+  }
+
+  const {
+    pdf,
+    filename,
+    reportData,
+  } =
+    await buildPdfReport(
+      reportFrequency,
+      range,
+    );
+
+  downloadPdfOnWeb(
+    pdf,
+    filename,
+  );
+
+  return {
+    filename,
+    reportData,
+  };
 }
 
 /**

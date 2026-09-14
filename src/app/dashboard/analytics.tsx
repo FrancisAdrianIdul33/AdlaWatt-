@@ -28,6 +28,11 @@ import {
   getSolarTemperatureData,
   groupMonitoringHistory,
   loadAnalyticsData,
+  downloadCsvOnWeb,
+  downloadPdfOnWeb,
+  generateAdlaWattCsv,
+  generateAdlaWattPdf,
+  prepareReportData,
 } from "@/services/analyticsService";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
@@ -39,6 +44,7 @@ import React, {
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -109,9 +115,9 @@ export default function AnalyticsScreen() {
 
         const {
           monitoringHistory:
-            monitoringRows,
+          monitoringRows,
           applianceUsageHistory:
-            applianceRows,
+          applianceRows,
         } = await loadAnalyticsData(
           range,
         );
@@ -265,8 +271,8 @@ export default function AnalyticsScreen() {
     );
 
   /* ==========================================================
-     REPORT
-     ========================================================== */
+   REPORT
+   ========================================================== */
 
   const generateReport =
     useCallback(
@@ -275,26 +281,100 @@ export default function AnalyticsScreen() {
       ) => {
         if (
           monitoringHistory.length ===
-            0 &&
+          0 &&
           applianceUsageHistory.length ===
-            0
+          0
         ) {
           Alert.alert(
             "No Data",
             "There is no historical analytics data available for the selected date range.",
           );
+
           return;
         }
+
+        /* ======================================================
+           WEB EXPORT
+           ====================================================== */
+
+        if (
+          Platform.OS === "web"
+        ) {
+          try {
+            const reportData =
+              prepareReportData(
+                monitoringHistory,
+                applianceUsageHistory,
+                reportFrequency,
+                range,
+              );
+
+            if (
+              reportType === "CSV"
+            ) {
+              const csv =
+                generateAdlaWattCsv(
+                  reportData,
+                );
+
+              const filename =
+                `adlawatt_${reportFrequency.toLowerCase()}_report_${new Date()
+                  .toISOString()
+                  .slice(0, 10)}.csv`;
+
+              downloadCsvOnWeb(
+                csv,
+                filename,
+              );
+
+              return;
+            }
+
+            const pdf =
+              generateAdlaWattPdf(
+                reportData,
+              );
+
+            const filename =
+              `adlawatt_${reportFrequency.toLowerCase()}_report_${new Date()
+                .toISOString()
+                .slice(0, 10)}.pdf`;
+
+            downloadPdfOnWeb(
+              pdf,
+              filename,
+            );
+
+            return;
+          } catch (error) {
+            console.error(
+              "Web report export error:",
+              error,
+            );
+
+            Alert.alert(
+              "Export Error",
+              "The report could not be generated.",
+            );
+
+            return;
+          }
+        }
+
+        /* ======================================================
+           NATIVE ANDROID / IOS EXPORT
+           ====================================================== */
 
         const {
           reportHeader,
           reportContent,
-        } = createAnalyticsReportContent(
-          monitoringHistory,
-          applianceUsageHistory,
-          reportFrequency,
-          range,
-        );
+        } =
+          createAnalyticsReportContent(
+            monitoringHistory,
+            applianceUsageHistory,
+            reportFrequency,
+            range,
+          );
 
         if (
           reportType === "CSV"
@@ -302,9 +382,11 @@ export default function AnalyticsScreen() {
           await Share.share({
             message:
               reportContent,
+
             title:
               "AdlaWatt Analytics CSV Report",
           });
+
           return;
         }
 
@@ -319,6 +401,7 @@ export default function AnalyticsScreen() {
             "",
             "This report contains the selected historical analytics data.",
           ].join("\n"),
+
           title:
             "AdlaWatt Analytics Report",
         });
@@ -327,8 +410,7 @@ export default function AnalyticsScreen() {
         monitoringHistory,
         applianceUsageHistory,
         reportFrequency,
-        range.start,
-        range.end,
+        range,
       ],
     );
 
@@ -523,7 +605,7 @@ export default function AnalyticsScreen() {
             style={
               styles.modalCard
             }
-            onPress={() => {}}
+            onPress={() => { }}
           >
             <View
               style={
@@ -561,8 +643,8 @@ export default function AnalyticsScreen() {
                   style={[
                     styles.modalOption,
                     chartFrequency ===
-                      option &&
-                      styles.selectedModalOption,
+                    option &&
+                    styles.selectedModalOption,
                   ]}
                   onPress={() => {
                     setChartFrequency(
@@ -591,8 +673,8 @@ export default function AnalyticsScreen() {
                     style={[
                       styles.modalOptionText,
                       chartFrequency ===
-                        option &&
-                        styles.selectedModalOptionText,
+                      option &&
+                      styles.selectedModalOptionText,
                     ]}
                   >
                     {option}
@@ -633,7 +715,7 @@ export default function AnalyticsScreen() {
             style={
               styles.modalCard
             }
-            onPress={() => {}}
+            onPress={() => { }}
           >
             <View
               style={
@@ -671,8 +753,8 @@ export default function AnalyticsScreen() {
                   style={[
                     styles.modalOption,
                     reportFrequency ===
-                      option &&
-                      styles.selectedModalOption,
+                    option &&
+                    styles.selectedModalOption,
                   ]}
                   onPress={() => {
                     setReportFrequency(
@@ -701,8 +783,8 @@ export default function AnalyticsScreen() {
                     style={[
                       styles.modalOptionText,
                       reportFrequency ===
-                        option &&
-                        styles.selectedModalOptionText,
+                      option &&
+                      styles.selectedModalOptionText,
                     ]}
                   >
                     {option}
