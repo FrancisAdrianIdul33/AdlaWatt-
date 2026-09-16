@@ -15,10 +15,12 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+
 import {
   getCurrentWeatherForUser,
   type WeatherCondition,
 } from "@/services/weatherForecast";
+
 import {
   useMonitoring,
 } from "@/services/monitoringService";
@@ -91,7 +93,6 @@ export default function DashboardScreen() {
 
         // Prevent state updates if the screen
         // has already been unmounted.
-
         if (!isMounted) {
           return;
         }
@@ -99,10 +100,8 @@ export default function DashboardScreen() {
         setWeather({
           city:
             forecast.location.city,
-
           temperature:
             forecast.weather.temperature,
-
           description:
             forecast.weather.condition,
         });
@@ -118,7 +117,6 @@ export default function DashboardScreen() {
 
         // Weather failure should not affect
         // Supabase monitoring data.
-
         setWeather(null);
       } finally {
         if (isMounted) {
@@ -207,7 +205,15 @@ export default function DashboardScreen() {
           >
             {/* ==============================================
                 BATTERY
+
                 Source: Supabase
+
+                ChartCard.tsx:
+                - Circular battery gauge
+                - Battery percentage
+                - Time remaining
+                - Battery status
+                - DoD Safe / Unsafe
                 ============================================== */}
 
             <View
@@ -224,50 +230,89 @@ export default function DashboardScreen() {
 
             {/* ==============================================
                 BATTERY MONITORING
-                Voltage + Watt-hour + Load Now
+
+                ChartCard.tsx internally renders:
+                - Voltage
+                - Watt-hour
+                - Load Now
+
+                Only "voltage" is passed here because
+                ChartCard.tsx uses it as the grouped
+                Battery Monitoring card.
                 ============================================== */}
 
-            <ChartCard
-              type="voltage"
-              monitoring={monitoring}
-              loading={loading}
-            />
+            <View
+              style={styles.fullWidthCard}
+            >
+              <ChartCard
+                type="voltage"
+                monitoring={monitoring}
+                loading={loading}
+              />
+            </View>
 
             {/* ==============================================
                 SOLAR MONITORING
-                Solar Timer + Solar Input + Solar Voltage
-                + Solar Current + Total Energy
+
+                ChartCard.tsx internally renders:
+                - Solar Timer
+                - Solar Input
+                - Solar Voltage
+                - Solar Current
+                - Total Energy
                 ============================================== */}
 
-            <ChartCard
-              type="solar"
-              monitoring={monitoring}
-              loading={loading}
-            />
+            <View
+              style={styles.fullWidthCard}
+            >
+              <ChartCard
+                type="solar"
+                monitoring={monitoring}
+                loading={loading}
+              />
+            </View>
 
             {/* ==============================================
                 WEATHER
+
                 Source: Open-Meteo API
+
+                ChartCard.tsx renders:
+                - Weather icon
+                - City
+                - Temperature
+                - Weather condition
                 ============================================== */}
 
-            <ChartCard
-              type="weather"
-              monitoring={monitoring}
-              weather={weather}
-              loading={weatherLoading}
-            />
+            <View
+              style={styles.fullWidthCard}
+            >
+              <ChartCard
+                type="weather"
+                monitoring={monitoring}
+                weather={weather}
+                loading={weatherLoading}
+              />
+            </View>
 
             {/* ==============================================
                 TEMPERATURE
-                Interior Temperature + Battery Temperature
-                + Solar Panel Temperature
+
+                ChartCard.tsx internally renders:
+                - Interior Temperature
+                - Battery Temperature
+                - Solar Panel Temperature
                 ============================================== */}
 
-            <ChartCard
-              type="temperature"
-              monitoring={monitoring}
-              loading={loading}
-            />
+            <View
+              style={styles.fullWidthCard}
+            >
+              <ChartCard
+                type="temperature"
+                monitoring={monitoring}
+                loading={loading}
+              />
+            </View>
           </View>
         </View>
 
@@ -329,7 +374,6 @@ const dashboardDimensions = {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-
     backgroundColor:
       Colors.light.background,
   },
@@ -337,62 +381,48 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal:
       dashboardDimensions.horizontalPadding,
-
     paddingTop: 20,
-
     paddingBottom: 24,
   },
 
   headerCard: {
     backgroundColor:
       Colors.glass.white,
-
     borderWidth: 3,
-
     borderColor:
       Colors.light.secondary,
-
     borderRadius:
       dashboardDimensions.cardRadius,
-
     padding: 18,
-
     marginBottom: 18,
   },
 
   headerTitle: {
     color: "#000000",
-
     fontWeight: "700",
   },
 
   headerSubtitle: {
     color:
       Colors.light.textSecondary,
-
     marginTop: 6,
   },
 
   section: {
     width: "100%",
-
     marginBottom:
       dashboardDimensions.sectionSpacing,
   },
 
   sectionTitle: {
     color: "#000000",
-
     fontWeight: "700",
-
     marginBottom: 10,
   },
 
   monitorGrid: {
-    flexDirection: "row",
-
-    flexWrap: "wrap",
-
+    width: "100%",
+    flexDirection: "column",
     gap:
       dashboardDimensions.monitorGap,
   },
@@ -400,11 +430,22 @@ const styles = StyleSheet.create({
   /*
    * Battery occupies the complete row.
    *
-   * The remaining ChartCards use their
-   * own width defined in ChartCard.tsx.
+   * ChartCard.tsx renders the battery gauge
+   * as a complete-width monitoring card.
    */
-
   batteryCardContainer: {
+    width: "100%",
+  },
+
+  /*
+   * All remaining ChartCards are grouped cards
+   * that occupy their complete available width.
+   *
+   * ChartCard.tsx handles the internal layout
+   * of Battery Monitoring, Solar Monitoring,
+   * Weather, and Temperature Monitoring.
+   */
+  fullWidthCard: {
     width: "100%",
   },
 });

@@ -387,35 +387,52 @@ export default function ChartCard({
       <View
         style={[
           styles.monitorCard,
-          styles.batteryMonitorCard,
+          styles.groupMonitoringCard,
         ]}
       >
 
         {/* ==================================================
-            LEFT ICON PANEL
+            BATTERY HEADER / ACCENT PANEL
             ================================================== */}
 
         <View
           style={
-            styles.iconAccentPanel
+            styles.groupHeaderPanel
           }
         >
 
-          <Ionicons
-            name="flash-outline"
-            size={40}
-            color={Colors.light.primary}
-          />
+          <View
+            style={
+              styles.groupHeaderLeft
+            }
+          >
+
+            <Ionicons
+              name="flash-outline"
+              size={30}
+              color="#FACC15"
+            />
+
+            <AppText
+              variant="heading"
+              style={
+                styles.groupHeaderTitle
+              }
+            >
+              Battery Monitoring
+            </AppText>
+
+          </View>
 
         </View>
 
         {/* ==================================================
-            BATTERY MEASUREMENTS
+            BATTERY 1 × 3 MEASUREMENT GRID
             ================================================== */}
 
         <View
           style={
-            styles.batteryMetrics
+            styles.groupMeasurementGrid
           }
         >
 
@@ -425,14 +442,14 @@ export default function ChartCard({
 
           <View
             style={
-              styles.metricColumn
+              styles.groupMetricCell
             }
           >
 
             <AppText
               variant="caption"
               style={
-                styles.monitorLabel
+                styles.groupMetricLabel
               }
             >
               {voltageData.label}
@@ -441,11 +458,19 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.monitorValue
+                styles.groupMetricValue
               }
             >
               {voltageData.value}
             </AppText>
+
+            {/* Reserved status slot for vertical alignment */}
+
+            <View
+              style={
+                styles.statusSlot
+              }
+            />
 
           </View>
 
@@ -455,14 +480,14 @@ export default function ChartCard({
 
           <View
             style={
-              styles.metricColumn
+              styles.groupMetricCell
             }
           >
 
             <AppText
               variant="caption"
               style={
-                styles.monitorLabel
+                styles.groupMetricLabel
               }
             >
               {wattHourData.label}
@@ -471,11 +496,19 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.monitorValue
+                styles.groupMetricValue
               }
             >
               {wattHourData.value}
             </AppText>
+
+            {/* Reserved status slot for vertical alignment */}
+
+            <View
+              style={
+                styles.statusSlot
+              }
+            />
 
           </View>
 
@@ -485,14 +518,14 @@ export default function ChartCard({
 
           <View
             style={
-              styles.metricColumn
+              styles.groupMetricCell
             }
           >
 
             <AppText
               variant="caption"
               style={
-                styles.monitorLabel
+                styles.groupMetricLabel
               }
             >
               {loadData.label}
@@ -501,11 +534,19 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.monitorValue
+                styles.groupMetricValue
               }
             >
               {loadData.value}
             </AppText>
+
+            {/* Reserved status slot for vertical alignment */}
+
+            <View
+              style={
+                styles.statusSlot
+              }
+            />
 
           </View>
 
@@ -578,7 +619,7 @@ export default function ChartCard({
 
             <Ionicons
               name="sunny-outline"
-              size={40}
+              size={30}
               color="#FACC15"
             />
 
@@ -663,30 +704,40 @@ export default function ChartCard({
               {solarInput}
             </AppText>
 
+            {/* Status slot — always rendered for grid alignment */}
+
             <View
-              style={[
-                styles.statusBadge,
-                solarStatus === "High"
-                  ? styles.normalBadge
-                  : solarStatus ===
-                      "Moderate"
-                    ? styles.moderateBadge
-                    : styles.lowBadge,
-              ]}
+              style={
+                styles.statusSlot
+              }
             >
 
-              <AppText
-                variant="caption"
+              <View
                 style={[
-                  styles.statusBadgeText,
-                  solarStatus ===
-                    "Moderate"
-                    ? styles.darkBadgeText
-                    : styles.lightBadgeText,
+                  styles.statusBadge,
+                  solarStatus === "High"
+                    ? styles.normalBadge
+                    : solarStatus ===
+                        "Moderate"
+                      ? styles.moderateBadge
+                      : styles.lowBadge,
                 ]}
               >
-                {solarStatus}
-              </AppText>
+
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.statusBadgeText,
+                    solarStatus ===
+                      "Moderate"
+                      ? styles.darkBadgeText
+                      : styles.lightBadgeText,
+                  ]}
+                >
+                  {solarStatus}
+                </AppText>
+
+              </View>
 
             </View>
 
@@ -720,6 +771,15 @@ export default function ChartCard({
               {solarVoltage}
             </AppText>
 
+            {/* Empty status slot intentionally reserved for
+                horizontal alignment with Solar Input. */}
+
+            <View
+              style={
+                styles.statusSlot
+              }
+            />
+
           </View>
 
           {/* ==================================================
@@ -750,6 +810,14 @@ export default function ChartCard({
               {solarCurrent}
             </AppText>
 
+            {/* Reserved status slot for vertical alignment */}
+
+            <View
+              style={
+                styles.statusSlot
+              }
+            />
+
           </View>
 
           {/* ==================================================
@@ -779,6 +847,14 @@ export default function ChartCard({
             >
               {totalEnergy}
             </AppText>
+
+            {/* Reserved status slot for vertical alignment */}
+
+            <View
+              style={
+                styles.statusSlot
+              }
+            />
 
           </View>
 
@@ -824,7 +900,7 @@ export default function ChartCard({
 
           <Ionicons
             name={weatherData.icon}
-            size={40}
+            size={34}
             color={Colors.light.primary}
           />
 
@@ -858,26 +934,36 @@ export default function ChartCard({
             {weatherData.value}
           </AppText>
 
-          {weatherData.badge && (
-            <View
-              style={[
-                styles.statusBadge,
-                weatherData.badgeStyle,
-              ]}
-            >
+          {/* Status slot — always rendered for consistent spacing */}
 
-              <AppText
-                variant="caption"
+          <View
+            style={
+              styles.weatherStatusSlot
+            }
+          >
+
+            {weatherData.badge && (
+              <View
                 style={[
-                  styles.statusBadgeText,
-                  weatherData.badgeTextStyle,
+                  styles.statusBadge,
+                  weatherData.badgeStyle,
                 ]}
               >
-                {weatherData.badge}
-              </AppText>
 
-            </View>
-          )}
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.statusBadgeText,
+                    weatherData.badgeTextStyle,
+                  ]}
+                >
+                  {weatherData.badge}
+                </AppText>
+
+              </View>
+            )}
+
+          </View>
 
         </View>
 
@@ -953,35 +1039,52 @@ export default function ChartCard({
       <View
         style={[
           styles.monitorCard,
-          styles.temperatureMonitorCard,
+          styles.groupMonitoringCard,
         ]}
       >
 
         {/* ==================================================
-            LEFT TEMPERATURE ICON PANEL
+            TEMPERATURE HEADER / ACCENT PANEL
             ================================================== */}
 
         <View
           style={
-            styles.iconAccentPanel
+            styles.groupHeaderPanel
           }
         >
 
-          <Ionicons
-            name="thermometer-outline"
-            size={40}
-            color={Colors.light.primary}
-          />
+          <View
+            style={
+              styles.groupHeaderLeft
+            }
+          >
+
+            <Ionicons
+              name="thermometer-outline"
+              size={30}
+              color="#FACC15"
+            />
+
+            <AppText
+              variant="heading"
+              style={
+                styles.groupHeaderTitle
+              }
+            >
+              Temperature Monitoring
+            </AppText>
+
+          </View>
 
         </View>
 
         {/* ==================================================
-            TEMPERATURE MEASUREMENTS
+            TEMPERATURE 1 × 3 MEASUREMENT GRID
             ================================================== */}
 
         <View
           style={
-            styles.temperatureMetrics
+            styles.groupMeasurementGrid
           }
         >
 
@@ -991,14 +1094,14 @@ export default function ChartCard({
 
           <View
             style={
-              styles.metricColumn
+              styles.groupMetricCell
             }
           >
 
             <AppText
               variant="caption"
               style={
-                styles.monitorLabel
+                styles.groupMetricLabel
               }
             >
               Interior
@@ -1007,30 +1110,36 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.monitorValue
+                styles.groupMetricValue
               }
             >
               {interiorTemperatureValue}
             </AppText>
 
-            {/* Interior Temperature Status */}
-
             <View
-              style={[
-                styles.statusBadge,
-                interiorTemperatureBadge,
-              ]}
+              style={
+                styles.statusSlot
+              }
             >
 
-              <AppText
-                variant="caption"
+              <View
                 style={[
-                  styles.statusBadgeText,
-                  interiorTemperatureBadgeText,
+                  styles.statusBadge,
+                  interiorTemperatureBadge,
                 ]}
               >
-                {interiorTemperatureStatus}
-              </AppText>
+
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.statusBadgeText,
+                    interiorTemperatureBadgeText,
+                  ]}
+                >
+                  {interiorTemperatureStatus}
+                </AppText>
+
+              </View>
 
             </View>
 
@@ -1042,14 +1151,14 @@ export default function ChartCard({
 
           <View
             style={
-              styles.metricColumn
+              styles.groupMetricCell
             }
           >
 
             <AppText
               variant="caption"
               style={
-                styles.monitorLabel
+                styles.groupMetricLabel
               }
             >
               Battery
@@ -1058,34 +1167,40 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.monitorValue
+                styles.groupMetricValue
               }
             >
               {batteryTemperatureData.value}
             </AppText>
 
-            {/* Battery Temperature Status */}
+            <View
+              style={
+                styles.statusSlot
+              }
+            >
 
-            {batteryTemperatureData.badge && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  batteryTemperatureData.badgeStyle,
-                ]}
-              >
-
-                <AppText
-                  variant="caption"
+              {batteryTemperatureData.badge && (
+                <View
                   style={[
-                    styles.statusBadgeText,
-                    batteryTemperatureData.badgeTextStyle,
+                    styles.statusBadge,
+                    batteryTemperatureData.badgeStyle,
                   ]}
                 >
-                  {batteryTemperatureData.badge}
-                </AppText>
 
-              </View>
-            )}
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusBadgeText,
+                      batteryTemperatureData.badgeTextStyle,
+                    ]}
+                  >
+                    {batteryTemperatureData.badge}
+                  </AppText>
+
+                </View>
+              )}
+
+            </View>
 
           </View>
 
@@ -1095,14 +1210,14 @@ export default function ChartCard({
 
           <View
             style={
-              styles.metricColumn
+              styles.groupMetricCell
             }
           >
 
             <AppText
               variant="caption"
               style={
-                styles.monitorLabel
+                styles.groupMetricLabel
               }
             >
               Solar Panel
@@ -1111,34 +1226,40 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.monitorValue
+                styles.groupMetricValue
               }
             >
               {solarTemperatureData.value}
             </AppText>
 
-            {/* Solar Panel Temperature Status */}
+            <View
+              style={
+                styles.statusSlot
+              }
+            >
 
-            {solarTemperatureData.badge && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  solarTemperatureData.badgeStyle,
-                ]}
-              >
-
-                <AppText
-                  variant="caption"
+              {solarTemperatureData.badge && (
+                <View
                   style={[
-                    styles.statusBadgeText,
-                    solarTemperatureData.badgeTextStyle,
+                    styles.statusBadge,
+                    solarTemperatureData.badgeStyle,
                   ]}
                 >
-                  {solarTemperatureData.badge}
-                </AppText>
 
-              </View>
-            )}
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusBadgeText,
+                      solarTemperatureData.badgeTextStyle,
+                    ]}
+                  >
+                    {solarTemperatureData.badge}
+                  </AppText>
+
+                </View>
+              )}
+
+            </View>
 
           </View>
 
@@ -1869,12 +1990,6 @@ function getTemperatureBadgeTextStyle(
 
 // ============================================================
 // STYLES
-//
-// Keep your existing styles here.
-// ============================================================
-
-// ============================================================
-// STYLES
 // ============================================================
 
 const styles = StyleSheet.create({
@@ -2002,7 +2117,7 @@ const styles = StyleSheet.create({
   },
 
   // ==========================================================
-  // MONITORING CARDS
+  // MONITORING CARDS — BASE SHELL
   // ==========================================================
 
   monitorCard: {
@@ -2033,17 +2148,140 @@ const styles = StyleSheet.create({
   },
 
   // ==========================================================
-  // GROUPED MONITORING CARDS
+  // SHARED GROUP MONITORING CARD OVERRIDE
+  //
+  // Used by: Battery Monitoring (voltage type)
+  //          Temperature Monitoring (temperature type)
+  // Switches the base shell to column layout and strips
+  // the horizontal/vertical padding so the header panel
+  // fills edge-to-edge.
   // ==========================================================
 
-  batteryMonitorCard: {
+  groupMonitoringCard: {
 
-    minHeight: 116,
+    flexDirection: "column",
+
+    alignItems: "stretch",
+
+    paddingHorizontal: 0,
+
+    paddingVertical: 0,
+
+    overflow: "hidden",
   },
 
-  solarMonitorCard: {
+  // ==========================================================
+  // GROUP HEADER / ACCENT PANEL
+  // ==========================================================
 
-    minHeight: 108,
+  groupHeaderPanel: {
+
+    width: "100%",
+
+    backgroundColor:
+      Colors.light.primary,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    justifyContent: "flex-start",
+
+    paddingHorizontal: 14,
+
+    paddingVertical: 9,
+  },
+
+  groupHeaderLeft: {
+
+    flex: 1,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    minWidth: 0,
+  },
+
+  groupHeaderTitle: {
+
+    color: "#FFFFFF",
+
+    fontSize: 16,
+
+    fontWeight: "600",
+
+    marginLeft: 8,
+
+    flexShrink: 1,
+  },
+
+  // ==========================================================
+  // GROUP 1 × 3 MEASUREMENT GRID
+  // ==========================================================
+
+  groupMeasurementGrid: {
+
+    flex: 1,
+
+    width: "100%",
+
+    flexDirection: "row",
+
+    alignItems: "stretch",
+
+    justifyContent: "space-between",
+
+    paddingHorizontal: 8,
+
+    paddingVertical: 10,
+  },
+
+  groupMetricCell: {
+
+    flex: 1,
+
+    minHeight: 70,
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    paddingHorizontal: 6,
+
+    paddingVertical: 4,
+  },
+
+  groupMetricLabel: {
+
+    color: "#000000",
+
+    textAlign: "center",
+
+    fontSize: 13,
+
+    fontWeight: "600",
+
+    lineHeight: 17,
+
+    flexShrink: 1,
+  },
+
+  groupMetricValue: {
+
+    color: "#000000",
+
+    fontSize: 18,
+
+    fontWeight: "700",
+
+    textAlign: "center",
+
+    marginTop: 3,
+
+    lineHeight: 22,
+
+    flexShrink: 1,
   },
 
   // ==========================================================
@@ -2052,7 +2290,7 @@ const styles = StyleSheet.create({
 
   solarMonitoringCard: {
 
-    minHeight: 300,
+    minHeight: 250,
 
     flexDirection: "column",
 
@@ -2069,13 +2307,8 @@ const styles = StyleSheet.create({
 
     width: "100%",
 
-    minHeight: 30,
-
-    backgroundColor: Colors.light.primary,
-
-    borderTopLeftRadius: 12,
-
-    borderTopRightRadius: 12,
+    backgroundColor:
+      Colors.light.primary,
 
     flexDirection: "row",
 
@@ -2083,9 +2316,9 @@ const styles = StyleSheet.create({
 
     justifyContent: "space-between",
 
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
 
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
 
   solarHeaderLeft: {
@@ -2105,11 +2338,11 @@ const styles = StyleSheet.create({
 
     color: "#FFFFFF",
 
-    fontSize: 20,
+    fontSize: 16,
 
     fontWeight: "600",
 
-    marginLeft: 10,
+    marginLeft: 8,
 
     flexShrink: 1,
   },
@@ -2120,30 +2353,34 @@ const styles = StyleSheet.create({
 
     justifyContent: "center",
 
-    minWidth: 92,
+    minWidth: 86,
   },
 
   solarTimerLabel: {
 
     color: "#FFFFFF",
 
-    fontSize: 13,
+    fontSize: 11,
 
-    lineHeight: 16,
+    lineHeight: 14,
   },
 
   solarTimerValue: {
 
     color: "#FFFFFF",
 
-    fontSize: 19,
+    fontSize: 16,
 
     fontWeight: "600",
 
-    lineHeight: 23,
-    
+    lineHeight: 20,
+
     textAlign: "right",
   },
+
+  // ==========================================================
+  // SOLAR 2 × 2 MEASUREMENT GRID
+  // ==========================================================
 
   solarMeasurementGrid: {
 
@@ -2161,14 +2398,14 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 8,
 
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
 
   solarMetricCell: {
 
     width: "50%",
 
-    minHeight: 105,
+    minHeight: 95,
 
     alignItems: "center",
 
@@ -2185,11 +2422,11 @@ const styles = StyleSheet.create({
 
     textAlign: "center",
 
-    fontSize: 17,
+    fontSize: 13,
 
     fontWeight: "600",
 
-    lineHeight: 21,
+    lineHeight: 17,
 
     flexShrink: 1,
   },
@@ -2198,7 +2435,7 @@ const styles = StyleSheet.create({
 
     color: "#000000",
 
-    fontSize: 25,
+    fontSize: 20,
 
     fontWeight: "700",
 
@@ -2206,7 +2443,7 @@ const styles = StyleSheet.create({
 
     marginTop: 3,
 
-    lineHeight: 30,
+    lineHeight: 24,
 
     flexShrink: 1,
   },
@@ -2217,7 +2454,7 @@ const styles = StyleSheet.create({
 
   weatherMonitorCard: {
 
-    minHeight: 128,
+    minHeight: 108,
 
     alignItems: "stretch",
 
@@ -2230,11 +2467,12 @@ const styles = StyleSheet.create({
 
   weatherIconPanel: {
 
-    width: 70,
+    width: 62,
 
     alignSelf: "stretch",
 
-    backgroundColor: Colors.light.color1,
+    backgroundColor:
+      Colors.light.color1,
 
     borderTopLeftRadius: 12,
 
@@ -2253,7 +2491,7 @@ const styles = StyleSheet.create({
 
     justifyContent: "center",
 
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
 
     paddingVertical: 10,
 
@@ -2264,13 +2502,13 @@ const styles = StyleSheet.create({
 
     color: "#000000",
 
-    fontSize: 17,
+    fontSize: 14,
 
     fontWeight: "600",
 
     textAlign: "center",
 
-    lineHeight: 21,
+    lineHeight: 18,
 
     flexShrink: 1,
   },
@@ -2279,7 +2517,7 @@ const styles = StyleSheet.create({
 
     color: "#000000",
 
-    fontSize: 27,
+    fontSize: 22,
 
     fontWeight: "800",
 
@@ -2287,99 +2525,41 @@ const styles = StyleSheet.create({
 
     marginTop: 2,
 
-    lineHeight: 32,
+    lineHeight: 26,
   },
 
-  temperatureMonitorCard: {
+  weatherStatusSlot: {
 
-    minHeight: 108,
-  },
-
-  cardIconContainer: {
-
-    width: 38,
+    minHeight: 25,
 
     alignItems: "center",
 
     justifyContent: "center",
 
-    flexShrink: 0,
+    marginTop: 2,
   },
 
-  cardIcon: {
+  // ==========================================================
+  // STATUS SLOT
+  //
+  // Reserved minimum height keeps cells vertically aligned
+  // even when no badge is displayed.
+  // ==========================================================
 
-    marginRight: 0,
-  },
+  statusSlot: {
 
-  batteryMetrics: {
-
-    flex: 1,
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    justifyContent: "space-between",
-
-    paddingLeft: 4,
-
-    paddingRight: 2,
-
-  },
-
-  solarMetrics: {
-
-    flex: 1,
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    justifyContent: "space-between",
-
-    paddingLeft: 4,
-
-    paddingRight: 2,
-
-  },
-
-  temperatureMetrics: {
-
-    flex: 1,
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    justifyContent: "space-between",
-
-    paddingLeft: 4,
-
-    paddingRight: 2,
-
-  },
-
-  metricColumn: {
-
-    flex: 1,
+    minHeight: 25,
 
     alignItems: "center",
 
     justifyContent: "center",
 
-    minWidth: 0,
-
-    paddingHorizontal: 3,
+    marginTop: 2,
   },
 
   // ==========================================================
   // GENERAL CARD CONTENT
   // ==========================================================
-
-  icon: {
-
-    marginBottom: 3,
-  },
 
   monitorLabel: {
 
@@ -2425,7 +2605,7 @@ const styles = StyleSheet.create({
 
   statusBadge: {
 
-    marginTop: 6,
+    marginTop: 4,
 
     paddingHorizontal: 9,
 
@@ -2684,17 +2864,23 @@ const styles = StyleSheet.create({
     color: "#991B1B",
   },
 
- iconAccentPanel: {
-  width: 58,
-  alignSelf: "stretch",
-  backgroundColor: Colors.light.color1,
-  borderTopLeftRadius: 13,
-  borderBottomLeftRadius: 13,
-  alignItems: "center",
-  justifyContent: "center",
-  marginLeft: -12,
-  marginTop: -12,
-  marginBottom: -12,
-  marginRight: 12,
-},
+  // ==========================================================
+  // ICON ACCENT PANEL
+  //
+  // Used by: Other monitoring cards (fallback branch)
+  // ==========================================================
+
+  iconAccentPanel: {
+    width: 58,
+    alignSelf: "stretch",
+    backgroundColor: Colors.light.color1,
+    borderTopLeftRadius: 13,
+    borderBottomLeftRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -12,
+    marginTop: -12,
+    marginBottom: -12,
+    marginRight: 12,
+  },
 });
