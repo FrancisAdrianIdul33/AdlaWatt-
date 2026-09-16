@@ -30,6 +30,10 @@ type ChartType =
   | "voltage"
   | "watt_hour"
   | "solar"
+  | "solar_voltage"
+  | "solar_current"
+  | "solar_energy"
+  | "solar_timer"
   | "load"
   | "weather"
   | "temperature"
@@ -512,20 +516,285 @@ export default function ChartCard({
   }
 
   // ==========================================================
-  // SOLAR + WEATHER MONITORING GROUP
+  // SOLAR MONITORING GROUP
   //
-  // Solar Input + Weather
+  // Solar Timer + Solar Input + Solar Voltage
+  // + Solar Current + Total Energy
   // ==========================================================
 
   if (type === "solar") {
 
-    const solarData =
-      getCardData(
-        "solar",
-        monitoring,
-        weather ?? null,
-        loading,
-      );
+    const solarStatus =
+      monitoring?.solar_status ??
+      "Low";
+
+    const solarTimer =
+      monitoring?.solar_timer ??
+      "00:00:00";
+
+    const solarInput =
+      loading
+        ? "—"
+        : `${monitoring?.solar_input ?? 0}W`;
+
+    const solarVoltage =
+      loading
+        ? "—"
+        : `${monitoring?.solar_voltage ?? 0}V`;
+
+    const solarCurrent =
+      loading
+        ? "—"
+        : `${monitoring?.solar_current ?? 0}A`;
+
+    const totalEnergy =
+      loading
+        ? "—"
+        : `${monitoring?.total_energy ?? 0}Wh`;
+
+    return (
+      <View
+        style={[
+          styles.monitorCard,
+          styles.solarMonitoringCard,
+        ]}
+      >
+
+        {/* ==================================================
+            SOLAR HEADER / ACCENT PANEL
+            ================================================== */}
+
+        <View
+          style={
+            styles.solarHeaderPanel
+          }
+        >
+
+          <View
+            style={
+              styles.solarHeaderLeft
+            }
+          >
+
+            <Ionicons
+              name="sunny-outline"
+              size={40}
+              color="#FACC15"
+            />
+
+            <AppText
+              variant="heading"
+              style={
+                styles.solarHeaderTitle
+              }
+            >
+              Solar Monitoring
+            </AppText>
+
+          </View>
+
+          <View
+            style={
+              styles.solarTimerContainer
+            }
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.solarTimerLabel
+              }
+            >
+              Timer
+            </AppText>
+
+            <AppText
+              variant="heading"
+              style={
+                styles.solarTimerValue
+              }
+            >
+              {loading
+                ? "—"
+                : formatSolarTimer(
+                    solarTimer,
+                  )}
+            </AppText>
+
+          </View>
+
+        </View>
+
+        {/* ==================================================
+            SOLAR 2 × 2 MEASUREMENT GRID
+            ================================================== */}
+
+        <View
+          style={
+            styles.solarMeasurementGrid
+          }
+        >
+
+          {/* ==================================================
+              SOLAR INPUT
+              ================================================== */}
+
+          <View
+            style={
+              styles.solarMetricCell
+            }
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.solarMetricLabel
+              }
+            >
+              Solar Input
+            </AppText>
+
+            <AppText
+              variant="heading"
+              style={
+                styles.solarMetricValue
+              }
+            >
+              {solarInput}
+            </AppText>
+
+            <View
+              style={[
+                styles.statusBadge,
+                solarStatus === "High"
+                  ? styles.normalBadge
+                  : solarStatus ===
+                      "Moderate"
+                    ? styles.moderateBadge
+                    : styles.lowBadge,
+              ]}
+            >
+
+              <AppText
+                variant="caption"
+                style={[
+                  styles.statusBadgeText,
+                  solarStatus ===
+                    "Moderate"
+                    ? styles.darkBadgeText
+                    : styles.lightBadgeText,
+                ]}
+              >
+                {solarStatus}
+              </AppText>
+
+            </View>
+
+          </View>
+
+          {/* ==================================================
+              SOLAR VOLTAGE
+              ================================================== */}
+
+          <View
+            style={
+              styles.solarMetricCell
+            }
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.solarMetricLabel
+              }
+            >
+              Voltage
+            </AppText>
+
+            <AppText
+              variant="heading"
+              style={
+                styles.solarMetricValue
+              }
+            >
+              {solarVoltage}
+            </AppText>
+
+          </View>
+
+          {/* ==================================================
+              SOLAR CURRENT
+              ================================================== */}
+
+          <View
+            style={
+              styles.solarMetricCell
+            }
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.solarMetricLabel
+              }
+            >
+              Current
+            </AppText>
+
+            <AppText
+              variant="heading"
+              style={
+                styles.solarMetricValue
+              }
+            >
+              {solarCurrent}
+            </AppText>
+
+          </View>
+
+          {/* ==================================================
+              TOTAL ENERGY
+              ================================================== */}
+
+          <View
+            style={
+              styles.solarMetricCell
+            }
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.solarMetricLabel
+              }
+            >
+              Total Energy
+            </AppText>
+
+            <AppText
+              variant="heading"
+              style={
+                styles.solarMetricValue
+              }
+            >
+              {totalEnergy}
+            </AppText>
+
+          </View>
+
+        </View>
+
+      </View>
+    );
+  }
+
+  // ==========================================================
+  // WEATHER MONITORING CARD
+  //
+  // Weather is intentionally separated from the solar card.
+  // ==========================================================
+
+  if (type === "weather") {
 
     const weatherData =
       getCardData(
@@ -539,17 +808,17 @@ export default function ChartCard({
       <View
         style={[
           styles.monitorCard,
-          styles.solarMonitorCard,
+          styles.weatherMonitorCard,
         ]}
       >
 
         {/* ==================================================
-            LEFT WEATHER ICON PANEL
+            WEATHER ICON PANEL
             ================================================== */}
 
         <View
           style={
-            styles.iconAccentPanel
+            styles.weatherIconPanel
           }
         >
 
@@ -562,120 +831,53 @@ export default function ChartCard({
         </View>
 
         {/* ==================================================
-            SOLAR AND WEATHER MEASUREMENTS
+            WEATHER INFORMATION
             ================================================== */}
 
         <View
           style={
-            styles.solarMetrics
+            styles.weatherContent
           }
         >
 
-          {/* ==================================================
-              SOLAR INPUT
-              ================================================== */}
-
-          <View
+          <AppText
+            variant="caption"
             style={
-              styles.metricColumn
+              styles.weatherLocation
             }
           >
+            {weatherData.label}
+          </AppText>
 
-            <AppText
-              variant="caption"
-              style={
-                styles.monitorLabel
-              }
-            >
-              {solarData.label}
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.monitorValue
-              }
-            >
-              {solarData.value}
-            </AppText>
-
-            {/* Solar Status Badge */}
-
-            {solarData.badge && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  solarData.badgeStyle,
-                ]}
-              >
-
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.statusBadgeText,
-                    solarData.badgeTextStyle,
-                  ]}
-                >
-                  {solarData.badge}
-                </AppText>
-
-              </View>
-            )}
-
-          </View>
-
-          {/* ==================================================
-              WEATHER
-              ================================================== */}
-
-          <View
+          <AppText
+            variant="heading"
             style={
-              styles.metricColumn
+              styles.weatherTemperature
             }
           >
+            {weatherData.value}
+          </AppText>
 
-            <AppText
-              variant="caption"
-              style={
-                styles.monitorLabel
-              }
+          {weatherData.badge && (
+            <View
+              style={[
+                styles.statusBadge,
+                weatherData.badgeStyle,
+              ]}
             >
-              {weatherData.label}
-            </AppText>
 
-            <AppText
-              variant="heading"
-              style={
-                styles.monitorValue
-              }
-            >
-              {weatherData.value}
-            </AppText>
-
-            {/* Weather Description Badge */}
-
-            {weatherData.badge && (
-              <View
+              <AppText
+                variant="caption"
                 style={[
-                  styles.statusBadge,
-                  weatherData.badgeStyle,
+                  styles.statusBadgeText,
+                  weatherData.badgeTextStyle,
                 ]}
               >
+                {weatherData.badge}
+              </AppText>
 
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.statusBadgeText,
-                    weatherData.badgeTextStyle,
-                  ]}
-                >
-                  {weatherData.badge}
-                </AppText>
-
-              </View>
-            )}
-
-          </View>
+            </View>
+          )}
 
         </View>
 
@@ -955,8 +1157,11 @@ export default function ChartCard({
 
   if (
     type === "watt_hour" ||
+    type === "solar_voltage" ||
+    type === "solar_current" ||
+    type === "solar_energy" ||
+    type === "solar_timer" ||
     type === "load" ||
-    type === "weather" ||
     type === "dod" ||
     type === "solar_temperature"
   ) {
@@ -1164,6 +1369,89 @@ function getCardData(
     }
 
     // ========================================================
+    // SOLAR VOLTAGE
+    // ========================================================
+
+    case "solar_voltage":
+
+      return {
+
+        icon:
+          "flash-outline",
+
+        label:
+          "Voltage",
+
+        value:
+          loading
+            ? "—"
+            : `${monitoring?.solar_voltage ?? 0}V`,
+      };
+
+    // ========================================================
+    // SOLAR CURRENT
+    // ========================================================
+
+    case "solar_current":
+
+      return {
+
+        icon:
+          "pulse-outline",
+
+        label:
+          "Current",
+
+        value:
+          loading
+            ? "—"
+            : `${monitoring?.solar_current ?? 0}A`,
+      };
+
+    // ========================================================
+    // TOTAL ENERGY
+    // ========================================================
+
+    case "solar_energy":
+
+      return {
+
+        icon:
+          "battery-charging-outline",
+
+        label:
+          "Total Energy",
+
+        value:
+          loading
+            ? "—"
+            : `${monitoring?.total_energy ?? 0}Wh`,
+      };
+
+    // ========================================================
+    // SOLAR TIMER
+    // ========================================================
+
+    case "solar_timer":
+
+      return {
+
+        icon:
+          "timer-outline",
+
+        label:
+          "Timer",
+
+        value:
+          loading
+            ? "—"
+            : formatSolarTimer(
+                monitoring?.solar_timer ??
+                  "00:00:00",
+              ),
+      };
+
+    // ========================================================
     // CURRENT LOAD
     // ========================================================
 
@@ -1328,6 +1616,55 @@ function getCardData(
     }
 
   }
+}
+
+// ============================================================
+// SOLAR TIMER FORMATTER
+// ============================================================
+
+function formatSolarTimer(
+  timer: string,
+): string {
+
+  const value =
+    String(timer ?? "")
+      .trim();
+
+  if (!value) {
+    return "00:00:00";
+  }
+
+  // PostgreSQL interval values can be returned as
+  // HH:MM:SS, H:MM:SS, or values containing days.
+  const dayMatch =
+    value.match(/(-?\d+)\s+days?/i);
+
+  const timeMatch =
+    value.match(/(\d{1,3}):(\d{2}):(\d{2})/);
+
+  if (timeMatch) {
+    const days = dayMatch
+      ? Number(dayMatch[1])
+      : 0;
+
+    const hours =
+      Number(timeMatch[1]) +
+      days * 24;
+
+    const minutes =
+      Number(timeMatch[2]);
+
+    const seconds =
+      Number(timeMatch[3]);
+
+    return [
+      String(hours).padStart(2, "0"),
+      String(minutes).padStart(2, "0"),
+      String(seconds).padStart(2, "0"),
+    ].join(":");
+  }
+
+  return value;
 }
 
 // ============================================================
@@ -1707,6 +2044,250 @@ const styles = StyleSheet.create({
   solarMonitorCard: {
 
     minHeight: 108,
+  },
+
+  // ==========================================================
+  // SOLAR MONITORING CARD
+  // ==========================================================
+
+  solarMonitoringCard: {
+
+    minHeight: 300,
+
+    flexDirection: "column",
+
+    alignItems: "stretch",
+
+    paddingHorizontal: 0,
+
+    paddingVertical: 0,
+
+    overflow: "hidden",
+  },
+
+  solarHeaderPanel: {
+
+    width: "100%",
+
+    minHeight: 50,
+
+    backgroundColor: Colors.light.primary,
+
+    borderTopLeftRadius: 12,
+
+    borderTopRightRadius: 12,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    justifyContent: "space-between",
+
+    paddingHorizontal: 16,
+
+    paddingVertical: 10,
+  },
+
+  solarHeaderLeft: {
+
+    flex: 1,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    minWidth: 0,
+
+    paddingRight: 10,
+  },
+
+  solarHeaderTitle: {
+
+    color: "#FFFFFF",
+
+    fontSize: 23,
+
+    fontWeight: "800",
+
+    marginLeft: 10,
+
+    flexShrink: 1,
+  },
+
+  solarTimerContainer: {
+
+    alignItems: "flex-end",
+
+    justifyContent: "center",
+
+    minWidth: 92,
+  },
+
+  solarTimerLabel: {
+
+    color: "#FFFFFF",
+
+    fontSize: 13,
+
+    lineHeight: 16,
+  },
+
+  solarTimerValue: {
+
+    color: "#FFFFFF",
+
+    fontSize: 19,
+
+    fontWeight: "800",
+
+    lineHeight: 23,
+    
+    textAlign: "right",
+  },
+
+  solarMeasurementGrid: {
+
+    flex: 1,
+
+    width: "100%",
+
+    flexDirection: "row",
+
+    flexWrap: "wrap",
+
+    alignItems: "stretch",
+
+    justifyContent: "space-between",
+
+    paddingHorizontal: 8,
+
+    paddingVertical: 10,
+  },
+
+  solarMetricCell: {
+
+    width: "50%",
+
+    minHeight: 105,
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    paddingHorizontal: 6,
+
+    paddingVertical: 8,
+  },
+
+  solarMetricLabel: {
+
+    color: "#000000",
+
+    textAlign: "center",
+
+    fontSize: 17,
+
+    fontWeight: "600",
+
+    lineHeight: 21,
+
+    flexShrink: 1,
+  },
+
+  solarMetricValue: {
+
+    color: "#000000",
+
+    fontSize: 25,
+
+    fontWeight: "800",
+
+    textAlign: "center",
+
+    marginTop: 3,
+
+    lineHeight: 30,
+
+    flexShrink: 1,
+  },
+
+  // ==========================================================
+  // WEATHER CARD
+  // ==========================================================
+
+  weatherMonitorCard: {
+
+    minHeight: 128,
+
+    alignItems: "stretch",
+
+    paddingVertical: 0,
+
+    paddingHorizontal: 0,
+
+    overflow: "hidden",
+  },
+
+  weatherIconPanel: {
+
+    width: 70,
+
+    alignSelf: "stretch",
+
+    backgroundColor: Colors.light.color1,
+
+    borderTopLeftRadius: 12,
+
+    borderBottomLeftRadius: 12,
+
+    alignItems: "center",
+
+    justifyContent: "center",
+  },
+
+  weatherContent: {
+
+    flex: 1,
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    paddingHorizontal: 14,
+
+    paddingVertical: 10,
+
+    minWidth: 0,
+  },
+
+  weatherLocation: {
+
+    color: "#000000",
+
+    fontSize: 17,
+
+    fontWeight: "600",
+
+    textAlign: "center",
+
+    lineHeight: 21,
+
+    flexShrink: 1,
+  },
+
+  weatherTemperature: {
+
+    color: "#000000",
+
+    fontSize: 27,
+
+    fontWeight: "800",
+
+    textAlign: "center",
+
+    marginTop: 2,
+
+    lineHeight: 32,
   },
 
   temperatureMonitorCard: {

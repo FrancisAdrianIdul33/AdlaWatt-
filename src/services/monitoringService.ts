@@ -42,6 +42,10 @@ export interface MonitoringData {
   watt_hours: number;
   solar_input: number;
   solar_status: SolarStatus;
+  solar_timer: string;
+  solar_voltage: number;
+  solar_current: number;
+  total_energy: number;
   current_load: number;
   device_status: DeviceStatus;
   battery_temperature: number;
@@ -86,6 +90,10 @@ export const getMonitoringData =
         watt_hours,
         solar_input,
         solar_status,
+        solar_timer,
+        solar_voltage,
+        solar_current,
+        total_energy,
         current_load,
         device_status,
         battery_temperature,
