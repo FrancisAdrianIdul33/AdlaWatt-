@@ -7,28 +7,18 @@ import {
 } from "react-native";
 
 import ActivityCard from "@/components/ActivityCard";
-
 import AppRecCard from "@/components/AppRecCard";
-
 import ChartCard from "@/components/ChartCard";
-
 import Copyright from "@/components/forms/Copyright";
-
 import NavBar from "@/components/layout/Navbar";
-
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-
 import Sidebar from "@/components/layout/Sidebar";
-
 import AppText from "@/components/ui/AppText";
-
 import { Colors } from "@/constants/colors";
-
 import {
   getCurrentWeatherForUser,
   type WeatherCondition,
 } from "@/services/weatherForecast";
-
 import {
   useMonitoring,
 } from "@/services/monitoringService";
@@ -48,7 +38,6 @@ type WeatherData = {
 // ============================================================
 
 export default function DashboardScreen() {
-
   // ==========================================================
   // SIDEBAR STATE
   // ==========================================================
@@ -91,13 +80,10 @@ export default function DashboardScreen() {
   // ==========================================================
 
   useEffect(() => {
-
     let isMounted = true;
 
     const loadWeather = async () => {
-
       try {
-
         setWeatherLoading(true);
 
         const forecast =
@@ -120,9 +106,7 @@ export default function DashboardScreen() {
           description:
             forecast.weather.condition,
         });
-
       } catch (error) {
-
         console.error(
           "Failed to load weather:",
           error,
@@ -136,13 +120,10 @@ export default function DashboardScreen() {
         // Supabase monitoring data.
 
         setWeather(null);
-
       } finally {
-
         if (isMounted) {
           setWeatherLoading(false);
         }
-
       }
     };
 
@@ -151,7 +132,6 @@ export default function DashboardScreen() {
     return () => {
       isMounted = false;
     };
-
   }, []);
 
   // ==========================================================
@@ -159,9 +139,7 @@ export default function DashboardScreen() {
   // ==========================================================
 
   return (
-
     <ScreenContainer2>
-
       {/* ====================================================
           FIXED NAVBAR
           ==================================================== */}
@@ -188,7 +166,6 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-
         {/* ==================================================
             DASHBOARD HEADER
             ================================================== */}
@@ -196,7 +173,6 @@ export default function DashboardScreen() {
         <View
           style={styles.headerCard}
         >
-
           <AppText
             variant="heading"
             style={styles.headerTitle}
@@ -210,7 +186,6 @@ export default function DashboardScreen() {
           >
             Monitor your AdlaWatt system in real time.
           </AppText>
-
         </View>
 
         {/* ==================================================
@@ -220,7 +195,6 @@ export default function DashboardScreen() {
         <View
           style={styles.section}
         >
-
           <AppText
             variant="body"
             style={styles.sectionTitle}
@@ -231,7 +205,6 @@ export default function DashboardScreen() {
           <View
             style={styles.monitorGrid}
           >
-
             {/* ==============================================
                 BATTERY
                 Source: Supabase
@@ -242,13 +215,11 @@ export default function DashboardScreen() {
                 styles.batteryCardContainer
               }
             >
-
               <ChartCard
                 type="battery"
                 monitoring={monitoring}
                 loading={loading}
               />
-
             </View>
 
             {/* ==============================================
@@ -263,12 +234,24 @@ export default function DashboardScreen() {
             />
 
             {/* ==============================================
-                SOLAR + WEATHER
-                Solar Input + Weather
+                SOLAR MONITORING
+                Solar Timer + Solar Input + Solar Voltage
+                + Solar Current + Total Energy
                 ============================================== */}
 
             <ChartCard
               type="solar"
+              monitoring={monitoring}
+              loading={loading}
+            />
+
+            {/* ==============================================
+                WEATHER
+                Source: Open-Meteo API
+                ============================================== */}
+
+            <ChartCard
+              type="weather"
               monitoring={monitoring}
               weather={weather}
               loading={weatherLoading}
@@ -276,7 +259,8 @@ export default function DashboardScreen() {
 
             {/* ==============================================
                 TEMPERATURE
-                Battery Temperature + Solar Panel Temperature
+                Interior Temperature + Battery Temperature
+                + Solar Panel Temperature
                 ============================================== */}
 
             <ChartCard
@@ -284,9 +268,7 @@ export default function DashboardScreen() {
               monitoring={monitoring}
               loading={loading}
             />
-
           </View>
-
         </View>
 
         {/* ==================================================
@@ -296,7 +278,6 @@ export default function DashboardScreen() {
         <View
           style={styles.section}
         >
-
           <AppText
             variant="body"
             style={styles.sectionTitle}
@@ -305,7 +286,6 @@ export default function DashboardScreen() {
           </AppText>
 
           <AppRecCard />
-
         </View>
 
         {/* ==================================================
@@ -315,9 +295,7 @@ export default function DashboardScreen() {
         <View
           style={styles.section}
         >
-
           <ActivityCard />
-
         </View>
 
         {/* ==================================================
@@ -325,7 +303,6 @@ export default function DashboardScreen() {
             ================================================== */}
 
         <Copyright />
-
       </ScrollView>
 
       {/* ====================================================
@@ -338,7 +315,6 @@ export default function DashboardScreen() {
           setSidebarVisible(false)
         }
       />
-
     </ScreenContainer2>
   );
 }

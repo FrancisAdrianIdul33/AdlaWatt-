@@ -19,6 +19,8 @@ export const Colors = {
     error: "#EF4444",
 
     color1: "#edeb44",
+    color2: "#136243",
+    color3: "#E5B232",
   },
 
   dark: {
@@ -37,7 +39,7 @@ export const Colors = {
     warning: "#F59E0B",
     error: "#EF4444",
   },
-   glass: {
+  glass: {
     white: "rgba(255, 255, 255, 0.50)",
     whiteStrong: "rgba(255, 255, 255, 0.78)",
   },

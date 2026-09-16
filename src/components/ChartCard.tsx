@@ -2017,7 +2017,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
 
     borderColor:
-      Colors.light.primary,
+      Colors.light.color3,
 
     borderRadius: 15,
 
@@ -2069,7 +2069,7 @@ const styles = StyleSheet.create({
 
     width: "100%",
 
-    minHeight: 50,
+    minHeight: 30,
 
     backgroundColor: Colors.light.primary,
 
@@ -2105,9 +2105,9 @@ const styles = StyleSheet.create({
 
     color: "#FFFFFF",
 
-    fontSize: 23,
+    fontSize: 20,
 
-    fontWeight: "800",
+    fontWeight: "600",
 
     marginLeft: 10,
 
@@ -2138,7 +2138,7 @@ const styles = StyleSheet.create({
 
     fontSize: 19,
 
-    fontWeight: "800",
+    fontWeight: "600",
 
     lineHeight: 23,
     
@@ -2200,7 +2200,7 @@ const styles = StyleSheet.create({
 
     fontSize: 25,
 
-    fontWeight: "800",
+    fontWeight: "700",
 
     textAlign: "center",
 
