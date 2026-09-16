@@ -49,6 +49,8 @@ export interface MonitoringData {
   dod_status: DoDStatus;
   solar_temperature: number;
   solar_temperature_status: TemperatureStatus;
+  interior_temp: number;
+  interior_temp_status: TemperatureStatus;
 }
 
 // ============================================================
@@ -57,7 +59,6 @@ export interface MonitoringData {
 
 export const getMonitoringData =
   async (): Promise<MonitoringData | null> => {
-
     const {
       data: { user },
       error: userError,
@@ -68,7 +69,6 @@ export const getMonitoringData =
         "Error getting user:",
         userError.message,
       );
-
       return null;
     }
 
@@ -92,7 +92,9 @@ export const getMonitoringData =
         battery_temperature_status,
         dod_status,
         solar_temperature,
-        solar_temperature_status
+        solar_temperature_status,
+        interior_temp,
+        interior_temp_status
       `)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -102,13 +104,11 @@ export const getMonitoringData =
         "Error loading monitoring data:",
         error.message,
       );
-
       return null;
     }
 
     return data as MonitoringData | null;
   };
-
 
 // ============================================================
 // FETCH DEVICE STATUS ONLY
@@ -116,7 +116,6 @@ export const getMonitoringData =
 
 export const getDeviceStatus =
   async (): Promise<DeviceStatus> => {
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -136,7 +135,6 @@ export const getDeviceStatus =
         "Error loading device status:",
         error,
       );
-
       return "Offline";
     }
 
@@ -144,7 +142,6 @@ export const getDeviceStatus =
       ? "Online"
       : "Offline";
   };
-
 
 // ============================================================
 // SUBSCRIBE TO MONITORING
@@ -155,7 +152,6 @@ export const subscribeToMonitoring = async (
     data: MonitoringData | null,
   ) => void,
 ) => {
-
   const {
     data: { user },
     error,
@@ -166,7 +162,6 @@ export const subscribeToMonitoring = async (
       "Error getting user:",
       error.message,
     );
-
     return null;
   }
 
@@ -187,12 +182,10 @@ export const subscribeToMonitoring = async (
         filter: `user_id=eq.${user.id}`,
       },
       (payload) => {
-
         if (
           payload.eventType === "DELETE"
         ) {
           onChange(null);
-
           return;
         }
 
@@ -202,7 +195,6 @@ export const subscribeToMonitoring = async (
       },
     )
     .subscribe((status) => {
-
       if (
         status === "CHANNEL_ERROR"
       ) {
@@ -223,7 +215,6 @@ export const subscribeToMonitoring = async (
   return channel;
 };
 
-
 // ============================================================
 // SUBSCRIBE TO DEVICE STATUS ONLY
 // ============================================================
@@ -233,14 +224,12 @@ export const subscribeToDeviceStatus = async (
     status: DeviceStatus,
   ) => void,
 ) => {
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
     onChange("Offline");
-
     return null;
   }
 
@@ -257,7 +246,6 @@ export const subscribeToDeviceStatus = async (
         filter: `user_id=eq.${user.id}`,
       },
       (payload) => {
-
         onChange(
           payload.new?.device_status === "Online"
             ? "Online"
@@ -266,7 +254,6 @@ export const subscribeToDeviceStatus = async (
       },
     )
     .subscribe((status) => {
-
       if (
         status === "CHANNEL_ERROR"
       ) {
@@ -287,7 +274,6 @@ export const subscribeToDeviceStatus = async (
   return channel;
 };
 
-
 // ============================================================
 // UNSUBSCRIBE
 // ============================================================
@@ -297,12 +283,10 @@ export const unsubscribeFromMonitoring = (
     typeof supabase.channel
   > | null,
 ) => {
-
   if (channel) {
     supabase.removeChannel(channel);
   }
 };
-
 
 // ============================================================
 // UNSUBSCRIBE FROM DEVICE STATUS
@@ -313,19 +297,16 @@ export const unsubscribeFromDeviceStatus = (
     typeof supabase.channel
   > | null,
 ) => {
-
   if (channel) {
     supabase.removeChannel(channel);
   }
 };
-
 
 // ============================================================
 // USE MONITORING HOOK
 // ============================================================
 
 export const useMonitoring = () => {
-
   const [
     monitoring,
     setMonitoring,
@@ -339,7 +320,6 @@ export const useMonitoring = () => {
   ] = useState(true);
 
   useEffect(() => {
-
     let mounted = true;
 
     let channel:
@@ -350,9 +330,7 @@ export const useMonitoring = () => {
 
     const initializeMonitoring =
       async () => {
-
         try {
-
           // ----------------------------------------------------
           // GET INITIAL MONITORING DATA
           // ----------------------------------------------------
@@ -366,7 +344,6 @@ export const useMonitoring = () => {
 
           setMonitoring(data);
 
-
           // ----------------------------------------------------
           // SUBSCRIBE TO REALTIME MONITORING
           // ----------------------------------------------------
@@ -374,7 +351,6 @@ export const useMonitoring = () => {
           channel =
             await subscribeToMonitoring(
               (updatedData) => {
-
                 if (!mounted) {
                   return;
                 }
@@ -384,9 +360,7 @@ export const useMonitoring = () => {
                 );
               },
             );
-
         } catch (error) {
-
           console.error(
             "Unexpected monitoring error:",
             error,
@@ -395,9 +369,7 @@ export const useMonitoring = () => {
           if (mounted) {
             setMonitoring(null);
           }
-
         } finally {
-
           if (mounted) {
             setLoading(false);
           }
@@ -406,20 +378,17 @@ export const useMonitoring = () => {
 
     initializeMonitoring();
 
-
     // ==========================================================
     // CLEANUP
     // ==========================================================
 
     return () => {
-
       mounted = false;
 
       unsubscribeFromMonitoring(
         channel,
       );
     };
-
   }, []);
 
   return {
@@ -428,13 +397,11 @@ export const useMonitoring = () => {
   };
 };
 
-
 // ============================================================
 // USE DEVICE STATUS HOOK
 // ============================================================
 
 export const useDeviceStatus = () => {
-
   const [
     deviceStatus,
     setDeviceStatus,
@@ -448,7 +415,6 @@ export const useDeviceStatus = () => {
   ] = useState(true);
 
   useEffect(() => {
-
     let mounted = true;
 
     let channel:
@@ -459,9 +425,7 @@ export const useDeviceStatus = () => {
 
     const initializeDeviceStatus =
       async () => {
-
         try {
-
           // ----------------------------------------------------
           // GET INITIAL DEVICE STATUS
           // ----------------------------------------------------
@@ -475,7 +439,6 @@ export const useDeviceStatus = () => {
 
           setDeviceStatus(status);
 
-
           // ----------------------------------------------------
           // SUBSCRIBE TO REALTIME DEVICE STATUS
           // ----------------------------------------------------
@@ -483,7 +446,6 @@ export const useDeviceStatus = () => {
           channel =
             await subscribeToDeviceStatus(
               (updatedStatus) => {
-
                 if (!mounted) {
                   return;
                 }
@@ -493,9 +455,7 @@ export const useDeviceStatus = () => {
                 );
               },
             );
-
         } catch (error) {
-
           console.error(
             "Unexpected device status error:",
             error,
@@ -506,9 +466,7 @@ export const useDeviceStatus = () => {
               "Offline",
             );
           }
-
         } finally {
-
           if (mounted) {
             setLoading(false);
           }
@@ -517,20 +475,17 @@ export const useDeviceStatus = () => {
 
     initializeDeviceStatus();
 
-
     // ==========================================================
     // CLEANUP
     // ==========================================================
 
     return () => {
-
       mounted = false;
 
       unsubscribeFromDeviceStatus(
         channel,
       );
     };
-
   }, []);
 
   return {

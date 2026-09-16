@@ -686,10 +686,33 @@ export default function ChartCard({
   // ==========================================================
   // TEMPERATURE MONITORING GROUP
   //
-  // Battery Temperature + Solar Panel Temperature
+  // Interior Temperature + Battery Temperature
+  // + Solar Panel Temperature
   // ==========================================================
 
   if (type === "temperature") {
+
+    /*
+     * The monitoring service data is extended here with the
+     * newly added interior temperature fields.
+     *
+     * This keeps the existing MonitoringData import and all
+     * other ChartCard logic unchanged.
+     */
+
+    const temperatureMonitoring =
+      monitoring as (
+        MonitoringData & {
+          interior_temp: number;
+          interior_temp_status:
+            TemperatureStatus;
+        }
+      ) | null;
+
+    const interiorTemperatureStatus =
+      temperatureMonitoring
+        ?.interior_temp_status ??
+      "Nominal";
 
     const batteryTemperatureData =
       getCardData(
@@ -705,6 +728,23 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
+      );
+
+    const interiorTemperatureValue =
+      loading
+        ? "—"
+        : `${temperatureMonitoring
+            ?.interior_temp ??
+          0}°C`;
+
+    const interiorTemperatureBadge =
+      getTemperatureBadgeStyle(
+        interiorTemperatureStatus,
+      );
+
+    const interiorTemperatureBadgeText =
+      getTemperatureBadgeTextStyle(
+        interiorTemperatureStatus,
       );
 
     return (
@@ -742,6 +782,57 @@ export default function ChartCard({
             styles.temperatureMetrics
           }
         >
+
+          {/* ==================================================
+              INTERIOR TEMPERATURE
+              ================================================== */}
+
+          <View
+            style={
+              styles.metricColumn
+            }
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.monitorLabel
+              }
+            >
+              Interior
+            </AppText>
+
+            <AppText
+              variant="heading"
+              style={
+                styles.monitorValue
+              }
+            >
+              {interiorTemperatureValue}
+            </AppText>
+
+            {/* Interior Temperature Status */}
+
+            <View
+              style={[
+                styles.statusBadge,
+                interiorTemperatureBadge,
+              ]}
+            >
+
+              <AppText
+                variant="caption"
+                style={[
+                  styles.statusBadgeText,
+                  interiorTemperatureBadgeText,
+                ]}
+              >
+                {interiorTemperatureStatus}
+              </AppText>
+
+            </View>
+
+          </View>
 
           {/* ==================================================
               BATTERY TEMPERATURE
@@ -987,7 +1078,7 @@ function getCardData(
   type: NonBatteryChartType,
   monitoring: MonitoringData | null,
   weather: WeatherData | null,
-  loading: boolean,
+  loading: boolean
 ): CardData {
 
   switch (type) {
@@ -1041,6 +1132,7 @@ function getCardData(
         "Low";
 
       return {
+
         icon:
           "sunny-outline",
 
@@ -1065,7 +1157,7 @@ function getCardData(
 
         badgeTextStyle:
           solarStatus ===
-            "Moderate"
+          "Moderate"
             ? styles.darkBadgeText
             : styles.lightBadgeText,
       };
@@ -1078,6 +1170,7 @@ function getCardData(
     case "load":
 
       return {
+
         icon:
           "flash-outline",
 
@@ -1101,6 +1194,7 @@ function getCardData(
         "Clear sky";
 
       return {
+
         icon:
           getWeatherIcon(
             description,
@@ -1139,6 +1233,7 @@ function getCardData(
     case "dod":
 
       return {
+
         icon:
           "shield-checkmark-outline",
 
@@ -1162,6 +1257,7 @@ function getCardData(
         "Nominal";
 
       return {
+
         icon:
           "thermometer-outline",
 
@@ -1202,6 +1298,7 @@ function getCardData(
         "Nominal";
 
       return {
+
         icon:
           "thermometer-outline",
 
@@ -1229,6 +1326,7 @@ function getCardData(
           ),
       };
     }
+
   }
 }
 
