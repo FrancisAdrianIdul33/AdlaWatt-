@@ -1,6 +1,6 @@
 import {
-    Image,
-    Platform,
+  Image,
+  Platform,
 } from "react-native";
 
 const adlawattLogo =
@@ -504,6 +504,34 @@ export function createPresetRange(
     start,
     end,
   };
+}
+
+/*
+ * Returns a Date set to the very end of the range's To date so
+ * a selected date period includes all of its final day.
+ *
+ * The AnalyticsCard date range feature produces midnight-anchored
+ * From/To dates, so a raw `lte(end.toISOString())` query would
+ * silently drop every record recorded after midnight on the To
+ * date. Both the exported PDF/CSV and the charts share the same
+ * loaded data, so this keeps every report period inclusive.
+ */
+export function getInclusiveRangeEnd(
+  range: AnalyticsRange,
+): Date {
+  const end =
+    new Date(
+      range.end,
+    );
+
+  end.setHours(
+    23,
+    59,
+    59,
+    999,
+  );
+
+  return end;
 }
 
 /* ============================================================
@@ -1493,7 +1521,9 @@ export async function loadAnalyticsData(
         )
         .lte(
           "recorded_at",
-          range.end.toISOString(),
+          getInclusiveRangeEnd(
+            range,
+          ).toISOString(),
         )
         .order(
           "recorded_at",
@@ -1544,7 +1574,9 @@ export async function loadAnalyticsData(
         )
         .lte(
           "recorded_at",
-          range.end.toISOString(),
+          getInclusiveRangeEnd(
+            range,
+          ).toISOString(),
         )
         .order(
           "recorded_at",
@@ -2414,7 +2446,7 @@ function addPdfStatusBox(
   );
 
   doc.setFontSize(
-    9,
+    12,
   );
 
   doc.setTextColor(
@@ -2834,10 +2866,10 @@ export async function generateAdlaWattPdf(
    * The logo sits on the left side of the header.
    */
   const logoWidth =
-    30;
+    40;
 
   const logoHeight =
-    20;
+    25;
 
   const logoX =
     horizontalMargin;
