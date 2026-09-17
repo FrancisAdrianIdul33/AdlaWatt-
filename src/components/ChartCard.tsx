@@ -719,8 +719,8 @@ export default function ChartCard({
                     ? styles.normalBadge
                     : solarStatus ===
                         "Moderate"
-                      ? styles.moderateBadge
-                      : styles.lowBadge,
+                    ? styles.moderateBadge
+                    : styles.lowBadge,
                 ]}
               >
 
@@ -810,8 +810,6 @@ export default function ChartCard({
               {solarCurrent}
             </AppText>
 
-            {/* Reserved status slot for vertical alignment */}
-
             <View
               style={
                 styles.statusSlot
@@ -848,8 +846,6 @@ export default function ChartCard({
               {totalEnergy}
             </AppText>
 
-            {/* Reserved status slot for vertical alignment */}
-
             <View
               style={
                 styles.statusSlot
@@ -868,6 +864,9 @@ export default function ChartCard({
   // WEATHER MONITORING CARD
   //
   // Weather is intentionally separated from the solar card.
+  // The weather card now follows the same grouped-card layout
+  // used by Battery Monitoring, Solar Monitoring, and
+  // Temperature Monitoring.
   // ==========================================================
 
   if (type === "weather") {
@@ -884,25 +883,42 @@ export default function ChartCard({
       <View
         style={[
           styles.monitorCard,
-          styles.weatherMonitorCard,
+          styles.weatherMonitoringCard,
         ]}
       >
 
         {/* ==================================================
-            WEATHER ICON PANEL
+            WEATHER HEADER / ACCENT PANEL
             ================================================== */}
 
         <View
           style={
-            styles.weatherIconPanel
+            styles.weatherHeaderPanel
           }
         >
 
-          <Ionicons
-            name={weatherData.icon}
-            size={34}
-            color={Colors.light.primary}
-          />
+          <View
+            style={
+              styles.weatherHeaderLeft
+            }
+          >
+
+            <Ionicons
+              name={weatherData.icon}
+              size={30}
+              color="#FACC15"
+            />
+
+            <AppText
+              variant="heading"
+              style={
+                styles.weatherHeaderTitle
+              }
+            >
+              Weather Monitoring
+            </AppText>
+
+          </View>
 
         </View>
 
@@ -912,56 +928,74 @@ export default function ChartCard({
 
         <View
           style={
-            styles.weatherContent
+            styles.weatherMeasurementArea
           }
         >
 
-          <AppText
-            variant="caption"
-            style={
-              styles.weatherLocation
-            }
-          >
-            {weatherData.label}
-          </AppText>
-
-          <AppText
-            variant="heading"
-            style={
-              styles.weatherTemperature
-            }
-          >
-            {weatherData.value}
-          </AppText>
-
-          {/* Status slot — always rendered for consistent spacing */}
-
           <View
             style={
-              styles.weatherStatusSlot
+              styles.weatherMetricCell
             }
           >
 
-            {weatherData.badge && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  weatherData.badgeStyle,
-                ]}
-              >
+            {/* ==================================================
+                LOCATION
+                ================================================== */}
 
-                <AppText
-                  variant="caption"
+            <AppText
+              variant="caption"
+              style={
+                styles.weatherLocation
+              }
+            >
+              {weatherData.label}
+            </AppText>
+
+            {/* ==================================================
+                TEMPERATURE
+                ================================================== */}
+
+            <AppText
+              variant="heading"
+              style={
+                styles.weatherTemperature
+              }
+            >
+              {weatherData.value}
+            </AppText>
+
+            {/* ==================================================
+                WEATHER CONDITION
+                ================================================== */}
+
+            <View
+              style={
+                styles.weatherStatusSlot
+              }
+            >
+
+              {weatherData.badge && (
+                <View
                   style={[
-                    styles.statusBadgeText,
-                    weatherData.badgeTextStyle,
+                    styles.statusBadge,
+                    weatherData.badgeStyle,
                   ]}
                 >
-                  {weatherData.badge}
-                </AppText>
 
-              </View>
-            )}
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusBadgeText,
+                      weatherData.badgeTextStyle,
+                    ]}
+                  >
+                    {weatherData.badge}
+                  </AppText>
+
+                </View>
+              )}
+
+            </View>
 
           </View>
 
@@ -1353,25 +1387,28 @@ export default function ChartCard({
 
       {data.value !==
         undefined && (
-          <AppText
-            variant="heading"
-            style={[
-              styles.monitorValue,
-              isSafe &&
-                styles.safeValue,
-              isUnsafe &&
-                styles.unsafeValue,
-            ]}
-          >
-            {data.value}
-          </AppText>
-        )}
+
+        <AppText
+          variant="heading"
+          style={[
+            styles.monitorValue,
+            isSafe &&
+              styles.safeValue,
+            isUnsafe &&
+              styles.unsafeValue,
+          ]}
+        >
+          {data.value}
+        </AppText>
+
+      )}
 
       {/* ==================================================
           STATUS BADGE
           ================================================== */}
 
       {data.badge && (
+
         <View
           style={[
             styles.statusBadge,
@@ -1390,6 +1427,7 @@ export default function ChartCard({
           </AppText>
 
         </View>
+
       )}
 
     </View>
@@ -1458,7 +1496,6 @@ function getCardData(
         "Low";
 
       return {
-
         icon:
           "sunny-outline",
 
@@ -1496,7 +1533,6 @@ function getCardData(
     case "solar_voltage":
 
       return {
-
         icon:
           "flash-outline",
 
@@ -1516,7 +1552,6 @@ function getCardData(
     case "solar_current":
 
       return {
-
         icon:
           "pulse-outline",
 
@@ -1536,7 +1571,6 @@ function getCardData(
     case "solar_energy":
 
       return {
-
         icon:
           "battery-charging-outline",
 
@@ -1556,7 +1590,6 @@ function getCardData(
     case "solar_timer":
 
       return {
-
         icon:
           "timer-outline",
 
@@ -1579,7 +1612,6 @@ function getCardData(
     case "load":
 
       return {
-
         icon:
           "flash-outline",
 
@@ -1603,7 +1635,6 @@ function getCardData(
         "Clear sky";
 
       return {
-
         icon:
           getWeatherIcon(
             description,
@@ -1642,7 +1673,6 @@ function getCardData(
     case "dod":
 
       return {
-
         icon:
           "shield-checkmark-outline",
 
@@ -1666,7 +1696,6 @@ function getCardData(
         "Nominal";
 
       return {
-
         icon:
           "thermometer-outline",
 
@@ -1707,7 +1736,6 @@ function getCardData(
         "Nominal";
 
       return {
-
         icon:
           "thermometer-outline",
 
@@ -1757,6 +1785,7 @@ function formatSolarTimer(
 
   // PostgreSQL interval values can be returned as
   // HH:MM:SS, H:MM:SS, or values containing days.
+
   const dayMatch =
     value.match(/(-?\d+)\s+days?/i);
 
@@ -1764,6 +1793,7 @@ function formatSolarTimer(
     value.match(/(\d{1,3}):(\d{2}):(\d{2})/);
 
   if (timeMatch) {
+
     const days = dayMatch
       ? Number(dayMatch[1])
       : 0;
@@ -1829,6 +1859,7 @@ function getWeatherIcon(
     case "Thunderstorm with heavy hail":
 
       return "thunderstorm-outline";
+
   }
 }
 
@@ -1879,6 +1910,7 @@ function getWeatherBadgeStyle(
     case "Thunderstorm with heavy hail":
 
       return styles.redWeatherBadge;
+
   }
 }
 
@@ -1929,6 +1961,7 @@ function getWeatherBadgeTextStyle(
     case "Thunderstorm with heavy hail":
 
       return styles.redWeatherBadgeText;
+
   }
 }
 
@@ -1957,6 +1990,7 @@ function getTemperatureBadgeStyle(
     case "Critical":
 
       return styles.criticalTemperatureBadge;
+
   }
 }
 
@@ -1985,6 +2019,7 @@ function getTemperatureBadgeTextStyle(
     case "Critical":
 
       return styles.criticalTemperatureBadgeText;
+
   }
 }
 
@@ -1999,120 +2034,77 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   batterySection: {
-
     width: "100%",
-
     alignItems: "center",
-
     marginBottom: 14,
   },
 
   batteryCircle: {
-
     width: RING_SIZE,
-
     height: RING_SIZE,
-
     alignItems: "center",
-
     justifyContent: "center",
   },
 
   batteryCenter: {
-
     position: "absolute",
-
     top: 0,
-
     left: 0,
-
     right: 0,
-
     bottom: 0,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     paddingHorizontal: 14,
   },
 
   batteryPercentage: {
-
     color: "#000000",
-
     fontSize: 40,
-
     fontWeight: "800",
-
     lineHeight: 30,
   },
 
   lowBatteryText: {
-
     color: Colors.light.error,
   },
 
   batteryLabel: {
-
     color:
       Colors.light.textSecondary,
-
     fontWeight: "600",
-
     marginTop: 1,
   },
 
   batteryStatusRow: {
-
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "center",
-
     marginTop: 7,
-
     gap: 9,
   },
 
   batteryStatus: {
-
     backgroundColor:
       Colors.light.primary,
-
     borderRadius: 10,
-
     paddingHorizontal: 15,
-
     paddingVertical: 3,
-
     minWidth: 10,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     height: 25,
-
   },
 
   batteryStatusText: {
-
     color: "#FFFFFF",
-
     fontSize: 12,
-
     fontWeight: "600",
   },
 
   remainingText: {
-
     color:
       Colors.light.textSecondary,
-
     marginTop: 3,
-
     textAlign: "center",
   },
 
@@ -2121,29 +2113,18 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   monitorCard: {
-
     width: "100%",
-
     minHeight: 108,
-
     backgroundColor:
       Colors.glass.white,
-
     borderWidth: 3,
-
     borderColor:
-      Colors.light.color3,
-
+      Colors.light.primary,
     borderRadius: 15,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     paddingHorizontal: 12,
-
     paddingVertical: 12,
-
     marginBottom: 2,
   },
 
@@ -2151,22 +2132,18 @@ const styles = StyleSheet.create({
   // SHARED GROUP MONITORING CARD OVERRIDE
   //
   // Used by: Battery Monitoring (voltage type)
-  //          Temperature Monitoring (temperature type)
+  //           Temperature Monitoring (temperature type)
+  //
   // Switches the base shell to column layout and strips
   // the horizontal/vertical padding so the header panel
   // fills edge-to-edge.
   // ==========================================================
 
   groupMonitoringCard: {
-
     flexDirection: "column",
-
     alignItems: "stretch",
-
     paddingHorizontal: 0,
-
     paddingVertical: 0,
-
     overflow: "hidden",
   },
 
@@ -2175,44 +2152,28 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   groupHeaderPanel: {
-
     width: "100%",
-
     backgroundColor:
       Colors.light.primary,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "flex-start",
-
     paddingHorizontal: 14,
-
     paddingVertical: 9,
   },
 
   groupHeaderLeft: {
-
     flex: 1,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     minWidth: 0,
   },
 
   groupHeaderTitle: {
-
     color: "#FFFFFF",
-
     fontSize: 16,
-
     fontWeight: "600",
-
     marginLeft: 8,
-
     flexShrink: 1,
   },
 
@@ -2221,66 +2182,40 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   groupMeasurementGrid: {
-
     flex: 1,
-
     width: "100%",
-
     flexDirection: "row",
-
     alignItems: "stretch",
-
     justifyContent: "space-between",
-
     paddingHorizontal: 8,
-
     paddingVertical: 10,
   },
 
   groupMetricCell: {
-
     flex: 1,
-
     minHeight: 70,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     paddingHorizontal: 6,
-
     paddingVertical: 4,
   },
 
   groupMetricLabel: {
-
     color: "#000000",
-
     textAlign: "center",
-
     fontSize: 13,
-
     fontWeight: "600",
-
     lineHeight: 17,
-
     flexShrink: 1,
   },
 
   groupMetricValue: {
-
     color: "#000000",
-
     fontSize: 18,
-
     fontWeight: "700",
-
     textAlign: "center",
-
     marginTop: 3,
-
     lineHeight: 22,
-
     flexShrink: 1,
   },
 
@@ -2289,92 +2224,58 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   solarMonitoringCard: {
-
     minHeight: 250,
-
     flexDirection: "column",
-
     alignItems: "stretch",
-
     paddingHorizontal: 0,
-
     paddingVertical: 0,
-
     overflow: "hidden",
   },
 
   solarHeaderPanel: {
-
     width: "100%",
-
     backgroundColor:
       Colors.light.primary,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "space-between",
-
     paddingHorizontal: 14,
-
     paddingVertical: 9,
   },
 
   solarHeaderLeft: {
-
     flex: 1,
-
     flexDirection: "row",
-
     alignItems: "center",
-
     minWidth: 0,
-
     paddingRight: 10,
   },
 
   solarHeaderTitle: {
-
     color: "#FFFFFF",
-
     fontSize: 16,
-
     fontWeight: "600",
-
     marginLeft: 8,
-
     flexShrink: 1,
   },
 
   solarTimerContainer: {
-
     alignItems: "flex-end",
-
     justifyContent: "center",
-
     minWidth: 86,
   },
 
   solarTimerLabel: {
-
     color: "#FFFFFF",
-
     fontSize: 11,
-
     lineHeight: 14,
   },
 
   solarTimerValue: {
-
     color: "#FFFFFF",
-
     fontSize: 16,
-
     fontWeight: "600",
-
     lineHeight: 20,
-
     textAlign: "right",
   },
 
@@ -2383,159 +2284,126 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   solarMeasurementGrid: {
-
     flex: 1,
-
     width: "100%",
-
     flexDirection: "row",
-
     flexWrap: "wrap",
-
     alignItems: "stretch",
-
     justifyContent: "space-between",
-
     paddingHorizontal: 8,
-
     paddingVertical: 8,
   },
 
   solarMetricCell: {
-
     width: "50%",
-
     minHeight: 95,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     paddingHorizontal: 6,
-
     paddingVertical: 8,
   },
 
   solarMetricLabel: {
-
     color: "#000000",
-
     textAlign: "center",
-
     fontSize: 13,
-
     fontWeight: "600",
-
     lineHeight: 17,
-
     flexShrink: 1,
   },
 
   solarMetricValue: {
-
     color: "#000000",
-
     fontSize: 20,
-
     fontWeight: "700",
-
     textAlign: "center",
-
     marginTop: 3,
-
     lineHeight: 24,
-
     flexShrink: 1,
   },
 
   // ==========================================================
-  // WEATHER CARD
+  // WEATHER MONITORING CARD
+  //
+  // Uses the same grouped layout language as the Battery,
+  // Solar, and Temperature monitoring cards.
   // ==========================================================
 
-  weatherMonitorCard: {
-
-    minHeight: 108,
-
+  weatherMonitoringCard: {
+    minHeight: 175,
+    flexDirection: "column",
     alignItems: "stretch",
-
-    paddingVertical: 0,
-
     paddingHorizontal: 0,
-
+    paddingVertical: 0,
     overflow: "hidden",
   },
 
-  weatherIconPanel: {
-
-    width: 62,
-
-    alignSelf: "stretch",
-
+  weatherHeaderPanel: {
+    width: "100%",
     backgroundColor:
-      Colors.light.color1,
-
-    borderTopLeftRadius: 12,
-
-    borderBottomLeftRadius: 12,
-
+      Colors.light.primary,
+    flexDirection: "row",
     alignItems: "center",
-
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
 
-  weatherContent: {
-
+  weatherHeaderLeft: {
     flex: 1,
-
+    flexDirection: "row",
     alignItems: "center",
-
-    justifyContent: "center",
-
-    paddingHorizontal: 12,
-
-    paddingVertical: 10,
-
     minWidth: 0,
   },
 
-  weatherLocation: {
-
-    color: "#000000",
-
-    fontSize: 14,
-
+  weatherHeaderTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "600",
+    marginLeft: 8,
+    flexShrink: 1,
+  },
 
+  weatherMeasurementArea: {
+    flex: 1,
+    width: "100%",
+    alignItems: "stretch",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+
+  weatherMetricCell: {
+    flex: 1,
+    minHeight: 105,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+
+  weatherLocation: {
+    color: "#000000",
+    fontSize: 14,
+    fontWeight: "600",
     textAlign: "center",
-
     lineHeight: 18,
-
     flexShrink: 1,
   },
 
   weatherTemperature: {
-
     color: "#000000",
-
     fontSize: 22,
-
     fontWeight: "800",
-
     textAlign: "center",
-
     marginTop: 2,
-
     lineHeight: 26,
   },
 
   weatherStatusSlot: {
-
     minHeight: 25,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     marginTop: 2,
   },
 
@@ -2547,13 +2415,9 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   statusSlot: {
-
     minHeight: 25,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     marginTop: 2,
   },
 
@@ -2562,39 +2426,27 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   monitorLabel: {
-
     color: "#000000",
-
     textAlign: "center",
-
     fontWeight: "600",
-
     lineHeight: 17,
   },
 
   monitorValue: {
-
     color: "#000000",
-
     fontSize: 20,
-
     fontWeight: "700",
-
     textAlign: "center",
-
     marginTop: 3,
-
     lineHeight: 24,
   },
 
   safeValue: {
-
     color:
       Colors.light.primary,
   },
 
   unsafeValue: {
-
     color:
       Colors.light.error,
   },
@@ -2604,63 +2456,46 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   statusBadge: {
-
     marginTop: 4,
-
     paddingHorizontal: 9,
-
     paddingVertical: 3,
-
     borderRadius: 10,
-
     minWidth: 42,
-
     alignItems: "center",
-
     justifyContent: "center",
-
   },
 
   statusBadgeText: {
-
     fontSize: 9,
-
     fontWeight: "600",
-
     textAlign: "center",
   },
 
   normalBadge: {
-
     backgroundColor:
       Colors.light.primary,
   },
 
   moderateBadge: {
-
     backgroundColor:
       Colors.light.secondary,
   },
 
   alarmingBadge: {
-
     backgroundColor:
       Colors.light.error,
   },
 
   lowBadge: {
-
     backgroundColor:
       Colors.light.error,
   },
 
   lightBadgeText: {
-
     color: "#FFFFFF",
   },
 
   darkBadgeText: {
-
     color: "#000000",
   },
 
@@ -2669,50 +2504,36 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   dodStatusBadge: {
-
     borderRadius: 10,
-
     paddingHorizontal: 9,
-
     paddingVertical: 3,
-
     minWidth: 58,
-
     alignItems: "center",
-
     justifyContent: "center",
-
     height: 25,
   },
 
   dodSafeBadge: {
-
     backgroundColor:
       Colors.light.primary,
   },
 
   dodUnsafeBadge: {
-
     backgroundColor:
       Colors.light.error,
   },
 
   dodStatusBadgeText: {
-
     fontSize: 12,
-
     fontWeight: "600",
-
     textAlign: "center",
   },
 
   dodSafeBadgeText: {
-
     color: "#FFFFFF",
   },
 
   dodUnsafeBadgeText: {
-
     color: "#FFFFFF",
   },
 
@@ -2721,58 +2542,42 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   nominalTemperatureBadge: {
-
     backgroundColor: "#E4EAD9",
-
     borderWidth: 1,
-
     borderColor: "#14532D",
   },
 
   nominalTemperatureBadgeText: {
-
     color: "#14532D",
   },
 
   elevatedTemperatureBadge: {
-
     backgroundColor: "#EBE8CD",
-
     borderWidth: 1,
-
     borderColor: "#713F12",
   },
 
   elevatedTemperatureBadgeText: {
-
     color: "#713F12",
   },
 
   highTemperatureBadge: {
-
     backgroundColor: "#EFE2CC",
-
     borderWidth: 1,
-
     borderColor: "#7C2D12",
   },
 
   highTemperatureBadgeText: {
-
     color: "#7C2D12",
   },
 
   criticalTemperatureBadge: {
-
     backgroundColor: "#EFE0DC",
-
     borderWidth: 1,
-
     borderColor: "#7F1D1D",
   },
 
   criticalTemperatureBadgeText: {
-
     color: "#7F1D1D",
   },
 
@@ -2883,4 +2688,5 @@ const styles = StyleSheet.create({
     marginBottom: -12,
     marginRight: 12,
   },
+
 });
