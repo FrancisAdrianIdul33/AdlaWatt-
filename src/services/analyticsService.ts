@@ -1,6 +1,6 @@
 import {
-    Image,
-    Platform,
+  Image,
+  Platform,
 } from "react-native";
 
 const adlawattLogo =
@@ -37,6 +37,10 @@ export interface MonitoringHistoryRow {
   time_remaining: string | null;
   solar_input: number | null;
   solar_status: string | null;
+  solar_timer: string | null;
+  solar_voltage: number | null;
+  solar_current: number | null;
+  total_energy: number | null;
   current_load: number | null;
   device_status: string | null;
   last_seen: string | null;
@@ -125,6 +129,11 @@ export interface ReportSummary {
   latestSolarTemperature: number;
   latestSolarTemperatureStatus: string;
 
+  latestSolarTimer: string;
+  latestSolarVoltage: number;
+  latestSolarCurrent: number;
+  latestTotalEnergy: number;
+
   latestDeviceStatus: string;
   latestTimeRemaining: string;
 
@@ -140,6 +149,10 @@ export interface ReportMonitoringRow {
   timeRemaining: string;
   solarInput: string;
   solarStatus: string;
+  solarTimer: string;
+  solarVoltage: string;
+  solarCurrent: string;
+  totalEnergy: string;
   currentLoad: string;
   deviceStatus: string;
   batteryTemperature: string;
@@ -531,6 +544,10 @@ export function createCsv(
     "Time Remaining",
     "Solar Input (W)",
     "Solar Status",
+    "Solar Timer",
+    "Solar Voltage (V)",
+    "Solar Current (A)",
+    "Total Energy (Wh)",
     "Current Load (W)",
     "Device Status",
     "Battery Temperature (C)",
@@ -565,6 +582,16 @@ export function createCsv(
             row.solar_input,
           ),
           row.solar_status,
+          row.solar_timer,
+          toNumber(
+            row.solar_voltage,
+          ),
+          toNumber(
+            row.solar_current,
+          ),
+          toNumber(
+            row.total_energy,
+          ),
           toNumber(
             row.current_load,
           ),
@@ -700,6 +727,41 @@ export function formatMonitoringReportRows(
       solarStatus:
         row.solar_status ??
         "Unknown",
+
+      solarTimer:
+        formatSolarTimer(
+          row.solar_timer,
+        ),
+
+      solarVoltage:
+        formatNumber(
+          Math.max(
+            0,
+            toNumber(
+              row.solar_voltage,
+            ),
+          ),
+        ),
+
+      solarCurrent:
+        formatNumber(
+          Math.max(
+            0,
+            toNumber(
+              row.solar_current,
+            ),
+          ),
+        ),
+
+      totalEnergy:
+        formatNumber(
+          Math.max(
+            0,
+            toNumber(
+              row.total_energy,
+            ),
+          ),
+        ),
 
       currentLoad:
         formatNumber(
@@ -1102,6 +1164,42 @@ export function createReportSummary(
       latest?.solar_temperature_status ??
       "No data",
 
+    latestSolarTimer:
+      formatSolarTimer(
+        latest?.solar_timer ??
+          null,
+      ),
+
+    latestSolarVoltage:
+      latest
+        ? Math.max(
+            0,
+            toNumber(
+              latest.solar_voltage,
+            ),
+          )
+        : 0,
+
+    latestSolarCurrent:
+      latest
+        ? Math.max(
+            0,
+            toNumber(
+              latest.solar_current,
+            ),
+          )
+        : 0,
+
+    latestTotalEnergy:
+      latest
+        ? Math.max(
+            0,
+            toNumber(
+              latest.total_energy,
+            ),
+          )
+        : 0,
+
     latestDeviceStatus:
       latest?.device_status ??
       "No data",
@@ -1265,6 +1363,59 @@ export function formatDuration(
 }
 
 /* ============================================================
+   SOLAR TIMER FORMATTER
+   ============================================================ */
+
+export function formatSolarTimer(
+  timer: string | null,
+): string {
+  const value =
+    String(timer ?? "")
+      .trim();
+
+  if (!value) {
+    return "00:00:00";
+  }
+
+  // PostgreSQL interval values can be returned as
+  // HH:MM:SS, H:MM:SS, or values containing days.
+
+  const dayMatch =
+    value.match(
+      /(-?\d+)\s+days?/i,
+    );
+
+  const timeMatch =
+    value.match(
+      /(\d{1,3}):(\d{2}):(\d{2})/,
+    );
+
+  if (timeMatch) {
+    const days = dayMatch
+      ? Number(dayMatch[1])
+      : 0;
+
+    const hours =
+      Number(timeMatch[1]) +
+      days * 24;
+
+    const minutes =
+      Number(timeMatch[2]);
+
+    const seconds =
+      Number(timeMatch[3]);
+
+    return [
+      String(hours).padStart(2, "0"),
+      String(minutes).padStart(2, "0"),
+      String(seconds).padStart(2, "0"),
+    ].join(":");
+  }
+
+  return value;
+}
+
+/* ============================================================
    SUPABASE ANALYTICS DATA LOADING
    ============================================================ */
 
@@ -1313,6 +1464,10 @@ export async function loadAnalyticsData(
             "time_remaining",
             "solar_input",
             "solar_status",
+            "solar_timer",
+            "solar_voltage",
+            "solar_current",
+            "total_energy",
             "current_load",
             "device_status",
             "last_seen",
@@ -2026,21 +2181,17 @@ export function generateAdlaWattCsv(
 
   const monitoringHeaders = [
     "Recorded At",
-    "Battery Level (%)",
-    "Battery Status",
-    "Time Remaining",
-    "Solar Input (W)",
-    "Solar Status",
-    "Current Load (W)",
-    "Device Status",
-    "Battery Temperature (C)",
-    "Battery Temperature Status",
-    "Solar Temperature (C)",
-    "Solar Temperature Status",
-    "Voltage (V)",
-    "Watt Hours",
-    "Energy Input (Wh)",
-    "Energy Output (Wh)",
+    "Battery %",
+    "Battery",
+    "Solar W",
+    "Load W",
+    "Device",
+    "Battery C",
+    "Solar C",
+    "Sol Timer",
+    "Sol V",
+    "Sol A",
+    "Total Wh",
   ];
 
   const monitoringCsvRows =
@@ -2049,19 +2200,15 @@ export function generateAdlaWattCsv(
         row.recordedAt,
         row.batteryLevel,
         row.batteryStatus,
-        row.timeRemaining,
         row.solarInput,
-        row.solarStatus,
         row.currentLoad,
         row.deviceStatus,
         row.batteryTemperature,
-        row.batteryTemperatureStatus,
         row.solarTemperature,
-        row.solarTemperatureStatus,
-        row.voltage,
-        row.wattHours,
-        row.energyInputWh,
-        row.energyOutputWh,
+        row.solarTimer,
+        row.solarVoltage,
+        row.solarCurrent,
+        row.totalEnergy,
       ],
     );
 
@@ -2105,6 +2252,29 @@ export function generateAdlaWattCsv(
       ],
     );
 
+  /*
+   * Every row is padded to a single uniform column count so the
+   * CSV opens as one clean, aligned grid in spreadsheet apps.
+   */
+  const uniformColumnCount =
+    monitoringHeaders.length;
+
+  const padCsvRow = (
+    row: (string | number)[],
+  ): (string | number)[] => {
+    const padded =
+      [...row];
+
+    while (
+      padded.length <
+      uniformColumnCount
+    ) {
+      padded.push("");
+    }
+
+    return padded;
+  };
+
   const sections: (string | number)[][] = [];
 
   sections.push(
@@ -2139,7 +2309,7 @@ export function generateAdlaWattCsv(
 
   return sections
     .map((row) =>
-      row
+      padCsvRow(row)
         .map(
           escapeCsvValue,
         )
@@ -2208,11 +2378,10 @@ function addPdfStatusBox(
   width: number,
   height: number,
 ): void {
-  const statusColor =
-    getPdfStatusColor(
-      value,
-    );
-
+  /*
+   * The summary cards use a primary green border with primary
+   * green, medium-sized text for clear readability.
+   */
   doc.setFillColor(
     248,
     250,
@@ -2220,13 +2389,13 @@ function addPdfStatusBox(
   );
 
   doc.setDrawColor(
-    statusColor[0],
-    statusColor[1],
-    statusColor[2],
+    0,
+    168,
+    107,
   );
 
   doc.setLineWidth(
-    0.6,
+    0.8,
   );
 
   doc.roundedRect(
@@ -2234,8 +2403,8 @@ function addPdfStatusBox(
     y,
     width,
     height,
-    3,
-    3,
+    4,
+    4,
     "FD",
   );
 
@@ -2245,13 +2414,13 @@ function addPdfStatusBox(
   );
 
   doc.setFontSize(
-    8,
+    9,
   );
 
   doc.setTextColor(
-    100,
-    116,
-    139,
+    0,
+    168,
+    107,
   );
 
   doc.text(
@@ -2266,13 +2435,13 @@ function addPdfStatusBox(
   );
 
   doc.setFontSize(
-    11,
+    12,
   );
 
   doc.setTextColor(
-    statusColor[0],
-    statusColor[1],
-    statusColor[2],
+    0,
+    168,
+    107,
   );
 
   doc.text(
@@ -2311,6 +2480,34 @@ function addPdfSectionTitle(
   return y + 7;
 }
 
+function paintPdfTableBackground(
+  doc: jsPDF,
+  pageNumber: number,
+  tableStartPage: number,
+  pageWidth: number,
+  pageHeight: number,
+): void {
+  /*
+   * Only paint pages created beyond the table's start page so
+   * the already-drawn page-1 header and layout are preserved.
+   */
+  if (pageNumber > tableStartPage) {
+    doc.setFillColor(
+      240,
+      234,
+      214,
+    );
+
+    doc.rect(
+      0,
+      0,
+      pageWidth,
+      pageHeight,
+      "F",
+    );
+  }
+}
+
 function addPdfFooter(
   doc: jsPDF,
 ): void {
@@ -2331,9 +2528,9 @@ function addPdfFooter(
     doc.setPage(page);
 
     doc.setFillColor(
-      31,
-      41,
-      55,
+      0,
+      168,
+      107,
     );
 
     doc.rect(
@@ -2510,23 +2707,71 @@ export async function generateAdlaWattPdf(
   let logoDataUrl:
     string | null = null;
 
-  try {
-    const assetSource =
-      Image.resolveAssetSource(
-        adlawattLogo,
-      );
+  /* 
+   * Resolve the bundled logo URI with fallbacks.
+   *
+   * Metro on web can return either an asset number needed by
+   * Image.resolveAssetSource, or an object that already carries
+   * a uri directly, so both paths are attempted.
+   */
+  const resolveLogoUri =
+    (): string | null => {
+      try {
+        const source =
+          Image.resolveAssetSource(
+            adlawattLogo,
+          );
 
-    if (
-      assetSource?.uri
-    ) {
-      const response =
+        if (source?.uri) {
+          return source.uri;
+        }
+      } catch (error) {
+        console.warn(
+          "Image.resolveAssetSource failed:",
+          error,
+        );
+      }
+
+      const directUri =
+        (
+          adlawattLogo as unknown as {
+            uri?: string;
+          } | null
+        )?.uri;
+
+      if (directUri) {
+        return directUri;
+      }
+
+      return null;
+    };
+
+  try {
+    const resolvedUri =
+      resolveLogoUri();
+
+    if (resolvedUri) {
+      let response =
         await fetch(
-          assetSource.uri,
+          resolvedUri,
         );
 
-      if (
-        response.ok
-      ) {
+      if (!response.ok) {
+        /*
+         * Retry once with a cache-buster query.
+         */
+        response =
+          await fetch(
+            resolvedUri +
+              (resolvedUri.includes("?")
+                ? "&"
+                : "?") +
+              "t=" +
+              Date.now(),
+          );
+      }
+
+      if (response.ok) {
         const blob =
           await response.blob();
 
@@ -2589,7 +2834,7 @@ export async function generateAdlaWattPdf(
    * The logo sits on the left side of the header.
    */
   const logoWidth =
-    30;
+    40;
 
   const logoHeight =
     20;
@@ -2599,6 +2844,9 @@ export async function generateAdlaWattPdf(
 
   const logoY =
     6;
+
+  let logoRendered =
+    false;
 
   if (
     logoDataUrl
@@ -2614,12 +2862,44 @@ export async function generateAdlaWattPdf(
         undefined,
         "FAST",
       );
+
+      logoRendered =
+        true;
     } catch (error) {
       console.warn(
         "AdlaWatt logo could not be added to PDF:",
         error,
       );
     }
+  }
+
+  /*
+   * Branding fallback.
+   *
+   * If the image logo could not be loaded, draw the AdlaWatt
+   * wordmark in white so the header branding always appears.
+   */
+  if (!logoRendered) {
+    doc.setFont(
+      "helvetica",
+      "bold",
+    );
+
+    doc.setFontSize(
+      13,
+    );
+
+    doc.setTextColor(
+      255,
+      255,
+      255,
+    );
+
+    doc.text(
+      "AdlaWatt",
+      logoX,
+      logoY + 14,
+    );
   }
 
   /* ----------------------------------------------------------
@@ -2805,6 +3085,16 @@ export async function generateAdlaWattPdf(
     boxHeight +
     6;
 
+  const thirdRowY =
+    secondRowY +
+    boxHeight +
+    6;
+
+  const fourthRowY =
+    thirdRowY +
+    boxHeight +
+    6;
+
   /* ----------------------------------------------------------
      SYSTEM SUMMARY - ROW 1
      ---------------------------------------------------------- */
@@ -2899,10 +3189,116 @@ export async function generateAdlaWattPdf(
     boxHeight,
   );
 
+  /* ----------------------------------------------------------
+     SYSTEM SUMMARY - ROW 3
+     ---------------------------------------------------------- */
+
+  addPdfStatusBox(
+    doc,
+    "Solar Timer",
+    reportData.summary
+      .latestSolarTimer,
+    horizontalMargin,
+    thirdRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  addPdfStatusBox(
+    doc,
+    "Solar Voltage",
+    `${formatNumber(
+      reportData.summary
+        .latestSolarVoltage,
+    )} V`,
+    horizontalMargin +
+      boxWidth +
+      boxGap,
+    thirdRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  addPdfStatusBox(
+    doc,
+    "Solar Current",
+    `${formatNumber(
+      reportData.summary
+        .latestSolarCurrent,
+    )} A`,
+    horizontalMargin +
+      (
+        boxWidth +
+        boxGap
+      ) *
+        2,
+    thirdRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  /* ----------------------------------------------------------
+     SYSTEM SUMMARY - ROW 4
+     ---------------------------------------------------------- */
+
+  addPdfStatusBox(
+    doc,
+    "Total Energy",
+    `${formatNumber(
+      reportData.summary
+        .latestTotalEnergy,
+    )} Wh`,
+    horizontalMargin,
+    fourthRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  addPdfStatusBox(
+    doc,
+    "Time Remaining",
+    reportData.summary
+      .latestTimeRemaining,
+    horizontalMargin +
+      boxWidth +
+      boxGap,
+    fourthRowY,
+    boxWidth,
+    boxHeight,
+  );
+
   currentY =
-    secondRowY +
+    fourthRowY +
     boxHeight +
     10;
+
+  /*
+   * The SYSTEM SUMMARY now renders four rows of cards, so
+   * guard the ENERGY SUMMARY against running off the page.
+   */
+  if (
+    currentY >
+    pageHeight - 95
+  ) {
+    doc.addPage();
+
+    doc.setFillColor(
+      240,
+      234,
+      214,
+    );
+
+    doc.rect(
+      0,
+      0,
+      pageWidth,
+      pageHeight,
+      "F",
+    );
+
+    currentY =
+      20;
+  }
 
   /* ----------------------------------------------------------
      ENERGY SUMMARY
@@ -2914,6 +3310,9 @@ export async function generateAdlaWattPdf(
       "ENERGY SUMMARY",
       currentY,
     );
+
+  const energyTableStartPage =
+    doc.getCurrentPageInfo().pageNumber;
 
   autoTable(
     doc,
@@ -3042,16 +3441,26 @@ export async function generateAdlaWattPdf(
         ],
       },
 
-      /*
-       * No alternating gray rows.
-       */
       alternateRowStyles: {
         fillColor: [
-          248,
-          245,
+          240,
           234,
+          214,
         ],
       },
+
+      didDrawPage:
+        (
+          hookData,
+        ) => {
+          paintPdfTableBackground(
+            doc,
+            hookData.pageNumber,
+            energyTableStartPage,
+            pageWidth,
+            pageHeight,
+          );
+        },
 
       columnStyles: {
         0: {
@@ -3093,6 +3502,9 @@ export async function generateAdlaWattPdf(
       "TEMPERATURE SUMMARY",
       currentY,
     );
+
+  const temperatureTableStartPage =
+    doc.getCurrentPageInfo().pageNumber;
 
   autoTable(
     doc,
@@ -3232,11 +3644,24 @@ export async function generateAdlaWattPdf(
 
       alternateRowStyles: {
         fillColor: [
-          248,
-          245,
+          240,
           234,
+          214,
         ],
       },
+
+      didDrawPage:
+        (
+          hookData,
+        ) => {
+          paintPdfTableBackground(
+            doc,
+            hookData.pageNumber,
+            temperatureTableStartPage,
+            pageWidth,
+            pageHeight,
+          );
+        },
 
       /*
        * The proportions total exactly 100%.
@@ -3359,6 +3784,9 @@ export async function generateAdlaWattPdf(
       .length >
     0
   ) {
+    const applianceSummaryStartPage =
+      doc.getCurrentPageInfo().pageNumber;
+
     autoTable(
       doc,
       {
@@ -3461,11 +3889,24 @@ export async function generateAdlaWattPdf(
 
         alternateRowStyles: {
           fillColor: [
-            248,
-            245,
+            240,
             234,
+            214,
           ],
         },
+
+        didDrawPage:
+          (
+            hookData,
+          ) => {
+            paintPdfTableBackground(
+              doc,
+              hookData.pageNumber,
+              applianceSummaryStartPage,
+              pageWidth,
+              pageHeight,
+            );
+          },
 
         columnStyles: {
           0: {
@@ -3599,6 +4040,9 @@ export async function generateAdlaWattPdf(
      * - 18 mm right margin
      * = 174 mm table width
      */
+    const monitoringTableStartPage =
+      doc.getCurrentPageInfo().pageNumber;
+
     autoTable(
       doc,
       {
@@ -3629,6 +4073,10 @@ export async function generateAdlaWattPdf(
             "Device",
             "Battery C",
             "Solar C",
+            "Sol Timer",
+            "Sol V",
+            "Sol A",
+            "Total Wh",
           ],
         ],
 
@@ -3643,6 +4091,10 @@ export async function generateAdlaWattPdf(
               row.deviceStatus,
               row.batteryTemperature,
               row.solarTemperature,
+              row.solarTimer,
+              row.solarVoltage,
+              row.solarCurrent,
+              row.totalEnergy,
             ],
           ),
 
@@ -3714,11 +4166,24 @@ export async function generateAdlaWattPdf(
 
         alternateRowStyles: {
           fillColor: [
-            248,
-            245,
+            240,
             234,
+            214,
           ],
         },
+
+        didDrawPage:
+          (
+            hookData,
+          ) => {
+            paintPdfTableBackground(
+              doc,
+              hookData.pageNumber,
+              monitoringTableStartPage,
+              pageWidth,
+              pageHeight,
+            );
+          },
 
         /*
          * The column proportions total 100%.
@@ -3730,49 +4195,73 @@ export async function generateAdlaWattPdf(
           0: {
             cellWidth:
               contentWidth *
-              0.19,
+              0.17,
           },
 
           1: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.075,
           },
 
           2: {
             cellWidth:
               contentWidth *
-              0.15,
+              0.11,
           },
 
           3: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.075,
           },
 
           4: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.075,
           },
 
           5: {
             cellWidth:
               contentWidth *
-              0.125,
+              0.095,
           },
 
           6: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.07,
           },
 
           7: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.07,
+          },
+
+          8: {
+            cellWidth:
+              contentWidth *
+              0.07,
+          },
+
+          9: {
+            cellWidth:
+              contentWidth *
+              0.06,
+          },
+
+          10: {
+            cellWidth:
+              contentWidth *
+              0.06,
+          },
+
+          11: {
+            cellWidth:
+              contentWidth *
+              0.07,
           },
         },
 
@@ -3883,6 +4372,9 @@ export async function generateAdlaWattPdf(
         currentY,
       );
 
+    const applianceUsageStartPage =
+      doc.getCurrentPageInfo().pageNumber;
+
     autoTable(
       doc,
       {
@@ -3991,11 +4483,24 @@ export async function generateAdlaWattPdf(
 
         alternateRowStyles: {
           fillColor: [
-            248,
-            245,
+            240,
             234,
+            214,
           ],
         },
+
+        didDrawPage:
+          (
+            hookData,
+          ) => {
+            paintPdfTableBackground(
+              doc,
+              hookData.pageNumber,
+              applianceUsageStartPage,
+              pageWidth,
+              pageHeight,
+            );
+          },
 
         columnStyles: {
           0: {
