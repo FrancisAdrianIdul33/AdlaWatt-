@@ -1,6 +1,6 @@
 import {
-  Image,
-  Platform,
+    Image,
+    Platform,
 } from "react-native";
 
 const adlawattLogo =
@@ -2834,7 +2834,7 @@ export async function generateAdlaWattPdf(
    * The logo sits on the left side of the header.
    */
   const logoWidth =
-    40;
+    30;
 
   const logoHeight =
     20;

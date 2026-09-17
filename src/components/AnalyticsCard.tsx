@@ -1,7 +1,11 @@
-import React from "react";
+import React, {
+  useState,
+} from "react";
 import {
   Alert,
   Dimensions,
+  Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -23,8 +27,6 @@ import {
   formatDuration,
   formatNumber,
   formatReportDate,
-  FREQUENCIES,
-  REPORT_FREQUENCIES,
 } from "@/services/analyticsService";
 
 /* ============================================================
@@ -38,6 +40,402 @@ const CHART_WIDTH =
   Math.max(250, SCREEN_WIDTH - 70);
 
 const CHART_HEIGHT = 220;
+
+/*
+ * Spreads points comfortably across the chart so long ranges
+ * stay readable instead of overlapping.
+ */
+function getChartSpacing(
+  pointCount: number,
+): number {
+  if (pointCount <= 0) {
+    return 38;
+  }
+
+  const usableWidth =
+    CHART_WIDTH - 50;
+
+  const perPoint = Math.floor(
+    usableWidth / pointCount,
+  );
+
+  return Math.max(
+    20,
+    Math.min(60, perPoint),
+  );
+}
+
+/* ============================================================
+   DATE PICKER
+   ============================================================ */
+
+/*
+ * @react-native-community/datetimepicker is a native-only
+ * module. It is loaded lazily and only on Android/iOS so the
+ * web bundle never executes the native bridge code.
+ */
+declare const require: (
+  id: string,
+) => any;
+
+const NativeDateTimePicker =
+  Platform.OS === "web"
+    ? null
+    : (
+        require(
+          "@react-native-community/datetimepicker",
+        ) as {
+          default: any;
+        }
+      ).default;
+
+/*
+ * The project does not include the DOM lib, so React's typed
+ * DOM element helpers cannot be used directly on web.
+ */
+const createElementLoose =
+  React.createElement as unknown as (
+    type: any,
+    props: any,
+  ) => any;
+
+function toInputDate(
+  date: Date,
+): string {
+  return [
+    date.getFullYear(),
+    String(
+      date.getMonth() + 1,
+    ).padStart(2, "0"),
+    String(
+      date.getDate(),
+    ).padStart(2, "0"),
+  ].join("-");
+}
+
+interface DatePickerFieldProps {
+  label: string;
+  value: Date;
+  onChange: (date: Date) => void;
+}
+
+function DatePickerField({
+  label,
+  value,
+  onChange,
+}: DatePickerFieldProps) {
+  const [
+    pickerVisible,
+    setPickerVisible,
+  ] = useState(false);
+
+  const [
+    calendarVisible,
+    setCalendarVisible,
+  ] = useState(false);
+
+  const today =
+    new Date();
+
+  /* --------------------------------------------------
+     WEB FALLBACK
+     Uses the browser's native date input.
+     -------------------------------------------------- */
+
+  if (
+    Platform.OS === "web"
+  ) {
+    return (
+      <View
+        style={
+          styles.reportControl
+        }
+      >
+        <AppText
+          variant="caption"
+          style={
+            styles.reportControlLabel
+          }
+        >
+          {label}
+        </AppText>
+
+        <View
+          style={
+            styles.dateFieldBox
+          }
+        >
+          {createElementLoose(
+            "input",
+            {
+              type: "date",
+              value:
+                toInputDate(value),
+              max:
+                toInputDate(today),
+              onChange: (
+                event: any,
+              ) => {
+                const picked =
+                  new Date(
+                    event
+                      .target
+                      .value +
+                      "T00:00:00",
+                  );
+
+                if (
+                  !Number.isNaN(
+                    picked.getTime(),
+                  )
+                ) {
+                  onChange(picked);
+                }
+              },
+            },
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  /* --------------------------------------------------
+     IOS
+     Inline calendar inside a modal.
+     -------------------------------------------------- */
+
+  if (
+    Platform.OS === "ios"
+  ) {
+    return (
+      <View
+        style={
+          styles.reportControl
+        }
+      >
+        <AppText
+          variant="caption"
+          style={
+            styles.reportControlLabel
+          }
+        >
+          {label}
+        </AppText>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.dateFieldButton,
+            pressed &&
+              styles.buttonPressed,
+          ]}
+          onPress={() =>
+            setCalendarVisible(
+              true,
+            )
+          }
+        >
+          <AppText
+            variant="caption"
+            style={
+              styles.dateFieldText
+            }
+          >
+            {formatReportDate(value)}
+          </AppText>
+
+          <Ionicons
+            name="calendar-outline"
+            size={16}
+            color={
+              Colors.light.primary
+            }
+          />
+        </Pressable>
+
+        <Modal
+          visible={calendarVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() =>
+            setCalendarVisible(
+              false,
+            )
+          }
+        >
+          <Pressable
+            style={
+              styles.dateModalOverlay
+            }
+            onPress={() =>
+              setCalendarVisible(
+                false,
+              )
+            }
+          >
+            <Pressable
+              style={
+                styles.dateModalCard
+              }
+              onPress={() => {}}
+            >
+              <View
+                style={
+                  styles.dateModalHeader
+                }
+              >
+                <AppText
+                  variant="body"
+                  style={
+                    styles.dateModalTitle
+                  }
+                >
+                  {label}
+                </AppText>
+
+                <Pressable
+                  onPress={() =>
+                    setCalendarVisible(
+                      false,
+                    )
+                  }
+                >
+                  <Ionicons
+                    name="close-outline"
+                    size={22}
+                    color="#000000"
+                  />
+                </Pressable>
+              </View>
+
+              <NativeDateTimePicker
+                value={value}
+                mode="date"
+                display="inline"
+                maximumDate={today}
+                accentColor={
+                  Colors.light.primary
+                }
+                onChange={(
+                  event: any,
+                  date:
+                    | Date
+                    | undefined,
+                ) => {
+                  if (
+                    event.type ===
+                      "set" &&
+                    date
+                  ) {
+                    onChange(date);
+                  }
+                }}
+              />
+
+              <Pressable
+                style={
+                  styles.dateModalDoneButton
+                }
+                onPress={() =>
+                  setCalendarVisible(
+                    false,
+                  )
+                }
+              >
+                <AppText
+                  variant="caption"
+                  style={
+                    styles.dateModalDoneText
+                  }
+                >
+                  Done
+                </AppText>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      </View>
+    );
+  }
+
+  /* --------------------------------------------------
+     ANDROID
+     System date dialog.
+     -------------------------------------------------- */
+
+  return (
+    <View
+      style={
+        styles.reportControl
+      }
+    >
+      <AppText
+        variant="caption"
+        style={
+          styles.reportControlLabel
+        }
+      >
+        {label}
+      </AppText>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.dateFieldButton,
+          pressed &&
+            styles.buttonPressed,
+        ]}
+        onPress={() =>
+          setPickerVisible(true)
+        }
+      >
+        <AppText
+          variant="caption"
+          style={
+            styles.dateFieldText
+          }
+        >
+          {formatReportDate(value)}
+        </AppText>
+
+        <Ionicons
+          name="calendar-outline"
+          size={16}
+          color={
+            Colors.light.primary
+          }
+        />
+      </Pressable>
+
+      {pickerVisible && (
+        <NativeDateTimePicker
+          value={value}
+          mode="date"
+          maximumDate={today}
+          accentColor={
+            Colors.light.primary
+          }
+          onChange={(
+            event: any,
+            date:
+              | Date
+              | undefined,
+          ) => {
+            setPickerVisible(
+              false,
+            );
+
+            if (
+              event.type ===
+                "set" &&
+              date
+            ) {
+              onChange(date);
+            }
+          }}
+        />
+      )}
+    </View>
+  );
+}
 
 /* ============================================================
    PROPS
@@ -59,7 +457,8 @@ export interface AnalyticsCardsProps {
     React.SetStateAction<boolean>
   >;
   range: AnalyticsRange;
-  applyPresetRange: (days: number) => void;
+  onFromDateChange: (date: Date) => void;
+  onToDateChange: (date: Date) => void;
   generateReport: (
     reportType: ReportType,
   ) => Promise<void>;
@@ -108,19 +507,11 @@ function AnalyticsCard({
           styles.analyticsCardHeader
         }
       >
-        <View
-          style={
-            styles.analyticsCardIcon
-          }
-        >
-          <Ionicons
-            name={icon}
-            size={19}
-            color={
-              Colors.light.primary
-            }
-          />
-        </View>
+        <Ionicons
+          name={icon}
+          size={30}
+          color="#FACC15"
+        />
 
         <View
           style={
@@ -207,7 +598,8 @@ export default function AnalyticsCards({
   setReportModalVisible,
   setFrequencyModalVisible,
   range,
-  applyPresetRange,
+  onFromDateChange,
+  onToDateChange,
   generateReport,
   loading,
   batteryChartData,
@@ -325,10 +717,14 @@ export default function AnalyticsCards({
             }
             maxValue={100}
             noOfSections={5}
-            initialSpacing={8}
-            spacing={38}
+            initialSpacing={12}
+            spacing={getChartSpacing(
+              batteryChartData
+                .length,
+            )}
             thickness={3}
-            hideRules
+            rulesType="solid"
+            rulesColor="rgba(0, 0, 0, 0.07)"
             yAxisThickness={0}
             xAxisThickness={1}
             yAxisTextStyle={
@@ -343,6 +739,20 @@ export default function AnalyticsCards({
             color={
               Colors.light.primary
             }
+            isAnimated
+            animateOnDataChange
+            showDataPointOnFocus
+            focusedDataPointColor={
+              Colors.light.secondary
+            }
+            focusedDataPointRadius={6}
+            showStripOnFocus
+            stripStrokeDashArray={[7, 4]}
+            stripColor="rgba(0, 0, 0, 0.18)"
+            showTextOnFocus
+            textColor="#000000"
+            textFontSize={10}
+            endSpacing={12}
           />
         ) : (
           <EmptyChartState
@@ -376,10 +786,13 @@ export default function AnalyticsCards({
               solarMax
             }
             noOfSections={5}
-            initialSpacing={8}
-            spacing={38}
+            initialSpacing={12}
+            spacing={getChartSpacing(
+              solarChartData.length,
+            )}
             thickness={3}
-            hideRules
+            rulesType="solid"
+            rulesColor="rgba(0, 0, 0, 0.07)"
             yAxisThickness={0}
             xAxisThickness={1}
             yAxisTextStyle={
@@ -394,6 +807,20 @@ export default function AnalyticsCards({
             color={
               Colors.light.secondary
             }
+            isAnimated
+            animateOnDataChange
+            showDataPointOnFocus
+            focusedDataPointColor={
+              Colors.light.primary
+            }
+            focusedDataPointRadius={6}
+            showStripOnFocus
+            stripStrokeDashArray={[7, 4]}
+            stripColor="rgba(0, 0, 0, 0.18)"
+            showTextOnFocus
+            textColor="#000000"
+            textFontSize={10}
+            endSpacing={12}
           />
         ) : (
           <EmptyChartState
@@ -469,8 +896,10 @@ export default function AnalyticsCards({
                 }
                 noOfSections={4}
                 barWidth={20}
-                spacing={22}
-                initialSpacing={8}
+                spacing={26}
+                initialSpacing={12}
+                rulesType="solid"
+                rulesColor="rgba(0, 0, 0, 0.07)"
                 yAxisThickness={0}
                 xAxisThickness={1}
                 yAxisTextStyle={
@@ -482,6 +911,8 @@ export default function AnalyticsCards({
                 frontColor={
                   Colors.light.primary
                 }
+                isAnimated
+                endSpacing={12}
               />
             </View>
 
@@ -530,8 +961,10 @@ export default function AnalyticsCards({
                 }
                 noOfSections={4}
                 barWidth={20}
-                spacing={22}
-                initialSpacing={8}
+                spacing={26}
+                initialSpacing={12}
+                rulesType="solid"
+                rulesColor="rgba(0, 0, 0, 0.07)"
                 yAxisThickness={0}
                 xAxisThickness={1}
                 yAxisTextStyle={
@@ -543,6 +976,8 @@ export default function AnalyticsCards({
                 frontColor={
                   Colors.light.secondary
                 }
+                isAnimated
+                endSpacing={12}
               />
             </View>
           </View>
@@ -641,10 +1076,14 @@ export default function AnalyticsCards({
                 temperatureMax
               }
               noOfSections={4}
-              initialSpacing={8}
-              spacing={38}
+              initialSpacing={12}
+              spacing={getChartSpacing(
+                batteryTemperatureData
+                  .length,
+              )}
               thickness={3}
-              hideRules
+              rulesType="solid"
+              rulesColor="rgba(0, 0, 0, 0.07)"
               yAxisThickness={0}
               xAxisThickness={1}
               yAxisTextStyle={
@@ -659,6 +1098,20 @@ export default function AnalyticsCards({
               color={
                 Colors.light.primary
               }
+              isAnimated
+              animateOnDataChange
+              showDataPointOnFocus
+              focusedDataPointColor={
+                Colors.light.secondary
+              }
+              focusedDataPointRadius={6}
+              showStripOnFocus
+              stripStrokeDashArray={[7, 4]}
+              stripColor="rgba(0, 0, 0, 0.18)"
+              showTextOnFocus
+              textColor="#000000"
+              textFontSize={10}
+              endSpacing={12}
             />
 
             <View
@@ -680,10 +1133,14 @@ export default function AnalyticsCards({
                   temperatureMax
                 }
                 noOfSections={4}
-                initialSpacing={8}
-                spacing={38}
+                initialSpacing={12}
+                spacing={getChartSpacing(
+                  solarTemperatureData
+                    .length,
+                )}
                 thickness={3}
-                hideRules
+                rulesType="solid"
+                rulesColor="rgba(0, 0, 0, 0.07)"
                 yAxisThickness={0}
                 xAxisThickness={1}
                 yAxisTextStyle={
@@ -698,6 +1155,20 @@ export default function AnalyticsCards({
                 color={
                   Colors.light.secondary
                 }
+                isAnimated
+                animateOnDataChange
+                showDataPointOnFocus
+                focusedDataPointColor={
+                  Colors.light.primary
+                }
+                focusedDataPointRadius={6}
+                showStripOnFocus
+                stripStrokeDashArray={[7, 4]}
+                stripColor="rgba(0, 0, 0, 0.18)"
+                showTextOnFocus
+                textColor="#000000"
+                textFontSize={10}
+                endSpacing={12}
               />
             </View>
           </View>
@@ -896,7 +1367,8 @@ export default function AnalyticsCards({
               styles.reportSubtitle
             }
           >
-            Export historical analytics using the selected frequency and date range.
+            Choose a frequency and pick a custom from/to date range
+            for the report export.
           </AppText>
 
           <View
@@ -919,9 +1391,11 @@ export default function AnalyticsCards({
               </AppText>
 
               <Pressable
-                style={
-                  styles.reportSelect
-                }
+                style={({ pressed }) => [
+                  styles.reportSelect,
+                  pressed &&
+                    styles.buttonPressed,
+                ]}
                 onPress={() =>
                   setReportModalVisible(
                     true,
@@ -947,142 +1421,21 @@ export default function AnalyticsCards({
               </Pressable>
             </View>
 
-            <View
-              style={
-                styles.reportControl
+            <DatePickerField
+              label="From Date"
+              value={range.start}
+              onChange={
+                onFromDateChange
               }
-            >
-              <AppText
-                variant="caption"
-                style={
-                  styles.reportControlLabel
-                }
-              >
-                Date Range
-              </AppText>
+            />
 
-              <View
-                style={
-                  styles.dateRangeBox
-                }
-              >
-                <AppText
-                  variant="caption"
-                  style={
-                    styles.dateRangeText
-                  }
-                >
-                  {formatReportDate(
-                    range.start,
-                  )}
-                </AppText>
-
-                <Ionicons
-                  name="arrow-forward-outline"
-                  size={13}
-                  color={
-                    Colors.light.textSecondary
-                  }
-                />
-
-                <AppText
-                  variant="caption"
-                  style={
-                    styles.dateRangeText
-                  }
-                >
-                  {formatReportDate(
-                    range.end,
-                  )}
-                </AppText>
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={
-              styles.presetRow
-            }
-          >
-            <Pressable
-              style={
-                styles.presetButton
+            <DatePickerField
+              label="To Date"
+              value={range.end}
+              onChange={
+                onToDateChange
               }
-              onPress={() =>
-                applyPresetRange(
-                  7,
-                )
-              }
-            >
-              <AppText
-                variant="caption"
-                style={
-                  styles.presetButtonText
-                }
-              >
-                7 Days
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              style={
-                styles.presetButton
-              }
-              onPress={() =>
-                applyPresetRange(
-                  30,
-                )
-              }
-            >
-              <AppText
-                variant="caption"
-                style={
-                  styles.presetButtonText
-                }
-              >
-                30 Days
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              style={
-                styles.presetButton
-              }
-              onPress={() =>
-                applyPresetRange(
-                  90,
-                )
-              }
-            >
-              <AppText
-                variant="caption"
-                style={
-                  styles.presetButtonText
-                }
-              >
-                90 Days
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              style={
-                styles.presetButton
-              }
-              onPress={() =>
-                applyPresetRange(
-                  366,
-                )
-              }
-            >
-              <AppText
-                variant="caption"
-                style={
-                  styles.presetButtonText
-                }
-              >
-                1 Year
-              </AppText>
-            </Pressable>
+            />
           </View>
 
           <View
@@ -1091,9 +1444,11 @@ export default function AnalyticsCards({
             }
           >
             <Pressable
-              style={
-                styles.exportPrimaryButton
-              }
+              style={({ pressed }) => [
+                styles.exportPrimaryButton,
+                pressed &&
+                  styles.buttonPressed,
+              ]}
               onPress={() =>
                 generateReport(
                   "CSV",
@@ -1117,9 +1472,11 @@ export default function AnalyticsCards({
             </Pressable>
 
             <Pressable
-              style={
-                styles.exportSecondaryButton
-              }
+              style={({ pressed }) => [
+                styles.exportPrimaryButton,
+                pressed &&
+                  styles.buttonPressed,
+              ]}
               onPress={() =>
                 generateReport(
                   "PDF",
@@ -1129,15 +1486,13 @@ export default function AnalyticsCards({
               <Ionicons
                 name="document-outline"
                 size={17}
-                color={
-                  Colors.light.primary
-                }
+                color="#FFFFFF"
               />
 
               <AppText
                 variant="caption"
                 style={
-                  styles.exportSecondaryText
+                  styles.exportPrimaryText
                 }
               >
                 Export PDF
@@ -1273,20 +1628,19 @@ export const styles =
 
     /* ========================================================
        ANALYTICS CARDS
+       ChartCard-style shell: green header panel with a yellow
+       icon and white title, followed by the chart body.
     ======================================================== */
 
     analyticsCard: {
       width: "100%",
       backgroundColor:
         Colors.glass.white,
-      borderWidth:
-        analyticsDimensions.cardBorderWidth,
+      borderWidth: 3,
       borderColor:
         Colors.light.primary,
-      borderRadius:
-        analyticsDimensions.cardRadius,
-      padding:
-        analyticsDimensions.cardPadding,
+      borderRadius: 15,
+      overflow: "hidden",
       marginBottom:
         analyticsDimensions.sectionSpacing,
     },
@@ -1295,53 +1649,44 @@ export const styles =
       width: "100%",
       flexDirection: "row",
       alignItems: "center",
-      gap: 11,
-      marginBottom: 14,
-    },
-
-    analyticsCardIcon: {
-      width:
-        analyticsDimensions.iconSize,
-      height:
-        analyticsDimensions.iconSize,
-      borderRadius:
-        analyticsDimensions.iconRadius,
-      alignItems: "center",
-      justifyContent: "center",
+      gap: 10,
       backgroundColor:
-        "rgba(0, 168, 107, 0.10)",
-      borderWidth: 1,
-      borderColor:
-        "rgba(0, 168, 107, 0.20)",
+        Colors.light.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
     },
 
     analyticsCardHeaderText: {
       flex: 1,
+      minWidth: 0,
     },
 
     analyticsCardTitle: {
-      color: "#000000",
-      fontWeight: "700",
-      fontSize: 17,
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
     },
 
     analyticsCardSubtitle: {
-      color:
-        Colors.light.textSecondary,
-      marginTop: 3,
-      lineHeight: 18,
+      color: "rgba(255, 255, 255, 0.88)",
+      fontSize: 11,
+      marginTop: 2,
+      lineHeight: 15,
     },
 
     analyticsChartContainer: {
       width: "100%",
       alignItems: "center",
+      paddingHorizontal: 6,
+      paddingVertical: 12,
       overflow: "hidden",
     },
 
     chartAxisText: {
       color:
         Colors.light.textSecondary,
-      fontSize: 9,
+      fontSize: 10,
+      fontWeight: "600",
     },
 
     /* ========================================================
@@ -1526,11 +1871,10 @@ export const styles =
       alignItems: "flex-start",
       backgroundColor:
         Colors.glass.white,
-      borderWidth: 2,
+      borderWidth: 3,
       borderColor:
-        Colors.light.secondary,
-      borderRadius:
-        analyticsDimensions.cardRadius,
+        Colors.light.primary,
+      borderRadius: 15,
       padding: 16,
       marginBottom:
         analyticsDimensions.sectionSpacing,
@@ -1600,53 +1944,83 @@ export const styles =
       fontWeight: "600",
     },
 
-    dateRangeBox: {
+    dateFieldButton: {
       width: "100%",
       minHeight: 42,
-      borderWidth: 1,
+      borderWidth: 2,
       borderColor:
-        "rgba(0, 0, 0, 0.14)",
+        Colors.light.primary,
       borderRadius: 12,
-      paddingHorizontal: 10,
+      paddingHorizontal: 12,
       flexDirection: "row",
       alignItems: "center",
       justifyContent:
         "space-between",
-      gap: 7,
     },
 
-    dateRangeText: {
+    dateFieldText: {
       color: "#000000",
-      flexShrink: 1,
-      fontSize: 10,
+      fontWeight: "600",
     },
 
-    presetRow: {
+    dateFieldBox: {
+      width: "100%",
+      minHeight: 42,
+      borderWidth: 2,
+      borderColor:
+        Colors.light.primary,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      justifyContent: "center",
+    },
+
+    dateModalOverlay: {
+      flex: 1,
+      backgroundColor:
+        "rgba(0, 0, 0, 0.40)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+
+    dateModalCard: {
+      width: "100%",
+      maxWidth: 420,
+      backgroundColor:
+        "#FFFFFF",
+      borderRadius: 18,
+      padding: 16,
+    },
+
+    dateModalHeader: {
       width: "100%",
       flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 7,
-      marginTop: 10,
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      marginBottom: 10,
     },
 
-    presetButton: {
-      minHeight: 34,
-      paddingHorizontal: 11,
-      borderWidth: 1,
-      borderColor:
-        "rgba(0, 168, 107, 0.35)",
-      borderRadius: 10,
+    dateModalTitle: {
+      color: "#000000",
+      fontWeight: "700",
+      fontSize: 16,
+    },
+
+    dateModalDoneButton: {
+      width: "100%",
+      minHeight: 44,
+      marginTop: 14,
+      backgroundColor:
+        Colors.light.primary,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor:
-        "rgba(0, 168, 107, 0.06)",
     },
 
-    presetButtonText: {
-      color:
-        Colors.light.primary,
-      fontWeight: "600",
-      fontSize: 10,
+    dateModalDoneText: {
+      color: "#FFFFFF",
+      fontWeight: "700",
     },
 
     exportRow: {
@@ -1671,28 +2045,6 @@ export const styles =
 
     exportPrimaryText: {
       color: "#FFFFFF",
-      fontWeight: "700",
-    },
-
-    exportSecondaryButton: {
-      flex: 1,
-      minHeight: 44,
-      backgroundColor:
-        Colors.glass.white,
-      borderWidth: 2,
-      borderColor:
-        Colors.light.secondary,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "row",
-      gap: 7,
-      paddingHorizontal: 10,
-    },
-
-    exportSecondaryText: {
-      color:
-        Colors.light.primary,
       fontWeight: "700",
     },
 
