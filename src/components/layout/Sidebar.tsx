@@ -2,13 +2,14 @@ import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Alert,
   Dimensions,
   Image,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -21,13 +22,22 @@ interface SidebarProps {
 
 const screenWidth = Dimensions.get("window").width;
 
+/*
+ * The logo asset is 500x220 (2.27:1). Keep this ratio so the
+ * logo renders with its true proportions inside its container.
+ */
+const LOGO_ASPECT_RATIO = 500 / 220;
+
 export default function Sidebar({
   visible,
   onClose,
 }: SidebarProps) {
   const pathname = usePathname();
 
-
+  // While the sidebar is open, stop the browser from applying
+  // pinch / trackpad zoom, which expands the page beyond its
+  // bounds and exposes a white screen. Restored on close.
+  useDisableWebZoom(visible);
 
   if (!visible) {
     return null;
@@ -101,37 +111,56 @@ export default function Sidebar({
 
       {/* Sidebar */}
       <View style={sidebarStyles.sidebar}>
-        {/* Close Button */}
-        <View style={sidebarStyles.closeContainer}>
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              sidebarStyles.closeButton,
-              pressed && sidebarStyles.buttonPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Close sidebar"
-          >
-            <Ionicons
-              name="close"
-              size={sidebarDimensions.closeIconSize}
-              color="#000000"
+        {/* ==================================================
+            HEADER - CLOSE BUTTON + LOGO
+            (pinned so the top always looks organized while
+            the logo image is still loading)
+            ================================================== */}
+
+        <View style={sidebarStyles.header}>
+          <View style={sidebarStyles.closeContainer}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                sidebarStyles.closeButton,
+                pressed && sidebarStyles.buttonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Close sidebar"
+            >
+              <Ionicons
+                name="close"
+                size={sidebarDimensions.closeIconSize}
+                color="#000000"
+              />
+            </Pressable>
+          </View>
+
+          <View style={sidebarStyles.logoContainer}>
+            <Image
+              source={require("@/assets/images/adlawatt-logo.png")}
+              style={sidebarStyles.logo}
+              resizeMode="contain"
+              fadeDuration={0}
+              accessibilityLabel="AdlaWatt logo"
             />
-          </Pressable>
+          </View>
         </View>
 
-        {/* AdlaWatt Logo */}
-        <View style={sidebarStyles.logoContainer}>
-          <Image
-            source={require("@/assets/images/adlawatt-logo.png")}
-            style={sidebarStyles.logo}
-            resizeMode="contain"
-          />
-        </View>
+        {/* ==================================================
+            MAIN NAVIGATION
+            (scrollable so nothing is ever cut off on short
+            screens - the layout stays organized at any size)
+            ================================================== */}
 
-        {/* Main navigation */}
-        <View style={sidebarStyles.navigation}>
-
+        <ScrollView
+          style={sidebarStyles.navigationScroll}
+          contentContainerStyle={
+            sidebarStyles.navigationContent
+          }
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <SidebarButton
             icon="home-outline"
             label="Dashboard"
@@ -194,12 +223,15 @@ export default function Sidebar({
               handleNavigation(Routes.SETTINGS)
             }
           />
-        </View>
+        </ScrollView>
 
-        {/* Divider */}
+        {/* ==================================================
+            DIVIDER + LOG OUT / EXIT
+            (pinned at the bottom and always visible)
+            ================================================== */}
+
         <View style={sidebarStyles.divider} />
 
-        {/* Log Out / Exit */}
         <View style={sidebarStyles.bottomActions}>
           <SidebarButton
             icon="log-out-outline"
@@ -218,6 +250,88 @@ export default function Sidebar({
       </View>
     </View>
   );
+}
+
+/*
+ * Prevents the page from being zoomed while the sidebar is
+ * visible:
+ *   - mobile: blocks pinch + double-tap zoom gestures
+ *   - desktop: blocks ctrl+wheel / trackpad pinch zoom
+ * Zooming expands the page past the viewport bounds and shows
+ * unwanted white space. On native builds (no DOM / document),
+ * this safely does nothing.
+ */
+function useDisableWebZoom(active: boolean) {
+  useEffect(() => {
+    if (!active || typeof document === "undefined") {
+      return;
+    }
+
+    const cancel = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const cancelWheelZoom = (event: WheelEvent) => {
+      if (event.ctrlKey) {
+        event.preventDefault();
+      }
+    };
+
+    const root = document.documentElement;
+    const previousTouchAction = root.style.touchAction;
+    root.style.touchAction = "pan-y";
+
+    document.addEventListener(
+      "gesturestart",
+      cancel,
+      { passive: false },
+    );
+    document.addEventListener(
+      "gesturechange",
+      cancel,
+      { passive: false },
+    );
+    document.addEventListener(
+      "gestureend",
+      cancel,
+      { passive: false },
+    );
+    document.addEventListener(
+      "dblclick",
+      cancel,
+      { passive: false },
+    );
+    document.addEventListener(
+      "wheel",
+      cancelWheelZoom,
+      { passive: false },
+    );
+
+    return () => {
+      root.style.touchAction = previousTouchAction;
+
+      document.removeEventListener(
+        "gesturestart",
+        cancel,
+      );
+      document.removeEventListener(
+        "gesturechange",
+        cancel,
+      );
+      document.removeEventListener(
+        "gestureend",
+        cancel,
+      );
+      document.removeEventListener(
+        "dblclick",
+        cancel,
+      );
+      document.removeEventListener(
+        "wheel",
+        cancelWheelZoom,
+      );
+    };
+  }, [active]);
 }
 
 interface SidebarButtonProps {
@@ -254,7 +368,7 @@ function SidebarButton({
         color={
           danger
             ? Colors.light.error
-            : Colors.light.text
+            : sidebarDimensions.iconColor
         }
       />
 
@@ -271,6 +385,7 @@ function SidebarButton({
     </Pressable>
   );
 }
+
 const sidebarDimensions = {
   width: screenWidth * 0.82,
   horizontalPadding: 18,
@@ -281,7 +396,7 @@ const sidebarDimensions = {
   // Fixed logo area
   logoContainerHeight: 105,
   logoWidth: 150,
-  logoHeight: 70,
+  logoHeight: 96,
 
   buttonHeight: 50,
   buttonWidth: "100%",
@@ -294,6 +409,10 @@ const sidebarDimensions = {
 
   // Close icon
   closeIconSize: 31,
+
+  // Navigation icon color - matches the ChartCard.tsx icon hex
+  // (#FACC15). Log Out / Exit keep their red danger color.
+  iconColor: "#FACC15",
 };
 
 const sidebarStyles = StyleSheet.create({
@@ -329,6 +448,14 @@ const sidebarStyles = StyleSheet.create({
     shadowRadius: 8,
   },
 
+  /*
+   * Fixed header keeps the close button and logo in a stable
+   * position regardless of nav scrolling or image loading.
+   */
+  header: {
+    width: "100%",
+  },
+
   closeContainer: {
     width: "100%",
     height: 72,
@@ -337,11 +464,16 @@ const sidebarStyles = StyleSheet.create({
   },
 
   closeButton: {
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 20,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
 
-  /* Fixed logo area */
   logoContainer: {
     width: "100%",
     height: sidebarDimensions.logoContainerHeight,
@@ -351,13 +483,20 @@ const sidebarStyles = StyleSheet.create({
   },
 
   logo: {
-    width: 250,
-    height: 250,
+    height: sidebarDimensions.logoHeight,
+    aspectRatio: LOGO_ASPECT_RATIO,
   },
-  navigation: {
+
+  navigationScroll: {
     width: "100%",
+    flexGrow: 1,
+    flexShrink: 1,
     marginTop:
       sidebarDimensions.navigationTopMargin,
+  },
+
+  navigationContent: {
+    paddingBottom: 8,
   },
 
   button: {
