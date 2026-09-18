@@ -19,7 +19,7 @@ type ApplianceStatusBoxProps = {
   imageSource?: ImageSourcePropType;
 };
 
-const defaultImage = require("@/assets/images/developers/avatar.jpg");
+const defaultImage = require("@/assets/images/adlawatt-icon.png");
 
 export default function ApplianceStatusBox({
   name,
@@ -119,6 +119,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
     marginTop: 3,
+    marginBottom: 8,
   },
 
   status: {
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 9,
     paddingVertical: 5,
-    marginTop: 8,
+    marginTop: "auto",
   },
 
   statusText: {

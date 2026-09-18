@@ -439,13 +439,7 @@ const sidebarStyles = StyleSheet.create({
       sidebarDimensions.horizontalPadding,
     paddingBottom: 24,
     elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: -3,
-      height: 0,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    boxShadow: "-3px 0px 8px rgba(0,0,0,0.2)",
   },
 
   /*

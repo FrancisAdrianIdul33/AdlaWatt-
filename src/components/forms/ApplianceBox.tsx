@@ -30,7 +30,7 @@ type ApplianceBoxProps = {
   onDelete?: () => void;
 };
 
-const defaultImage = require("@/assets/images/developers/avatar.jpg");
+const defaultImage = require("@/assets/images/adlawatt-icon.png");
 
 export default function ApplianceBox({
   name,
