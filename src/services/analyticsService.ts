@@ -2354,6 +2354,94 @@ export function generateAdlaWattCsv(
    PDF HELPERS
    ============================================================ */
 
+/*
+ * Shared AdlaWatt PDF palette.
+ *
+ * Primary:    #00A86B
+ * Secondary:  #FFBF00
+ * Background: #F0EAD6
+ * Body fill:  rgba(255, 255, 255, 0.50) -> #F8F5EA
+ */
+const PDF_PRIMARY: [
+  number,
+  number,
+  number,
+] = [
+  0,
+  168,
+  107,
+];
+
+const PDF_SECONDARY: [
+  number,
+  number,
+  number,
+] = [
+  255,
+  191,
+  0,
+];
+
+const PDF_BACKGROUND: [
+  number,
+  number,
+  number,
+] = [
+  240,
+  234,
+  214,
+];
+
+const PDF_BODY_FILL: [
+  number,
+  number,
+  number,
+] = [
+  255,
+  255,
+  255,
+];
+
+const PDF_ALT_FILL: [
+  number,
+  number,
+  number,
+] = [
+  248,
+  245,
+  234,
+];
+
+const PDF_TEXT: [
+  number,
+  number,
+  number,
+] = [
+  31,
+  41,
+  55,
+];
+
+const PDF_MUTED: [
+  number,
+  number,
+  number,
+] = [
+  117,
+  117,
+  117,
+];
+
+const PDF_BORDER: [
+  number,
+  number,
+  number,
+] = [
+  216,
+  210,
+  194,
+];
+
 function getPdfStatusColor(
   status: string,
 ): [number, number, number] {
@@ -2411,23 +2499,24 @@ function addPdfStatusBox(
   height: number,
 ): void {
   /*
-   * The summary cards use a primary green border with primary
-   * green, medium-sized text for clear readability.
+   * Summary cards follow the reference layout: a clean white
+   * card with a subtle border, a small uppercase label and a
+   * large bold value.
    */
   doc.setFillColor(
-    248,
-    250,
-    252,
+    PDF_BODY_FILL[0],
+    PDF_BODY_FILL[1],
+    PDF_BODY_FILL[2],
   );
 
   doc.setDrawColor(
-    0,
-    168,
-    107,
+    PDF_BORDER[0],
+    PDF_BORDER[1],
+    PDF_BORDER[2],
   );
 
   doc.setLineWidth(
-    0.8,
+    0.3,
   );
 
   doc.roundedRect(
@@ -2435,30 +2524,9 @@ function addPdfStatusBox(
     y,
     width,
     height,
-    4,
-    4,
+    3,
+    3,
     "FD",
-  );
-
-  doc.setFont(
-    "helvetica",
-    "normal",
-  );
-
-  doc.setFontSize(
-    12,
-  );
-
-  doc.setTextColor(
-    0,
-    168,
-    107,
-  );
-
-  doc.text(
-    label,
-    x + 5,
-    y + 7,
   );
 
   doc.setFont(
@@ -2467,19 +2535,59 @@ function addPdfStatusBox(
   );
 
   doc.setFontSize(
-    12,
+    7.5,
   );
 
   doc.setTextColor(
-    0,
-    168,
-    107,
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
   );
+
+  doc.text(
+    label.toUpperCase(),
+    x + 5,
+    y + 8,
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold",
+  );
+
+  /*
+   * Shrink the value until it fits the card so long status
+   * strings never overflow the white card.
+   */
+  let valueFontSize =
+    15;
+
+  doc.setFontSize(
+    valueFontSize,
+  );
+
+  doc.setTextColor(
+    PDF_TEXT[0],
+    PDF_TEXT[1],
+    PDF_TEXT[2],
+  );
+
+  while (
+    valueFontSize > 8 &&
+    doc.getTextWidth(value) >
+      width - 10
+  ) {
+    valueFontSize -= 0.5;
+
+    doc.setFontSize(
+      valueFontSize,
+    );
+  }
 
   doc.text(
     value,
     x + 5,
-    y + 15,
+    y + 19,
   );
 }
 
@@ -2494,13 +2602,13 @@ function addPdfSectionTitle(
   );
 
   doc.setFontSize(
-    12,
+    11.5,
   );
 
   doc.setTextColor(
-    31,
-    41,
-    55,
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
   );
 
   doc.text(
@@ -2509,39 +2617,97 @@ function addPdfSectionTitle(
     y,
   );
 
-  return y + 7;
+  /*
+   * Short secondary-colour accent bar under each section title
+   * mirrors the reference report styling.
+   */
+  doc.setFillColor(
+    PDF_SECONDARY[0],
+    PDF_SECONDARY[1],
+    PDF_SECONDARY[2],
+  );
+
+  doc.rect(
+    18,
+    y + 1.8,
+    16,
+    1,
+    "F",
+  );
+
+  return y + 8;
 }
 
-function paintPdfTableBackground(
+/*
+ * Paints the AdlaWatt page shell that must stay identical on
+ * every page: the cream background and a thin primary green
+ * top accent strip.
+ */
+function paintPdfPageBase(
   doc: jsPDF,
-  pageNumber: number,
+  pageWidth: number,
+  pageHeight: number,
+): void {
+  doc.setFillColor(
+    PDF_BACKGROUND[0],
+    PDF_BACKGROUND[1],
+    PDF_BACKGROUND[2],
+  );
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    pageHeight,
+    "F",
+  );
+
+  doc.setFillColor(
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
+  );
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    4,
+    "F",
+  );
+}
+
+/*
+ * Called from autoTable's willDrawPage hook, which fires before
+ * a table draws its head and body. Only pages created by the
+ * table (beyond its start page) are repainted, so the section
+ * content already drawn on the start page is never covered.
+ *
+ * hookData.pageNumber is relative to the table, so the
+ * document's absolute current page is used instead.
+ */
+function paintPdfContinuationPage(
+  doc: jsPDF,
+  _pageNumber: number,
   tableStartPage: number,
   pageWidth: number,
   pageHeight: number,
 ): void {
-  /*
-   * Only paint pages created beyond the table's start page so
-   * the already-drawn page-1 header and layout are preserved.
-   */
-  if (pageNumber > tableStartPage) {
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
-
-    doc.rect(
-      0,
-      0,
+  if (
+    doc.getCurrentPageInfo().pageNumber >
+    tableStartPage
+  ) {
+    paintPdfPageBase(
+      doc,
       pageWidth,
       pageHeight,
-      "F",
     );
   }
 }
 
 function addPdfFooter(
   doc: jsPDF,
+  periodLabel: string,
 ): void {
   const pageCount =
     doc.getNumberOfPages();
@@ -2552,6 +2718,9 @@ function addPdfFooter(
   const pageHeight =
     doc.internal.pageSize.getHeight();
 
+  const footerHeight =
+    10;
+
   for (
     let page = 1;
     page <= pageCount;
@@ -2560,22 +2729,25 @@ function addPdfFooter(
     doc.setPage(page);
 
     doc.setFillColor(
-      0,
-      168,
-      107,
+      PDF_PRIMARY[0],
+      PDF_PRIMARY[1],
+      PDF_PRIMARY[2],
     );
 
     doc.rect(
       0,
-      pageHeight - 14,
+      pageHeight - footerHeight,
       pageWidth,
-      14,
+      footerHeight,
       "F",
     );
 
+    const textY =
+      pageHeight - 3.8;
+
     doc.setFont(
       "helvetica",
-      "normal",
+      "bold",
     );
 
     doc.setFontSize(
@@ -2591,13 +2763,46 @@ function addPdfFooter(
     doc.text(
       "AdlaWatt Analytics Report",
       18,
-      pageHeight - 6,
+      textY,
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal",
+    );
+
+    doc.setTextColor(
+      PDF_SECONDARY[0],
+      PDF_SECONDARY[1],
+      PDF_SECONDARY[2],
+    );
+
+    doc.text(
+      page === 1
+        ? "Confidential | IoT Off-Grid Solar Backup Monitoring"
+        : periodLabel,
+      pageWidth / 2,
+      textY,
+      {
+        align: "center",
+      },
+    );
+
+    doc.setFont(
+      "helvetica",
+      "bold",
+    );
+
+    doc.setTextColor(
+      255,
+      255,
+      255,
     );
 
     doc.text(
       `Page ${page} of ${pageCount}`,
       pageWidth - 18,
-      pageHeight - 6,
+      textY,
       {
         align: "right",
       },
@@ -2670,18 +2875,10 @@ export async function generateAdlaWattPdf(
      PAGE BACKGROUND
      ---------------------------------------------------------- */
 
-  doc.setFillColor(
-    240,
-    234,
-    214,
-  );
-
-  doc.rect(
-    0,
-    0,
+  paintPdfPageBase(
+    doc,
     pageWidth,
     pageHeight,
-    "F",
   );
 
   /* ----------------------------------------------------------
@@ -2695,9 +2892,9 @@ export async function generateAdlaWattPdf(
     38;
 
   doc.setFillColor(
-    0,
-    168,
-    107,
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
   );
 
   doc.rect(
@@ -2712,9 +2909,9 @@ export async function generateAdlaWattPdf(
    * Secondary yellow accent line.
    */
   doc.setFillColor(
-    255,
-    191,
-    0,
+    PDF_SECONDARY[0],
+    PDF_SECONDARY[1],
+    PDF_SECONDARY[2],
   );
 
   doc.rect(
@@ -3003,55 +3200,43 @@ export async function generateAdlaWattPdf(
   );
 
   /* ----------------------------------------------------------
-     REPORT INFORMATION
+     COVER
      ---------------------------------------------------------- */
 
   let currentY =
-    48;
-
-  currentY =
-    addPdfSectionTitle(
-      doc,
-      "REPORT INFORMATION",
-      currentY,
-    );
+    56;
 
   /*
-   * Information container.
-   *
-   * Body visually uses:
-   *
-   * rgba(255, 255, 255, 0.50)
+   * Light pill containing the report type.
    */
+  const pillWidth =
+    66;
+
+  const pillHeight =
+    9;
+
+  const pillX =
+    (pageWidth - pillWidth) / 2;
+
   doc.setFillColor(
-    248,
+    224,
     245,
-    234,
-  );
-
-  doc.setDrawColor(
-    203,
-    213,
-    225,
-  );
-
-  doc.setLineWidth(
-    0.25,
+    236,
   );
 
   doc.roundedRect(
-    horizontalMargin,
+    pillX,
     currentY,
-    contentWidth,
-    18,
-    3,
-    3,
-    "FD",
+    pillWidth,
+    pillHeight,
+    4.5,
+    4.5,
+    "F",
   );
 
   doc.setFont(
     "helvetica",
-    "normal",
+    "bold",
   );
 
   doc.setFontSize(
@@ -3059,29 +3244,268 @@ export async function generateAdlaWattPdf(
   );
 
   doc.setTextColor(
-    71,
-    85,
-    105,
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
   );
 
   doc.text(
-    `Frequency: ${reportData.frequency}`,
-    horizontalMargin + 6,
-    currentY + 7,
-  );
-
-  doc.text(
-    `Period: ${formatReportDate(
-      reportData.range.start,
-    )} - ${formatReportDate(
-      reportData.range.end,
-    )}`,
-    horizontalMargin + 6,
-    currentY + 13,
+    `${reportData.frequency.toUpperCase()} ANALYTICS REPORT`,
+    pageWidth / 2,
+    currentY + 6,
+    {
+      align: "center",
+    },
   );
 
   currentY +=
-    28;
+    pillHeight + 9;
+
+  doc.setFont(
+    "helvetica",
+    "normal",
+  );
+
+  doc.setFontSize(
+    14,
+  );
+
+  doc.setTextColor(
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
+  );
+
+  doc.text(
+    "Energy Monitoring",
+    pageWidth / 2,
+    currentY,
+    {
+      align: "center",
+    },
+  );
+
+  currentY +=
+    11;
+
+  doc.setFont(
+    "helvetica",
+    "bold",
+  );
+
+  doc.setFontSize(
+    24,
+  );
+
+  doc.setTextColor(
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
+  );
+
+  doc.text(
+    "& System Analytics",
+    pageWidth / 2,
+    currentY,
+    {
+      align: "center",
+    },
+  );
+
+  currentY +=
+    12;
+
+  /*
+   * Four-column information card.
+   */
+  const infoCardY =
+    currentY;
+
+  const infoCardHeight =
+    30;
+
+  doc.setFillColor(
+    PDF_BODY_FILL[0],
+    PDF_BODY_FILL[1],
+    PDF_BODY_FILL[2],
+  );
+
+  doc.setDrawColor(
+    PDF_BORDER[0],
+    PDF_BORDER[1],
+    PDF_BORDER[2],
+  );
+
+  doc.setLineWidth(
+    0.3,
+  );
+
+  doc.roundedRect(
+    horizontalMargin,
+    infoCardY,
+    contentWidth,
+    infoCardHeight,
+    3,
+    3,
+    "FD",
+  );
+
+  const infoColumns = [
+    {
+      label: "REPORT TYPE",
+      value: `${reportData.frequency} Report`,
+    },
+
+    {
+      label: "PERIOD",
+      value: `${formatReportDate(
+        reportData.range.start,
+      )} - ${formatReportDate(
+        reportData.range.end,
+      )}`,
+    },
+
+    {
+      label: "GENERATED",
+      value: formatReportDateTime(
+        new Date(),
+      ),
+    },
+
+    {
+      label: "SYSTEM",
+      value: "AdlaWatt IoT v1.0",
+    },
+  ];
+
+  const infoColumnWidth =
+    contentWidth /
+    infoColumns.length;
+
+  infoColumns.forEach(
+    (
+      column,
+      index,
+    ) => {
+      const columnX =
+        horizontalMargin +
+        infoColumnWidth * index +
+        6;
+
+      doc.setFont(
+        "helvetica",
+        "bold",
+      );
+
+      doc.setFontSize(
+        8,
+      );
+
+      doc.setTextColor(
+        PDF_MUTED[0],
+        PDF_MUTED[1],
+        PDF_MUTED[2],
+      );
+
+      doc.text(
+        column.label,
+        columnX,
+        infoCardY + 11,
+      );
+
+      doc.setFontSize(
+        9,
+      );
+
+      doc.setTextColor(
+        PDF_TEXT[0],
+        PDF_TEXT[1],
+        PDF_TEXT[2],
+      );
+
+      const valueLines =
+        doc.splitTextToSize(
+          column.value,
+          infoColumnWidth - 12,
+        );
+
+      doc.text(
+        valueLines.slice(
+          0,
+          2,
+        ),
+        columnX,
+        infoCardY + 19,
+      );
+
+      if (index > 0) {
+        doc.setDrawColor(
+          PDF_BORDER[0],
+          PDF_BORDER[1],
+          PDF_BORDER[2],
+        );
+
+        doc.setLineWidth(
+          0.3,
+        );
+
+        doc.line(
+          horizontalMargin +
+            infoColumnWidth * index,
+          infoCardY + 6,
+          horizontalMargin +
+            infoColumnWidth * index,
+          infoCardY +
+            infoCardHeight -
+            6,
+        );
+      }
+    },
+  );
+
+  currentY =
+    infoCardY +
+    infoCardHeight +
+    12;
+
+  doc.setFont(
+    "helvetica",
+    "italic",
+  );
+
+  doc.setFontSize(
+    8,
+  );
+
+  doc.setTextColor(
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
+  );
+
+  doc.text(
+    doc.splitTextToSize(
+      "This report provides a comprehensive overview of the AdlaWatt off-grid solar backup power monitoring system. All metrics are recorded at 5-minute intervals. Data source: AdlaWatt Mobile App and IoT hardware sensors.",
+      contentWidth,
+    ),
+    horizontalMargin,
+    currentY,
+  );
+
+  /*
+   * Summary sections begin on a fresh page, matching the
+   * reference report structure.
+   */
+  doc.addPage();
+
+  paintPdfPageBase(
+    doc,
+    pageWidth,
+    pageHeight,
+  );
+
+  currentY =
+    20;
 
   /* ----------------------------------------------------------
      SYSTEM SUMMARY
@@ -3314,18 +3738,10 @@ export async function generateAdlaWattPdf(
   ) {
     doc.addPage();
 
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
-
-    doc.rect(
-      0,
-      0,
+    paintPdfPageBase(
+      doc,
       pageWidth,
       pageHeight,
-      "F",
     );
 
     currentY =
@@ -3408,7 +3824,7 @@ export async function generateAdlaWattPdf(
       ],
 
       theme:
-        "grid",
+        "plain",
 
       styles: {
         font:
@@ -3425,15 +3841,6 @@ export async function generateAdlaWattPdf(
           41,
           55,
         ],
-
-        lineColor: [
-          203,
-          213,
-          225,
-        ],
-
-        lineWidth:
-          0.25,
 
         fillColor: [
           248,
@@ -3467,25 +3874,25 @@ export async function generateAdlaWattPdf(
        */
       bodyStyles: {
         fillColor: [
+          255,
+          255,
+          255,
+        ],
+      },
+
+      alternateRowStyles: {
+        fillColor: [
           248,
           245,
           234,
         ],
       },
 
-      alternateRowStyles: {
-        fillColor: [
-          240,
-          234,
-          214,
-        ],
-      },
-
-      didDrawPage:
+      willDrawPage:
         (
           hookData,
         ) => {
-          paintPdfTableBackground(
+          paintPdfContinuationPage(
             doc,
             hookData.pageNumber,
             energyTableStartPage,
@@ -3615,7 +4022,7 @@ export async function generateAdlaWattPdf(
       ],
 
       theme:
-        "grid",
+        "plain",
 
       styles: {
         font:
@@ -3632,15 +4039,6 @@ export async function generateAdlaWattPdf(
           41,
           55,
         ],
-
-        lineColor: [
-          203,
-          213,
-          225,
-        ],
-
-        lineWidth:
-          0.25,
 
         fillColor: [
           248,
@@ -3668,25 +4066,25 @@ export async function generateAdlaWattPdf(
 
       bodyStyles: {
         fillColor: [
+          255,
+          255,
+          255,
+        ],
+      },
+
+      alternateRowStyles: {
+        fillColor: [
           248,
           245,
           234,
         ],
       },
 
-      alternateRowStyles: {
-        fillColor: [
-          240,
-          234,
-          214,
-        ],
-      },
-
-      didDrawPage:
+      willDrawPage:
         (
           hookData,
         ) => {
-          paintPdfTableBackground(
+          paintPdfContinuationPage(
             doc,
             hookData.pageNumber,
             temperatureTableStartPage,
@@ -3783,21 +4181,10 @@ export async function generateAdlaWattPdf(
   ) {
     doc.addPage();
 
-    /*
-     * Every new page must also use the AdlaWatt background.
-     */
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
-
-    doc.rect(
-      0,
-      0,
+    paintPdfPageBase(
+      doc,
       pageWidth,
       pageHeight,
-      "F",
     );
 
     currentY =
@@ -3860,7 +4247,7 @@ export async function generateAdlaWattPdf(
           ),
 
         theme:
-          "grid",
+          "plain",
 
         styles: {
           font:
@@ -3877,15 +4264,6 @@ export async function generateAdlaWattPdf(
             41,
             55,
           ],
-
-          lineColor: [
-            203,
-            213,
-            225,
-          ],
-
-          lineWidth:
-            0.25,
 
           fillColor: [
             248,
@@ -3913,25 +4291,25 @@ export async function generateAdlaWattPdf(
 
         bodyStyles: {
           fillColor: [
+            255,
+            255,
+            255,
+          ],
+        },
+
+        alternateRowStyles: {
+          fillColor: [
             248,
             245,
             234,
           ],
         },
 
-        alternateRowStyles: {
-          fillColor: [
-            240,
-            234,
-            214,
-          ],
-        },
-
-        didDrawPage:
+        willDrawPage:
           (
             hookData,
           ) => {
-            paintPdfTableBackground(
+            paintPdfContinuationPage(
               doc,
               hookData.pageNumber,
               applianceSummaryStartPage,
@@ -3974,15 +4352,15 @@ export async function generateAdlaWattPdf(
       currentY + 30;
   } else {
     doc.setFillColor(
-      248,
-      245,
-      234,
+      255,
+      253,
+      230,
     );
 
     doc.setDrawColor(
-      203,
-      213,
-      225,
+      242,
+      222,
+      150,
     );
 
     doc.roundedRect(
@@ -4005,9 +4383,9 @@ export async function generateAdlaWattPdf(
     );
 
     doc.setTextColor(
-      71,
-      85,
-      105,
+      PDF_MUTED[0],
+      PDF_MUTED[1],
+      PDF_MUTED[2],
     );
 
     doc.text(
@@ -4027,29 +4405,20 @@ export async function generateAdlaWattPdf(
      MONITORING HISTORY
      ---------------------------------------------------------- */
 
-  if (
-    currentY >
-    pageHeight - 70
-  ) {
-    doc.addPage();
+  /*
+   * Monitoring History always begins on a fresh page so the
+   * dense data grid stays consistent, matching the reference.
+   */
+  doc.addPage();
 
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
+  paintPdfPageBase(
+    doc,
+    pageWidth,
+    pageHeight,
+  );
 
-    doc.rect(
-      0,
-      0,
-      pageWidth,
-      pageHeight,
-      "F",
-    );
-
-    currentY =
-      20;
-  }
+  currentY =
+    20;
 
   currentY =
     addPdfSectionTitle(
@@ -4057,6 +4426,30 @@ export async function generateAdlaWattPdf(
       "MONITORING HISTORY",
       currentY,
     );
+
+  doc.setFont(
+    "helvetica",
+    "normal",
+  );
+
+  doc.setFontSize(
+    8,
+  );
+
+  doc.setTextColor(
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
+  );
+
+  doc.text(
+    "5-minute interval readings",
+    horizontalMargin,
+    currentY,
+  );
+
+  currentY +=
+    4;
 
   if (
     reportData.monitoringRows
@@ -4131,7 +4524,7 @@ export async function generateAdlaWattPdf(
           ),
 
         theme:
-          "grid",
+          "plain",
 
         styles: {
           font:
@@ -4151,15 +4544,6 @@ export async function generateAdlaWattPdf(
             41,
             55,
           ],
-
-          lineColor: [
-            203,
-            213,
-            225,
-          ],
-
-          lineWidth:
-            0.25,
 
           fillColor: [
             248,
@@ -4190,25 +4574,25 @@ export async function generateAdlaWattPdf(
 
         bodyStyles: {
           fillColor: [
+            255,
+            255,
+            255,
+          ],
+        },
+
+        alternateRowStyles: {
+          fillColor: [
             248,
             245,
             234,
           ],
         },
 
-        alternateRowStyles: {
-          fillColor: [
-            240,
-            234,
-            214,
-          ],
-        },
-
-        didDrawPage:
+        willDrawPage:
           (
             hookData,
           ) => {
-            paintPdfTableBackground(
+            paintPdfContinuationPage(
               doc,
               hookData.pageNumber,
               monitoringTableStartPage,
@@ -4380,18 +4764,10 @@ export async function generateAdlaWattPdf(
   ) {
     doc.addPage();
 
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
-
-    doc.rect(
-      0,
-      0,
+    paintPdfPageBase(
+      doc,
       pageWidth,
       pageHeight,
-      "F",
     );
 
     currentY =
@@ -4451,7 +4827,7 @@ export async function generateAdlaWattPdf(
           ),
 
         theme:
-          "grid",
+          "plain",
 
         styles: {
           font:
@@ -4471,15 +4847,6 @@ export async function generateAdlaWattPdf(
             41,
             55,
           ],
-
-          lineColor: [
-            203,
-            213,
-            225,
-          ],
-
-          lineWidth:
-            0.25,
 
           fillColor: [
             248,
@@ -4507,25 +4874,25 @@ export async function generateAdlaWattPdf(
 
         bodyStyles: {
           fillColor: [
+            255,
+            255,
+            255,
+          ],
+        },
+
+        alternateRowStyles: {
+          fillColor: [
             248,
             245,
             234,
           ],
         },
 
-        alternateRowStyles: {
-          fillColor: [
-            240,
-            234,
-            214,
-          ],
-        },
-
-        didDrawPage:
+        willDrawPage:
           (
             hookData,
           ) => {
-            paintPdfTableBackground(
+            paintPdfContinuationPage(
               doc,
               hookData.pageNumber,
               applianceUsageStartPage,
@@ -4607,6 +4974,11 @@ export async function generateAdlaWattPdf(
 
   addPdfFooter(
     doc,
+    `${formatReportDate(
+      reportData.range.start,
+    )} - ${formatReportDate(
+      reportData.range.end,
+    )}  |  ${reportData.frequency} Report`,
   );
 
   return doc;

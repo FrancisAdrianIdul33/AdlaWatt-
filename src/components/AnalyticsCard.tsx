@@ -739,8 +739,8 @@ export default function AnalyticsCards({
             color={
               Colors.light.primary
             }
-            isAnimated
-            animateOnDataChange
+            isAnimated={Platform.OS !== "web"}
+            animateOnDataChange={Platform.OS !== "web"}
             showDataPointOnFocus
             focusedDataPointColor={
               Colors.light.secondary
@@ -807,8 +807,8 @@ export default function AnalyticsCards({
             color={
               Colors.light.secondary
             }
-            isAnimated
-            animateOnDataChange
+            isAnimated={Platform.OS !== "web"}
+            animateOnDataChange={Platform.OS !== "web"}
             showDataPointOnFocus
             focusedDataPointColor={
               Colors.light.primary
@@ -911,7 +911,7 @@ export default function AnalyticsCards({
                 frontColor={
                   Colors.light.primary
                 }
-                isAnimated
+                isAnimated={Platform.OS !== "web"}
                 endSpacing={12}
               />
             </View>
@@ -976,7 +976,7 @@ export default function AnalyticsCards({
                 frontColor={
                   Colors.light.secondary
                 }
-                isAnimated
+                isAnimated={Platform.OS !== "web"}
                 endSpacing={12}
               />
             </View>
@@ -1098,8 +1098,8 @@ export default function AnalyticsCards({
               color={
                 Colors.light.primary
               }
-              isAnimated
-              animateOnDataChange
+              isAnimated={Platform.OS !== "web"}
+              animateOnDataChange={Platform.OS !== "web"}
               showDataPointOnFocus
               focusedDataPointColor={
                 Colors.light.secondary
@@ -1155,8 +1155,8 @@ export default function AnalyticsCards({
                 color={
                   Colors.light.secondary
                 }
-                isAnimated
-                animateOnDataChange
+                isAnimated={Platform.OS !== "web"}
+                animateOnDataChange={Platform.OS !== "web"}
                 showDataPointOnFocus
                 focusedDataPointColor={
                   Colors.light.primary
