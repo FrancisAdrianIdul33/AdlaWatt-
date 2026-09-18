@@ -1,8 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React from "react";
+import React, {
+  useEffect,
+  useRef,
+} from "react";
 
 import {
+  Animated,
   StyleSheet,
   View,
 } from "react-native";
@@ -101,10 +105,10 @@ const LOW_BATTERY_THRESHOLD = 20;
 // ============================================================
 // SUN GAUGE CONFIGURATION
 //
-// Two-layer sun: a static grey layer with a yellow layer on
-// top whose opacity scales with the solar status. The circle
-// is large enough that the solar input value sits inside with
-// clear clearance; the rays match the battery gauge's stroke.
+// Single-layer sun: a solid fill color driven by the solar
+// status. Low = grey, Moderate = 50% yellow, High = 100%
+// yellow. A smooth animated transition cross-fades between
+// the three colors while the gauge stays fully colored.
 // ============================================================
 
 const SUN_RADIUS = 52;
@@ -118,9 +122,13 @@ const SUN_RAY_START = 62;
 
 const SUN_RAY_END = 68;
 
-const SUN_GREY = "#9CA3AF";
+const SUN_GREY = "#C7C7C6";
 
-const SUN_YELLOW = "#FDE68A";
+const SUN_MODERATE = "#EDEB44";
+
+const SUN_HIGH = "#FFBF00";
+
+const SOLAR_ANIMATION_DURATION_MS = 2000;
 
 const SOLAR_RAYS = Array.from(
   { length: 8 },
@@ -150,6 +158,39 @@ const SOLAR_RAYS = Array.from(
 );
 
 // ============================================================
+// SUN ANIMATION HELPERS
+//
+// The react-native-svg primitives are wrapped so they accept
+// animated props. The sun color is driven by an intensity value
+// that maps 0 → grey, 0.5 → 50% yellow, 1 → 100% yellow, with
+// every in-between shade resolved by color interpolation.
+// ============================================================
+
+const AnimatedCircle =
+  Animated.createAnimatedComponent(
+    Circle,
+  );
+
+const AnimatedLine =
+  Animated.createAnimatedComponent(
+    Line,
+  );
+
+function getSolarIntensity(
+  status: string | undefined,
+): number {
+  if (status === "High") {
+    return 1;
+  }
+
+  if (status === "Moderate") {
+    return 0.5;
+  }
+
+  return 0;
+}
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -159,6 +200,63 @@ export default function ChartCard({
   weather,
   loading,
 }: ChartCardProps) {
+
+  // ==========================================================
+  // SUN GAUGE ANIMATION
+  //
+  // A single animated intensity value drives the sun color so
+  // the gauge stays fully colored (no more grey/yellow layers).
+  // When the solar status flips the sun cross-fades between
+  // the three colors over SOLAR_ANIMATION_DURATION_MS.
+  // ==========================================================
+
+  const sunIntensity =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const sunColor =
+    sunIntensity.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [
+        SUN_GREY,
+        SUN_MODERATE,
+        SUN_HIGH,
+      ],
+    });
+
+  const solarTarget =
+    getSolarIntensity(
+      monitoring?.solar_status,
+    );
+
+  useEffect(() => {
+    if (type !== "solar") {
+      return;
+    }
+
+    const animation =
+      Animated.timing(
+        sunIntensity,
+        {
+          toValue: solarTarget,
+          duration:
+            SOLAR_ANIMATION_DURATION_MS,
+          useNativeDriver: false,
+        },
+      );
+
+    animation.start();
+
+    // Cancel any in-flight transition if the status
+    // flips again before the 2s fade completes.
+    return () =>
+      animation.stop();
+  }, [
+    type,
+    solarTarget,
+    sunIntensity,
+  ]);
 
   // ==========================================================
   // BATTERY MONITORING GROUP
@@ -791,21 +889,6 @@ export default function ChartCard({
         ? styles.moderateBadge
         : styles.lowBadge;
 
-    // --------------------------------------------------------
-    // SUN TWO-LAYER OPACITY
-    //
-    // Low      = 0    (grey layer only)
-    // Moderate = 0.5  (yellow at half strength)
-    // High     = 1    (full yellow)
-    // --------------------------------------------------------
-
-    const sunYellowOpacity =
-      solarStatus === "High"
-        ? 1
-        : solarStatus === "Moderate"
-        ? 0.5
-        : 0;
-
     return (
       <View
         style={[
@@ -883,57 +966,27 @@ export default function ChartCard({
                 }
               >
 
-                {/* Grey base layer */}
-
-                <Circle
+                <AnimatedCircle
                   cx={CENTER}
                   cy={CENTER}
                   r={SUN_RADIUS}
-                  fill={SUN_GREY}
+                  fill={sunColor}
                 />
-
-                {/* Yellow top layer (opacity by status) */}
-
-                <Circle
-                  cx={CENTER}
-                  cy={CENTER}
-                  r={SUN_RADIUS}
-                  fill={SUN_YELLOW}
-                  opacity={sunYellowOpacity}
-                />
-
-                {/* Rays — grey base */}
 
                 {SOLAR_RAYS.map((ray) => (
-                  <Line
+                  <AnimatedLine
                     key={
-                      `ray-grey-${ray.x1}-${ray.y1}`
+                      `ray-${ray.x1}-${ray.y1}`
                     }
                     x1={ray.x1}
                     y1={ray.y1}
                     x2={ray.x2}
                     y2={ray.y2}
-                    stroke={SUN_GREY}
-                    strokeWidth={SUN_RAYS_STROKE}
-                    strokeLinecap="round"
-                  />
-                ))}
-
-                {/* Rays — yellow overlay */}
-
-                {SOLAR_RAYS.map((ray) => (
-                  <Line
-                    key={
-                      `ray-yellow-${ray.x1}-${ray.y1}`
+                    stroke={sunColor}
+                    strokeWidth={
+                      SUN_RAYS_STROKE
                     }
-                    x1={ray.x1}
-                    y1={ray.y1}
-                    x2={ray.x2}
-                    y2={ray.y2}
-                    stroke={SUN_YELLOW}
-                    strokeWidth={SUN_RAYS_STROKE}
                     strokeLinecap="round"
-                    opacity={sunYellowOpacity}
                   />
                 ))}
 
@@ -968,9 +1021,10 @@ export default function ChartCard({
 
             <AppText
               variant="caption"
-              style={
-                styles.remainingText
-              }
+              style={[
+                styles.remainingText,
+                styles.solarTimerText,
+              ]}
             >
               Timer:{" "}
               {loading
@@ -985,9 +1039,10 @@ export default function ChartCard({
                 ============================================== */}
 
             <View
-              style={
-                styles.batteryStatusRow
-              }
+              style={[
+                styles.batteryStatusRow,
+                styles.solarStatusRow,
+              ]}
             >
 
               <View
@@ -2168,6 +2223,22 @@ const styles = StyleSheet.create({
     marginTop: 3,
     textAlign: "center",
     fontSize: 11,
+  },
+
+  // ==========================================================
+  // SOLAR MONITORING COLUMN OVERRIDES
+  //
+  // Pushes the timer and status badge slightly further away
+  // from the sun gauge (down by ~1px) without affecting the
+  // battery card that shares the base styles.
+  // ==========================================================
+
+  solarTimerText: {
+    marginTop: 12,
+  },
+
+  solarStatusRow: {
+    marginTop: 8,
   },
 
   // ==========================================================
