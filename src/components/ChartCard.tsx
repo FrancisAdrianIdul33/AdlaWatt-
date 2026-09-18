@@ -200,6 +200,52 @@ export default function ChartCard({
         loading,
       );
 
+    /*
+     * The monitoring service data is extended here with the
+     * interior temperature fields so both temperatures can be
+     * surfaced inside this card without changing the shared
+     * MonitoringData import.
+     */
+
+    const temperatureMonitoring =
+      monitoring as (
+        MonitoringData & {
+          interior_temp: number;
+          interior_temp_status:
+            TemperatureStatus;
+        }
+      ) | null;
+
+    const interiorTemperatureStatus =
+      temperatureMonitoring
+        ?.interior_temp_status ??
+      "Nominal";
+
+    const batteryTemperatureData =
+      getCardData(
+        "temperature",
+        monitoring,
+        weather ?? null,
+        loading,
+      );
+
+    const interiorTemperatureValue =
+      loading
+        ? "—"
+        : `${temperatureMonitoring
+            ?.interior_temp ??
+          0}°C`;
+
+    const interiorTemperatureBadge =
+      getTemperatureBadgeStyle(
+        interiorTemperatureStatus,
+      );
+
+    const interiorTemperatureBadgeText =
+      getTemperatureBadgeTextStyle(
+        interiorTemperatureStatus,
+      );
+
     return (
       <View
         style={[
@@ -518,7 +564,7 @@ export default function ChartCard({
             </View>
 
             {/* ==============================================
-                RESERVED CELLS (for future data)
+                RESERVED CELL (for future data)
                 ============================================== */}
 
             <View
@@ -527,17 +573,105 @@ export default function ChartCard({
               }
             />
 
-            <View
-              style={
-                styles.batteryMetricCell
-              }
-            />
+            {/* ==============================================
+                TEMPERATURE (battery temperature)
+                ============================================== */}
 
             <View
               style={
                 styles.batteryMetricCell
               }
-            />
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Temperature
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {batteryTemperatureData.value}
+              </AppText>
+
+              {batteryTemperatureData.badge && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    batteryTemperatureData.badgeStyle,
+                  ]}
+                >
+
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusBadgeText,
+                      batteryTemperatureData.badgeTextStyle,
+                    ]}
+                  >
+                    {batteryTemperatureData.badge}
+                  </AppText>
+
+                </View>
+              )}
+
+            </View>
+
+            {/* ==============================================
+                INTERIOR TEMPERATURE
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Interior
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {interiorTemperatureValue}
+              </AppText>
+
+              <View
+                style={[
+                  styles.statusBadge,
+                  interiorTemperatureBadge,
+                ]}
+              >
+
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.statusBadgeText,
+                    interiorTemperatureBadgeText,
+                  ]}
+                >
+                  {interiorTemperatureStatus}
+                </AppText>
+
+              </View>
+
+            </View>
 
           </View>
 
@@ -999,41 +1133,12 @@ export default function ChartCard({
   // ==========================================================
   // TEMPERATURE MONITORING GROUP
   //
-  // Interior Temperature + Battery Temperature
-  // + Solar Panel Temperature
+  // Only Solar Panel Temperature remains here. The battery and
+  // interior temperatures were moved into the Battery
+  // Monitoring card's 2 × 3 grid.
   // ==========================================================
 
   if (type === "temperature") {
-
-    /*
-     * The monitoring service data is extended here with the
-     * newly added interior temperature fields.
-     *
-     * This keeps the existing MonitoringData import and all
-     * other ChartCard logic unchanged.
-     */
-
-    const temperatureMonitoring =
-      monitoring as (
-        MonitoringData & {
-          interior_temp: number;
-          interior_temp_status:
-            TemperatureStatus;
-        }
-      ) | null;
-
-    const interiorTemperatureStatus =
-      temperatureMonitoring
-        ?.interior_temp_status ??
-      "Nominal";
-
-    const batteryTemperatureData =
-      getCardData(
-        "temperature",
-        monitoring,
-        weather ?? null,
-        loading,
-      );
 
     const solarTemperatureData =
       getCardData(
@@ -1041,23 +1146,6 @@ export default function ChartCard({
         monitoring,
         weather ?? null,
         loading,
-      );
-
-    const interiorTemperatureValue =
-      loading
-        ? "—"
-        : `${temperatureMonitoring
-            ?.interior_temp ??
-          0}°C`;
-
-    const interiorTemperatureBadge =
-      getTemperatureBadgeStyle(
-        interiorTemperatureStatus,
-      );
-
-    const interiorTemperatureBadgeText =
-      getTemperatureBadgeTextStyle(
-        interiorTemperatureStatus,
       );
 
     return (
@@ -1104,7 +1192,7 @@ export default function ChartCard({
         </View>
 
         {/* ==================================================
-            TEMPERATURE 1 × 3 MEASUREMENT GRID
+            SOLAR PANEL TEMPERATURE
             ================================================== */}
 
         <View
@@ -1112,126 +1200,6 @@ export default function ChartCard({
             styles.groupMeasurementGrid
           }
         >
-
-          {/* ==================================================
-              INTERIOR TEMPERATURE
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              Interior
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {interiorTemperatureValue}
-            </AppText>
-
-            <View
-              style={
-                styles.statusSlot
-              }
-            >
-
-              <View
-                style={[
-                  styles.statusBadge,
-                  interiorTemperatureBadge,
-                ]}
-              >
-
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.statusBadgeText,
-                    interiorTemperatureBadgeText,
-                  ]}
-                >
-                  {interiorTemperatureStatus}
-                </AppText>
-
-              </View>
-
-            </View>
-
-          </View>
-
-          {/* ==================================================
-              BATTERY TEMPERATURE
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              Battery
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {batteryTemperatureData.value}
-            </AppText>
-
-            <View
-              style={
-                styles.statusSlot
-              }
-            >
-
-              {batteryTemperatureData.badge && (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    batteryTemperatureData.badgeStyle,
-                  ]}
-                >
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.statusBadgeText,
-                      batteryTemperatureData.badgeTextStyle,
-                    ]}
-                  >
-                    {batteryTemperatureData.badge}
-                  </AppText>
-
-                </View>
-              )}
-
-            </View>
-
-          </View>
-
-          {/* ==================================================
-              SOLAR PANEL TEMPERATURE
-              ================================================== */}
 
           <View
             style={
