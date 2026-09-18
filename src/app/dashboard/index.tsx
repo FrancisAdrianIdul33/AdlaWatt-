@@ -322,25 +322,6 @@ export default function DashboardScreen() {
                 loading={weatherLoading}
               />
             </View>
-
-            {/* ==============================================
-                TEMPERATURE
-
-                ChartCard.tsx internally renders:
-                - Interior Temperature
-                - Battery Temperature
-                - Solar Panel Temperature
-                ============================================== */}
-
-            <View
-              style={styles.fullWidthCard}
-            >
-              <ChartCard
-                type="temperature"
-                monitoring={monitoring}
-                loading={loading}
-              />
-            </View>
           </View>
         </View>
 
