@@ -181,7 +181,7 @@ export default function RegisterScreen() {
     <ScreenContainer>
       <View style={styles.container}>
         <AppLogo
-          width={300}
+          width={350}
           height={180}
         />
 

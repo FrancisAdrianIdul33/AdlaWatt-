@@ -2,10 +2,32 @@ import * as Location from "expo-location";
 
 // ============================================================
 // OPENWEATHER API
+//
+// Providers (OpenWeather only):
+//
+//   1. One Call API 4.0 - Current weather   (primary)
+//      https://openweathermap.org/api/one-call-4
+//      Hyper-local current conditions from the latest
+//      high-resolution model for the exact GPS coordinates.
+//      Requires the "One Call by Call" subscription
+//      (free tier: 1,000 calls / day).
+//
+//   2. Current Weather 2.5  (fallback)
+//      https://openweathermap.org/current
+//      Used automatically if the One Call 4.0 request is
+//      unavailable on the account.
+//
+//   3. 5-day / 3-hour Forecast 2.5   (chart data)
+//      Used for the hourly temperature series regardless of
+//      which provider served the current conditions.
+//
+// Every call uses the LIVE coordinates from the device and is
+// re-fetched on the dashboard refresh interval, so the
+// temperature is never static or city-wide.
 // ============================================================
 
-const OPEN_WEATHER_APP_ID =
-  "280e7375e7fcf69a4abf516a878b84fe";
+const ONE_CALL_V4_CURRENT_URL =
+  "https://api.openweathermap.org/data/4.0/onecall/current";
 
 const CURRENT_WEATHER_URL =
   "https://api.openweathermap.org/data/2.5/weather";
@@ -16,15 +38,24 @@ const FORECAST_URL =
 const REVERSE_GEOCODE_URL =
   "https://api.bigdatacloud.net/data/reverse-geocode-client";
 
+const OPEN_WEATHER_APP_ID =
+  "280e7375e7fcf69a4abf516a878b84fe";
+
 const TIMEZONE = "Asia/Manila";
 
 const TIMEZONE_ABBREVIATION = "PHT";
 
 /*
- * Number of 3-hour forecast steps to retrieve.
- * The free OpenWeather tier returns 40 entries (5 days).
+ * Number of 3-hour forecast steps to retrieve for the hourly
+ * chart. The free OpenWeather tier returns 40 entries (5 days).
  */
 const FORECAST_STEPS = 40;
+
+/*
+ * Every network call is aborted after this long so the weather
+ * card never hangs when the device has a slow connection.
+ */
+const REQUEST_TIMEOUT_MS = 10 * 1000;
 
 // ============================================================
 // TYPES
@@ -85,7 +116,63 @@ export type WeatherForecast = {
 };
 
 // ============================================================
-// OPENWEATHER RESPONSE TYPES
+// NETWORK HELPERS
+// ============================================================
+
+/*
+ * Fetches a URL with a hard timeout. Rejects on any non-2xx
+ * status so callers can fall back to another provider.
+ */
+async function fetchJson(
+  url: string
+): Promise<unknown> {
+  const controller =
+    new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS
+  );
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status}`
+      );
+    }
+
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// ============================================================
+// OPENWEATHER REQUEST PARAMS
+// ============================================================
+
+/*
+ * Shared query parameters for every OpenWeather call:
+ * exact device coordinates + metric units + English.
+ */
+function buildOpenWeatherParams(
+  location: UserLocation
+): URLSearchParams {
+  return new URLSearchParams({
+    lat: location.latitude.toString(),
+    lon: location.longitude.toString(),
+    appid: OPEN_WEATHER_APP_ID,
+    units: "metric",
+    lang: "en",
+  });
+}
+
+// ============================================================
+// OPENWEATHER 2.5 RESPONSE TYPES
 // ============================================================
 
 type OpenWeatherCurrentResponse = {
@@ -112,6 +199,24 @@ type OpenWeatherForecastResponse = {
 };
 
 // ============================================================
+// OPENWEATHER ONE CALL 4.0 RESPONSE TYPE
+// ============================================================
+
+type OneCallV4CurrentData = {
+  dt: number;
+  temp: number;
+  weather: {
+    id: number;
+  }[];
+};
+
+type OneCallV4CurrentResponse = {
+  timezone: string;
+  timezone_offset: number;
+  data: OneCallV4CurrentData[];
+};
+
+// ============================================================
 // PHILIPPINE SEASON
 // ============================================================
 
@@ -132,11 +237,39 @@ function getPhilippineSeason(
 }
 
 // ============================================================
+// VALUE VALIDATION
+// ============================================================
+
+/*
+ * A physically plausible surface temperature in Celsius.
+ * Rejects clearly broken API responses so a bad reading never
+ * reaches the UI.
+ */
+function isValidTemperature(
+  value: number
+): boolean {
+  return (
+    Number.isFinite(value) &&
+    value >= -60 &&
+    value <= 60
+  );
+}
+
+function isValidWeatherCode(
+  value: unknown
+): value is number {
+  return (
+    Number.isFinite(value) &&
+    typeof value === "number"
+  );
+}
+
+// ============================================================
 // OPENWEATHER WEATHER CODE MAPPING
 // ============================================================
 
 /*
- * OpenWeather condition codes:
+ * OpenWeather condition codes (shared by One Call 4.0 and 2.5):
  *
  * 200-232 Thunderstorm
  * 300-321 Drizzle
@@ -188,31 +321,19 @@ function getWeatherCondition(
     // --------------------------------------------------------
 
     case 300:
-      return "Light drizzle";
-
-    case 301:
-      return "Moderate drizzle";
-
-    case 302:
-      return "Dense intensity drizzle";
-
     case 310:
-      return "Light drizzle";
-
-    case 311:
-      return "Moderate drizzle";
-
-    case 312:
-      return "Dense intensity drizzle";
-
     case 313:
       return "Light drizzle";
 
+    case 301:
+    case 311:
     case 314:
-      return "Moderate drizzle";
-
     case 321:
       return "Moderate drizzle";
+
+    case 302:
+    case 312:
+      return "Dense intensity drizzle";
 
     // --------------------------------------------------------
     // RAIN
@@ -287,6 +408,25 @@ function getWeatherCondition(
 }
 
 // ============================================================
+// TIME CONVERSION
+// ============================================================
+//
+// OpenWeather exposes Unix timestamps in seconds (UTC).
+// Adding the API-provided UTC offset (seconds east of UTC)
+// converts them to the requested timezone: Asia/Manila.
+//
+// ============================================================
+
+function toLocalDate(
+  timestamp: number,
+  utcOffsetSeconds: number
+): Date {
+  return new Date(
+    (timestamp + utcOffsetSeconds) * 1000
+  );
+}
+
+// ============================================================
 // REVERSE GEOCODING
 // ============================================================
 
@@ -308,18 +448,10 @@ async function reverseGeocode(
       localityLanguage: "en",
     });
 
-    const response = await fetch(
-      `${REVERSE_GEOCODE_URL}?${params.toString()}`
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Reverse geocoding failed: ${response.status}`
-      );
-    }
-
     const data =
-      (await response.json()) as ReverseGeocodeResponse;
+      (await fetchJson(
+        `${REVERSE_GEOCODE_URL}?${params.toString()}`
+      )) as ReverseGeocodeResponse;
 
     const city =
       data.city?.trim() ||
@@ -401,25 +533,6 @@ async function getUserLocation(): Promise<UserLocation> {
 }
 
 // ============================================================
-// CONVERT OPENWEATHER UNIX TIMESTAMP TO LOCAL TIME
-// ============================================================
-//
-// OpenWeather exposes Unix timestamps in seconds.
-// Adding the API-provided UTC offset (seconds east of UTC)
-// converts them to the requested timezone: Asia/Manila.
-//
-// ============================================================
-
-function toLocalDate(
-  timestamp: number,
-  utcOffsetSeconds: number
-): Date {
-  return new Date(
-    (timestamp + utcOffsetSeconds) * 1000
-  );
-}
-
-// ============================================================
 // TEMPERATURE ROUNDING
 // ============================================================
 
@@ -430,75 +543,74 @@ function roundTemperature(
 }
 
 // ============================================================
-// GET CURRENT WEATHER FOR USER
+// BUILD WEATHER RESULT
 // ============================================================
 
-export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
-  // ==========================================================
-  // 1. GET EXACT DEVICE COORDINATES
-  // ==========================================================
+function buildWeatherForecast(
+  location: UserLocation,
+  utcOffsetSeconds: number,
+  currentTime: Date,
+  temperature: number,
+  weatherCode: number,
+  hourly: HourlyWeather
+): WeatherForecast {
+  return {
+    location: {
+      // Preserve the actual coordinates collected
+      // from the user's device.
+      ...location,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    },
 
-  const location = await getUserLocation();
+    timezone: TIMEZONE,
+    timezoneAbbreviation: TIMEZONE_ABBREVIATION,
+    utcOffsetSeconds,
+    elevation: 0,
 
-  // ==========================================================
-  // 2. REQUEST CURRENT WEATHER
-  // ==========================================================
+    weather: {
+      time: currentTime,
+      temperature,
+      temperatureUnit: "°C",
+      weatherCode,
+      condition:
+        getWeatherCondition(
+          weatherCode
+        ),
+      season:
+        getPhilippineSeason(
+          currentTime
+        ),
+    },
 
-  const params = new URLSearchParams({
-    lat: location.latitude.toString(),
-    lon: location.longitude.toString(),
-    appid: OPEN_WEATHER_APP_ID,
-    units: "metric",
-    lang: "en",
-  });
+    hourly,
+  };
+}
 
-  const currentResponse = await fetch(
-    `${CURRENT_WEATHER_URL}?${params.toString()}`
-  );
+// ============================================================
+// HOURLY SERIES - 5-DAY / 3-HOUR FORECAST (2.5)
+//
+// Provides the temperature chart for both providers.
+// ============================================================
 
-  if (!currentResponse.ok) {
-    throw new Error(
-      `OpenWeather current weather request failed: ${currentResponse.status}`
+async function getHourlySeries(
+  location: UserLocation,
+  utcOffsetSeconds: number
+): Promise<HourlyWeather> {
+  const params =
+    buildOpenWeatherParams(
+      location
     );
-  }
 
-  const currentData =
-    (await currentResponse.json()) as OpenWeatherCurrentResponse;
-
-  if (
-    !currentData.weather ||
-    currentData.weather.length === 0 ||
-    !currentData.main
-  ) {
-    throw new Error(
-      "OpenWeather returned no current weather data."
-    );
-  }
-
-  // ==========================================================
-  // 3. REQUEST 3-HOUR FORECAST
-  // ==========================================================
-
-  const forecastParams =
-    new URLSearchParams(params);
-
-  forecastParams.set(
+  params.set(
     "cnt",
     FORECAST_STEPS.toString()
   );
 
-  const forecastResponse = await fetch(
-    `${FORECAST_URL}?${forecastParams.toString()}`
-  );
-
-  if (!forecastResponse.ok) {
-    throw new Error(
-      `OpenWeather forecast request failed: ${forecastResponse.status}`
-    );
-  }
-
   const forecastData =
-    (await forecastResponse.json()) as OpenWeatherForecastResponse;
+    (await fetchJson(
+      `${FORECAST_URL}?${params.toString()}`
+    )) as OpenWeatherForecastResponse;
 
   if (
     !forecastData.list ||
@@ -509,54 +621,7 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
     );
   }
 
-  // ==========================================================
-  // 4. TIMEZONE INFORMATION
-  // ==========================================================
-
-  const utcOffsetSeconds =
-    currentData.timezone;
-
-  // ==========================================================
-  // 5. CURRENT WEATHER
-  // ==========================================================
-
-  const currentTime =
-    toLocalDate(
-      currentData.dt,
-      utcOffsetSeconds
-    );
-
-  const currentTemperature =
-    roundTemperature(
-      currentData.main.temp
-    );
-
-  const currentWeatherCode =
-    currentData.weather[0].id;
-
-  if (
-    !Number.isFinite(
-      currentTemperature
-    ) ||
-    !Number.isFinite(
-      currentWeatherCode
-    )
-  ) {
-    throw new Error(
-      "Invalid current weather values."
-    );
-  }
-
-  const condition =
-    getWeatherCondition(
-      currentWeatherCode
-    );
-
-  // ==========================================================
-  // 6. HOURLY WEATHER OBJECT
-  // ==========================================================
-
-  const hourlyWeather: HourlyWeather = {
+  return {
     time: forecastData.list.map(
       (entry) =>
         toLocalDate(
@@ -572,57 +637,221 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
         )
     ),
   };
+}
 
-  // ==========================================================
-  // 7. FINAL WEATHER RESULT
-  // ==========================================================
-  //
-  // IMPORTANT:
-  // Keep the USER'S GPS coordinates here.
-  //
-  // OpenWeather returns the forecast for the requested
-  // coordinates, so the user's coordinates are preserved.
-  //
-  // OpenWeather does not return an elevation in the free
-  // endpoints, so elevation is reported as 0.
-  //
-  // ==========================================================
+// ============================================================
+// CLEAN CURRENT READING
+// ============================================================
+
+/*
+ * Common validation for a current-weather reading and the
+ * default temperature for the Philippine UI. Returns null when
+ * the reading is missing or physically impossible.
+ */
+function parseCurrentReading(
+  temperature: number,
+  weatherCode: number,
+  utcOffsetSeconds: number,
+  timestamp: number
+): {
+  currentTime: Date;
+  temperature: number;
+  weatherCode: number;
+} | null {
+  if (
+    !isValidTemperature(
+      temperature
+    ) ||
+    !isValidWeatherCode(
+      weatherCode
+    ) ||
+    !Number.isFinite(timestamp) ||
+    !Number.isFinite(utcOffsetSeconds)
+  ) {
+    return null;
+  }
 
   return {
-    location: {
-      ...location,
-
-      // Preserve the actual coordinates collected
-      // from the user's device.
-      latitude: location.latitude,
-      longitude: location.longitude,
-    },
-
-    timezone: TIMEZONE,
-    timezoneAbbreviation: TIMEZONE_ABBREVIATION,
-    utcOffsetSeconds,
-    elevation: 0,
-
-    weather: {
-      time: currentTime,
-
-      temperature:
-        currentTemperature,
-
-      temperatureUnit: "°C",
-
-      weatherCode:
-        currentWeatherCode,
-
-      condition,
-
-      season:
-        getPhilippineSeason(
-          currentTime
-        ),
-    },
-
-    hourly:
-      hourlyWeather,
+    currentTime:
+      toLocalDate(
+        timestamp,
+        utcOffsetSeconds
+      ),
+    temperature:
+      roundTemperature(
+        temperature
+      ),
+    weatherCode,
   };
+}
+
+// ============================================================
+// PRIMARY PROVIDER - ONE CALL API 4.0 (CURRENT)
+//
+// https://api.openweathermap.org/data/4.0/onecall/current
+// Returns a single record with hyper-local current conditions
+// for the exact device coordinates.
+// ============================================================
+
+async function getOneCallV4Weather(
+  location: UserLocation
+): Promise<WeatherForecast> {
+  const params =
+    buildOpenWeatherParams(
+      location
+    );
+
+  const currentData =
+    (await fetchJson(
+      `${ONE_CALL_V4_CURRENT_URL}?${params.toString()}`
+    )) as OneCallV4CurrentResponse;
+
+  if (
+    !Array.isArray(currentData.data) ||
+    currentData.data.length === 0 ||
+    !currentData.data[0]
+  ) {
+    throw new Error(
+      "One Call 4.0 returned no current weather data."
+    );
+  }
+
+  const entry = currentData.data[0];
+
+  if (
+    !Array.isArray(entry.weather) ||
+    entry.weather.length === 0
+  ) {
+    throw new Error(
+      "One Call 4.0 returned no weather condition."
+    );
+  }
+
+  const reading = parseCurrentReading(
+    entry.temp,
+    entry.weather[0].id,
+    currentData.timezone_offset,
+    entry.dt
+  );
+
+  if (!reading) {
+    throw new Error(
+      "One Call 4.0 returned invalid current weather values."
+    );
+  }
+
+  const { currentTime, temperature, weatherCode } = reading;
+
+  // The hourly chart comes from the 5-day / 3-hour forecast
+  // so the series stays complete.
+  const hourly =
+    await getHourlySeries(
+      location,
+      currentData.timezone_offset
+    );
+
+  return buildWeatherForecast(
+    location,
+    currentData.timezone_offset,
+    currentTime,
+    temperature,
+    weatherCode,
+    hourly
+  );
+}
+
+// ============================================================
+// FALLBACK PROVIDER - CURRENT WEATHER 2.5
+//
+// Only used if the One Call 4.0 request is unavailable.
+// Also uses the exact device GPS coordinates.
+// ============================================================
+
+async function getLegacyWeather(
+  location: UserLocation
+): Promise<WeatherForecast> {
+  const params =
+    buildOpenWeatherParams(
+      location
+    );
+
+  const currentData =
+    (await fetchJson(
+      `${CURRENT_WEATHER_URL}?${params.toString()}`
+    )) as OpenWeatherCurrentResponse;
+
+  if (
+    !currentData.weather ||
+    currentData.weather.length === 0 ||
+    !currentData.main
+  ) {
+    throw new Error(
+      "OpenWeather returned no current weather data."
+    );
+  }
+
+  const reading = parseCurrentReading(
+    currentData.main.temp,
+    currentData.weather[0].id,
+    currentData.timezone,
+    currentData.dt
+  );
+
+  if (!reading) {
+    throw new Error(
+      "OpenWeather returned invalid current weather values."
+    );
+  }
+
+  const { currentTime, temperature, weatherCode } = reading;
+
+  const hourly =
+    await getHourlySeries(
+      location,
+      currentData.timezone
+    );
+
+  return buildWeatherForecast(
+    location,
+    currentData.timezone,
+    currentTime,
+    temperature,
+    weatherCode,
+    hourly
+  );
+}
+
+// ============================================================
+// GET CURRENT WEATHER FOR USER
+// ============================================================
+
+export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
+  // ==========================================================
+  // 1. GET EXACT DEVICE COORDINATES
+  // ==========================================================
+
+  const location = await getUserLocation();
+
+  // ==========================================================
+  // 2. PRIMARY PROVIDER - ONE CALL API 4.0
+  // ==========================================================
+
+  try {
+    return await getOneCallV4Weather(
+      location
+    );
+  } catch (providerError) {
+    console.warn(
+      "One Call 4.0 failed, switching to Current Weather 2.5:",
+      providerError
+    );
+  }
+
+  // ==========================================================
+  // 3. FALLBACK PROVIDER - CURRENT WEATHER 2.5
+  // ==========================================================
+
+  return getLegacyWeather(
+    location
+  );
 }

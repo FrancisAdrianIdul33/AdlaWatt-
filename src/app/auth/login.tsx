@@ -88,7 +88,7 @@ export default function LoginScreen() {
         {/* AdlaWatt Logo */}
         <View style={styles.logoContainer}>
           <AppLogo
-            width={300}
+            width={350}
             height={200}
           />
         </View>
