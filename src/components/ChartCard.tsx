@@ -46,20 +46,6 @@ type TemperatureStatus =
   | "High"
   | "Critical";
 
-type BatteryStatus =
-  | "Charging"
-  | "Discharging"
-  | "Idle";
-
-type SolarStatus =
-  | "Low"
-  | "Moderate"
-  | "High";
-
-type DoDStatus =
-  | "Safe"
-  | "Unsafe";
-
 interface WeatherData {
   city: string;
   temperature: number;
@@ -123,10 +109,14 @@ export default function ChartCard({
 }: ChartCardProps) {
 
   // ==========================================================
-  // BATTERY CARD
+  // BATTERY MONITORING GROUP
+  //
+  // The battery gauge block (ring + percentage + time remaining
+  // + status badges) was merged into this card's left column.
+  // Voltage, Watt-hour, and Load Now fill the right 2 × 3 grid.
   // ==========================================================
 
-  if (type === "battery") {
+  if (type === "voltage") {
 
     const level =
       monitoring?.battery_level ?? 0;
@@ -167,17 +157,12 @@ export default function ChartCard({
       `scale(-1 1) ` +
       `rotate(-90 ${CENTER} ${CENTER})`;
 
-    // --------------------------------------------------------
-    // BATTERY STATUS
-    // --------------------------------------------------------
-
     const batteryStatus =
       monitoring?.battery_status ??
       "Idle";
 
-    // --------------------------------------------------------
-    // DEPTH OF DISCHARGE STATUS
-    // --------------------------------------------------------
+    const isIdle =
+      batteryStatus === "Idle";
 
     const dodStatus =
       monitoring?.dod_status ??
@@ -190,174 +175,6 @@ export default function ChartCard({
 
     const isDodUnsafe =
       dodStatus === "Unsafe";
-
-    return (
-      <View
-        style={styles.batterySection}
-      >
-
-        {/* ==================================================
-            BATTERY GAUGE
-            ================================================== */}
-
-        <View
-          style={styles.batteryCircle}
-        >
-
-          <Svg
-            width={RING_SIZE}
-            height={RING_SIZE}
-            viewBox={
-              `0 0 ${RING_SIZE} ${RING_SIZE}`
-            }
-          >
-
-            {/* Background Ring */}
-
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              stroke="#D8D6CC"
-              strokeWidth={STROKE}
-              fill="none"
-            />
-
-            {/* Battery Progress */}
-
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              stroke={batteryColor}
-              strokeWidth={STROKE}
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={
-                `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
-              }
-              strokeDashoffset={
-                dashOffset
-              }
-              transform={
-                batteryTransform
-              }
-            />
-
-          </Svg>
-
-          {/* ==================================================
-              BATTERY CENTER
-              ================================================== */}
-
-          <View
-            style={
-              styles.batteryCenter
-            }
-          >
-
-            <AppText
-              variant="heading"
-              style={[
-                styles.batteryPercentage,
-                isLowBattery &&
-                  styles.lowBatteryText,
-              ]}
-            >
-              {loading
-                ? "—"
-                : `${level}%`}
-            </AppText>
-
-          </View>
-
-        </View>
-
-        {/* ==================================================
-            TIME REMAINING
-            ================================================== */}
-
-        <AppText
-          variant="caption"
-          style={
-            styles.remainingText
-          }
-        >
-          Time Remaining:{" "}
-          {loading
-            ? "—"
-            : monitoring
-                ?.time_remaining ??
-              "—"}
-        </AppText>
-
-        {/* ==================================================
-            BATTERY STATUS AND DoD STATUS
-            ================================================== */}
-
-        <View
-          style={
-            styles.batteryStatusRow
-          }
-        >
-
-          {/* Battery Status */}
-
-          <View
-            style={
-              styles.batteryStatus
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.batteryStatusText
-              }
-            >
-              {batteryStatus}
-            </AppText>
-
-          </View>
-
-          {/* DoD Status */}
-
-          <View
-            style={[
-              styles.dodStatusBadge,
-              isDodUnsafe
-                ? styles.dodUnsafeBadge
-                : styles.dodSafeBadge,
-            ]}
-          >
-
-            <AppText
-              variant="caption"
-              style={[
-                styles.dodStatusBadgeText,
-                isDodUnsafe
-                  ? styles.dodUnsafeBadgeText
-                  : styles.dodSafeBadgeText,
-              ]}
-            >
-              {dodLabel}
-            </AppText>
-
-          </View>
-
-        </View>
-
-      </View>
-    );
-  }
-
-  // ==========================================================
-  // BATTERY MONITORING GROUP
-  //
-  // Voltage + Watt-hour + Load Now
-  // ==========================================================
-
-  if (type === "voltage") {
 
     const voltageData =
       getCardData(
@@ -427,124 +244,298 @@ export default function ChartCard({
         </View>
 
         {/* ==================================================
-            BATTERY 1 × 3 MEASUREMENT GRID
+            BATTERY BODY ROW
             ================================================== */}
 
         <View
           style={
-            styles.groupMeasurementGrid
+            styles.batteryBodyRow
           }
         >
 
           {/* ==================================================
-              VOLTAGE
+              LEFT — BATTERY GAUGE COLUMN
               ================================================== */}
 
           <View
             style={
-              styles.groupMetricCell
+              styles.batteryGaugeColumn
             }
           >
+
+            <View
+              style={
+                styles.batteryCircle
+              }
+            >
+
+              <Svg
+                width={RING_SIZE}
+                height={RING_SIZE}
+                viewBox={
+                  `0 0 ${RING_SIZE} ${RING_SIZE}`
+                }
+              >
+
+                {/* Background Ring */}
+
+                <Circle
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={RADIUS}
+                  stroke="#D8D6CC"
+                  strokeWidth={STROKE}
+                  fill="none"
+                />
+
+                {/* Battery Progress */}
+
+                <Circle
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={RADIUS}
+                  stroke={batteryColor}
+                  strokeWidth={STROKE}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={
+                    `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
+                  }
+                  strokeDashoffset={
+                    dashOffset
+                  }
+                  transform={
+                    batteryTransform
+                  }
+                />
+
+              </Svg>
+
+              {/* ==============================================
+                  BATTERY CENTER
+                  ============================================== */}
+
+              <View
+                style={
+                  styles.batteryCenter
+                }
+              >
+
+                <AppText
+                  variant="heading"
+                  style={[
+                    styles.batteryPercentage,
+                    isLowBattery &&
+                      styles.lowBatteryText,
+                  ]}
+                >
+                  {loading
+                    ? "—"
+                    : `${level}%`}
+                </AppText>
+
+              </View>
+
+            </View>
+
+            {/* ==============================================
+                TIME REMAINING
+                ============================================== */}
 
             <AppText
               variant="caption"
               style={
-                styles.groupMetricLabel
+                styles.remainingText
               }
             >
-              {voltageData.label}
+              Time Remaining:{" "}
+              {loading
+                ? "—"
+                : monitoring
+                    ?.time_remaining ??
+                  "—"}
             </AppText>
 
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {voltageData.value}
-            </AppText>
-
-            {/* Reserved status slot for vertical alignment */}
+            {/* ==============================================
+                BATTERY STATUS AND DoD STATUS
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryStatusRow
               }
-            />
+            >
+
+              {/* Battery Status */}
+
+              <View
+                style={[
+                  styles.batteryStatus,
+                  isIdle
+                    ? styles.batteryStatusIdle
+                    : null,
+                ]}
+              >
+
+                <AppText
+                  variant="caption"
+                  style={
+                    styles.batteryStatusText
+                  }
+                >
+                  {batteryStatus}
+                </AppText>
+
+              </View>
+
+              {/* DoD Status */}
+
+              <View
+                style={[
+                  styles.dodStatusBadge,
+                  isDodUnsafe
+                    ? styles.dodUnsafeBadge
+                    : styles.dodSafeBadge,
+                ]}
+              >
+
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.dodStatusBadgeText,
+                    isDodUnsafe
+                      ? styles.dodUnsafeBadgeText
+                      : styles.dodSafeBadgeText,
+                  ]}
+                >
+                  {dodLabel}
+                </AppText>
+
+              </View>
+
+            </View>
 
           </View>
 
           {/* ==================================================
-              WATT-HOUR
+              RIGHT — BATTERY 2 × 3 MEASUREMENT GRID
               ================================================== */}
 
           <View
             style={
-              styles.groupMetricCell
+              styles.batteryMetricGrid
             }
           >
 
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              {wattHourData.label}
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {wattHourData.value}
-            </AppText>
-
-            {/* Reserved status slot for vertical alignment */}
+            {/* ==============================================
+                VOLTAGE
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                {voltageData.label}
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {voltageData.value}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                WATT-HOUR
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                {wattHourData.label}
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {wattHourData.value}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                CURRENT LOAD
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                {loadData.label}
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {loadData.value}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                RESERVED CELLS (for future data)
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
               }
             />
 
-          </View>
-
-          {/* ==================================================
-              CURRENT LOAD
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
+            <View
               style={
-                styles.groupMetricLabel
+                styles.batteryMetricCell
               }
-            >
-              {loadData.label}
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {loadData.value}
-            </AppText>
-
-            {/* Reserved status slot for vertical alignment */}
+            />
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryMetricCell
               }
             />
 
@@ -1311,6 +1302,7 @@ export default function ChartCard({
   // ==========================================================
 
   if (
+    type === "battery" ||
     type === "watt_hour" ||
     type === "solar_voltage" ||
     type === "solar_current" ||
@@ -2033,10 +2025,35 @@ const styles = StyleSheet.create({
   // BATTERY
   // ==========================================================
 
-  batterySection: {
+  // ==========================================================
+  // BATTERY BODY ROW
+  //
+  // Splits the card body into two equal flex halves. Both
+  // columns are flex:1 so the dividing boundary always lands
+  // on the true center of the card. The column gap sits in
+  // the middle, acting as the imaginary divider.
+  // ==========================================================
+
+  batteryBodyRow: {
+    flex: 1,
     width: "100%",
+    flexDirection: "row",
+    alignItems: "stretch",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    columnGap: 12,
+  },
+
+  // ==========================================================
+  // LEFT — BATTERY GAUGE COLUMN
+  // ==========================================================
+
+  batteryGaugeColumn: {
+    flex: 1,
     alignItems: "center",
-    marginBottom: 14,
+    justifyContent: "flex-start",
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
 
   batteryCircle: {
@@ -2059,7 +2076,7 @@ const styles = StyleSheet.create({
 
   batteryPercentage: {
     color: "#000000",
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: "800",
     lineHeight: 30,
   },
@@ -2068,19 +2085,12 @@ const styles = StyleSheet.create({
     color: Colors.light.error,
   },
 
-  batteryLabel: {
-    color:
-      Colors.light.textSecondary,
-    fontWeight: "600",
-    marginTop: 1,
-  },
-
   batteryStatusRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 7,
-    gap: 9,
+    gap: 8,
   },
 
   batteryStatus: {
@@ -2095,6 +2105,11 @@ const styles = StyleSheet.create({
     height: 25,
   },
 
+  batteryStatusIdle: {
+    backgroundColor:
+      Colors.light.error,
+  },
+
   batteryStatusText: {
     color: "#FFFFFF",
     fontSize: 12,
@@ -2106,6 +2121,51 @@ const styles = StyleSheet.create({
       Colors.light.textSecondary,
     marginTop: 3,
     textAlign: "center",
+    fontSize: 11,
+  },
+
+  // ==========================================================
+  // RIGHT — BATTERY 2 × 3 MEASUREMENT GRID
+  //
+  // Flex-wraps six equal cells (two per row × three rows).
+  // The bottom three cells are reserved for future data.
+  // ==========================================================
+
+  batteryMetricGrid: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "stretch",
+    alignContent: "flex-start",
+    justifyContent: "space-between",
+  },
+
+  batteryMetricCell: {
+    width: "50%",
+    minHeight: 78,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+
+  batteryMetricLabel: {
+    color: "#000000",
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    flexShrink: 1,
+  },
+
+  batteryMetricValue: {
+    color: "#000000",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 3,
+    lineHeight: 22,
+    flexShrink: 1,
   },
 
   // ==========================================================
