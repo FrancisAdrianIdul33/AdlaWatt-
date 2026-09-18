@@ -3,7 +3,10 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --dev-client",
+    "start:lan": "expo start --dev-client --host lan",
+    "start:tunnel": "expo start --dev-client --tunnel",
+    "reverse": "adb reverse tcp:8081 tcp:8081",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

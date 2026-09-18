@@ -1,18 +1,30 @@
 import * as Location from "expo-location";
 
-import { fetchWeatherApi } from "openmeteo";
-
 // ============================================================
-// OPEN-METEO ECMWF IFS HRES 9 KM
+// OPENWEATHER API
 // ============================================================
 
-const OPEN_METEO_URL =
-  "https://api.open-meteo.com/v1/ecmwf";
+const OPEN_WEATHER_APP_ID =
+  "280e7375e7fcf69a4abf516a878b84fe";
+
+const CURRENT_WEATHER_URL =
+  "https://api.openweathermap.org/data/2.5/weather";
+
+const FORECAST_URL =
+  "https://api.openweathermap.org/data/2.5/forecast";
 
 const REVERSE_GEOCODE_URL =
   "https://api.bigdatacloud.net/data/reverse-geocode-client";
 
-const TIMEZONE = "auto";
+const TIMEZONE = "Asia/Manila";
+
+const TIMEZONE_ABBREVIATION = "PHT";
+
+/*
+ * Number of 3-hour forecast steps to retrieve.
+ * The free OpenWeather tier returns 40 entries (5 days).
+ */
+const FORECAST_STEPS = 40;
 
 // ============================================================
 // TYPES
@@ -73,6 +85,33 @@ export type WeatherForecast = {
 };
 
 // ============================================================
+// OPENWEATHER RESPONSE TYPES
+// ============================================================
+
+type OpenWeatherCurrentResponse = {
+  weather: {
+    id: number;
+  }[];
+  main: {
+    temp: number;
+  };
+  dt: number;
+  timezone: number;
+};
+
+type OpenWeatherForecastResponse = {
+  list: {
+    dt: number;
+    main: {
+      temp: number;
+    };
+    weather: {
+      id: number;
+    }[];
+  }[];
+};
+
+// ============================================================
 // PHILIPPINE SEASON
 // ============================================================
 
@@ -93,9 +132,20 @@ function getPhilippineSeason(
 }
 
 // ============================================================
-// WMO WEATHER CODE MAPPING
+// OPENWEATHER WEATHER CODE MAPPING
 // ============================================================
 
+/*
+ * OpenWeather condition codes:
+ *
+ * 200-232 Thunderstorm
+ * 300-321 Drizzle
+ * 500-531 Rain
+ * 600-622 Snow
+ * 700-781 Atmosphere (fog, mist, haze, dust, smoke)
+ * 800     Clear
+ * 801-804 Clouds
+ */
 function getWeatherCondition(
   code: number
 ): WeatherCondition {
@@ -104,115 +154,128 @@ function getWeatherCondition(
     // CLEAR / CLOUD
     // --------------------------------------------------------
 
-    case 0:
+    case 800:
       return "Clear sky";
 
-    case 1:
+    case 801:
       return "Mainly clear";
 
-    case 2:
+    case 802:
       return "Partly cloudy";
 
-    case 3:
-      return "Overcast";
-
-    // --------------------------------------------------------
-    // FOG
-    // --------------------------------------------------------
-
-    case 45:
-    case 48:
-      return "Fog";
-
-    // --------------------------------------------------------
-    // DRIZZLE
-    // --------------------------------------------------------
-
-    case 51:
-      return "Light drizzle";
-
-    case 53:
-      return "Moderate drizzle";
-
-    case 55:
-      return "Dense intensity drizzle";
-
-    // --------------------------------------------------------
-    // FREEZING DRIZZLE
-    // --------------------------------------------------------
-
-    case 56:
-      return "Light drizzle";
-
-    case 57:
-      return "Dense intensity drizzle";
-
-    // --------------------------------------------------------
-    // RAIN
-    // --------------------------------------------------------
-
-    case 61:
-      return "Slight rain";
-
-    case 63:
-      return "Moderate rain";
-
-    case 65:
-      return "Heavy intensity rain";
-
-    // --------------------------------------------------------
-    // FREEZING RAIN
-    // --------------------------------------------------------
-
-    case 66:
-      return "Slight rain";
-
-    case 67:
-      return "Heavy intensity rain";
-
-    // --------------------------------------------------------
-    // SNOW
-    // --------------------------------------------------------
-
-    case 71:
-    case 73:
-    case 75:
-    case 77:
-      return "Overcast";
-
-    // --------------------------------------------------------
-    // RAIN SHOWERS
-    // --------------------------------------------------------
-
-    case 80:
-      return "Slight rain showers";
-
-    case 81:
-      return "Moderate rain showers";
-
-    case 82:
-      return "Violent rain showers";
-
-    // --------------------------------------------------------
-    // SNOW SHOWERS
-    // --------------------------------------------------------
-
-    case 85:
-    case 86:
+    case 803:
+    case 804:
       return "Overcast";
 
     // --------------------------------------------------------
     // THUNDERSTORM
     // --------------------------------------------------------
 
-    case 95:
+    case 200:
+    case 201:
+    case 202:
+    case 210:
+    case 211:
+    case 212:
+    case 221:
+    case 230:
+    case 231:
+    case 232:
       return "Slight or moderate thunderstorm";
 
-    case 96:
-      return "Thunderstorm with slight hail";
+    // --------------------------------------------------------
+    // DRIZZLE
+    // --------------------------------------------------------
 
-    case 99:
-      return "Thunderstorm with heavy hail";
+    case 300:
+      return "Light drizzle";
+
+    case 301:
+      return "Moderate drizzle";
+
+    case 302:
+      return "Dense intensity drizzle";
+
+    case 310:
+      return "Light drizzle";
+
+    case 311:
+      return "Moderate drizzle";
+
+    case 312:
+      return "Dense intensity drizzle";
+
+    case 313:
+      return "Light drizzle";
+
+    case 314:
+      return "Moderate drizzle";
+
+    case 321:
+      return "Moderate drizzle";
+
+    // --------------------------------------------------------
+    // RAIN
+    // --------------------------------------------------------
+
+    case 500:
+      return "Slight rain";
+
+    case 501:
+      return "Moderate rain";
+
+    case 502:
+    case 503:
+    case 504:
+      return "Heavy intensity rain";
+
+    case 511:
+      return "Slight rain";
+
+    case 520:
+      return "Slight rain showers";
+
+    case 521:
+      return "Moderate rain showers";
+
+    case 522:
+    case 531:
+      return "Violent rain showers";
+
+    // --------------------------------------------------------
+    // SNOW
+    // --------------------------------------------------------
+
+    case 600:
+    case 601:
+    case 602:
+    case 611:
+    case 612:
+    case 613:
+    case 615:
+    case 616:
+    case 620:
+    case 621:
+    case 622:
+      return "Overcast";
+
+    // --------------------------------------------------------
+    // ATMOSPHERE
+    // --------------------------------------------------------
+
+    case 701:
+    case 741:
+      return "Fog";
+
+    case 711:
+    case 721:
+    case 731:
+    case 751:
+    case 761:
+    case 762:
+    case 771:
+    case 781:
+      return "Overcast";
 
     // --------------------------------------------------------
     // FALLBACK
@@ -338,12 +401,12 @@ async function getUserLocation(): Promise<UserLocation> {
 }
 
 // ============================================================
-// CONVERT OPEN-METEO TIMESTAMP TO LOCAL TIME
+// CONVERT OPENWEATHER UNIX TIMESTAMP TO LOCAL TIME
 // ============================================================
 //
-// Open-Meteo's SDK exposes Unix timestamps.
-// Adding the API-provided UTC offset converts them to the
-// requested timezone: Asia/Manila.
+// OpenWeather exposes Unix timestamps in seconds.
+// Adding the API-provided UTC offset (seconds east of UTC)
+// converts them to the requested timezone: Asia/Manila.
 //
 // ============================================================
 
@@ -354,6 +417,16 @@ function toLocalDate(
   return new Date(
     (timestamp + utcOffsetSeconds) * 1000
   );
+}
+
+// ============================================================
+// TEMPERATURE ROUNDING
+// ============================================================
+
+function roundTemperature(
+  value: number
+): number {
+  return Math.round(value * 10) / 10;
 }
 
 // ============================================================
@@ -368,192 +441,98 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
   const location = await getUserLocation();
 
   // ==========================================================
-  // 2. REQUEST ECMWF IFS HRES DATA
+  // 2. REQUEST CURRENT WEATHER
   // ==========================================================
 
-  const params: any = {
-    latitude: [location.latitude],
-    longitude: [location.longitude],
+  const params = new URLSearchParams({
+    lat: location.latitude.toString(),
+    lon: location.longitude.toString(),
+    appid: OPEN_WEATHER_APP_ID,
+    units: "metric",
+    lang: "en",
+  });
 
-    hourly: [
-      "temperature_2m",
-      "weather_code",
-    ],
-
-    timezone: TIMEZONE,
-
-    // Prefer a suitable land grid cell with similar elevation.
-    cell_selection: "land",
-  };
-
-  const responses = await fetchWeatherApi(
-    OPEN_METEO_URL,
-    params
+  const currentResponse = await fetch(
+    `${CURRENT_WEATHER_URL}?${params.toString()}`
   );
 
-  if (
-    !responses ||
-    responses.length === 0
-  ) {
+  if (!currentResponse.ok) {
     throw new Error(
-      "No weather response was returned from Open-Meteo."
+      `OpenWeather current weather request failed: ${currentResponse.status}`
     );
   }
 
-  const response = responses[0];
+  const currentData =
+    (await currentResponse.json()) as OpenWeatherCurrentResponse;
+
+  if (
+    !currentData.weather ||
+    currentData.weather.length === 0 ||
+    !currentData.main
+  ) {
+    throw new Error(
+      "OpenWeather returned no current weather data."
+    );
+  }
 
   // ==========================================================
-  // 3. MODEL INFORMATION
+  // 3. REQUEST 3-HOUR FORECAST
   // ==========================================================
 
-  const modelLatitude =
-    response.latitude();
+  const forecastParams =
+    new URLSearchParams(params);
 
-  const modelLongitude =
-    response.longitude();
+  forecastParams.set(
+    "cnt",
+    FORECAST_STEPS.toString()
+  );
 
-  const elevation =
-    response.elevation();
+  const forecastResponse = await fetch(
+    `${FORECAST_URL}?${forecastParams.toString()}`
+  );
 
-  const timezone =
-    response.timezone() ||
-    TIMEZONE;
+  if (!forecastResponse.ok) {
+    throw new Error(
+      `OpenWeather forecast request failed: ${forecastResponse.status}`
+    );
+  }
 
-  const timezoneAbbreviation =
-    response.timezoneAbbreviation() ||
-    "PHT";
+  const forecastData =
+    (await forecastResponse.json()) as OpenWeatherForecastResponse;
+
+  if (
+    !forecastData.list ||
+    forecastData.list.length === 0
+  ) {
+    throw new Error(
+      "OpenWeather returned no forecast data."
+    );
+  }
+
+  // ==========================================================
+  // 4. TIMEZONE INFORMATION
+  // ==========================================================
 
   const utcOffsetSeconds =
-    response.utcOffsetSeconds();
+    currentData.timezone;
 
   // ==========================================================
-  // 4. HOURLY DATA
+  // 5. CURRENT WEATHER
   // ==========================================================
 
-  const hourly =
-    response.hourly();
-
-  if (!hourly) {
-    throw new Error(
-      "Hourly weather data was not returned."
+  const currentTime =
+    toLocalDate(
+      currentData.dt,
+      utcOffsetSeconds
     );
-  }
-
-  const temperatureVariable =
-    hourly.variables(0);
-
-  const weatherCodeVariable =
-    hourly.variables(1);
-
-  if (
-    !temperatureVariable ||
-    !weatherCodeVariable
-  ) {
-    throw new Error(
-      "Required weather variables were not returned."
-    );
-  }
-
-  const temperatureValues =
-    temperatureVariable.valuesArray();
-
-  const weatherCodeValues =
-    weatherCodeVariable.valuesArray();
-
-  if (
-    !temperatureValues ||
-    !weatherCodeValues ||
-    temperatureValues.length === 0 ||
-    weatherCodeValues.length === 0
-  ) {
-    throw new Error(
-      "Weather data contains no hourly values."
-    );
-  }
-
-  // ==========================================================
-  // 5. HOURLY TIME RANGE
-  // ==========================================================
-
-  const hourlyStart =
-    Number(hourly.time());
-
-  const hourlyEnd =
-    Number(hourly.timeEnd());
-
-  const hourlyInterval =
-    Number(hourly.interval());
-
-  const hourlyTimes: Date[] = [];
-
-  for (
-    let timestamp = hourlyStart;
-    timestamp < hourlyEnd;
-    timestamp += hourlyInterval
-  ) {
-    hourlyTimes.push(
-      toLocalDate(
-        timestamp,
-        utcOffsetSeconds
-      )
-    );
-  }
-
-  // ==========================================================
-  // 6. FIND CURRENT WEATHER HOUR
-  // ==========================================================
-  //
-  // Compare the raw Unix timestamps with the actual current
-  // Unix time. This avoids comparing a timezone-shifted Date
-  // against the device's absolute Date incorrectly.
-  //
-  // ==========================================================
-
-  const nowUnixSeconds =
-    Date.now() / 1000;
-
-  let currentIndex = 0;
-  let smallestDifference = Infinity;
-
-  for (
-    let index = 0;
-    index < temperatureValues.length;
-    index++
-  ) {
-    const timestamp =
-      hourlyStart +
-      index * hourlyInterval;
-
-    const difference =
-      Math.abs(
-        timestamp -
-          nowUnixSeconds
-      );
-
-    if (
-      difference <
-      smallestDifference
-    ) {
-      smallestDifference =
-        difference;
-
-      currentIndex = index;
-    }
-  }
-
-  // ==========================================================
-  // 7. CURRENT WEATHER
-  // ==========================================================
 
   const currentTemperature =
-    Number(
-      temperatureValues[currentIndex]
+    roundTemperature(
+      currentData.main.temp
     );
 
   const currentWeatherCode =
-    Number(
-      weatherCodeValues[currentIndex]
-    );
+    currentData.weather[0].id;
 
   if (
     !Number.isFinite(
@@ -568,46 +547,44 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
     );
   }
 
-  const roundedTemperature =
-    Math.round(
-      currentTemperature * 10
-    ) / 10;
-
-  const currentTime =
-    hourlyTimes[currentIndex] ||
-    new Date();
-
   const condition =
     getWeatherCondition(
       currentWeatherCode
     );
 
   // ==========================================================
-  // 8. HOURLY WEATHER OBJECT
+  // 6. HOURLY WEATHER OBJECT
   // ==========================================================
 
   const hourlyWeather: HourlyWeather = {
-    time: hourlyTimes,
+    time: forecastData.list.map(
+      (entry) =>
+        toLocalDate(
+          entry.dt,
+          utcOffsetSeconds
+        )
+    ),
 
-    temperature: Array.from(
-      temperatureValues,
-      (value) =>
-        Math.round(
-          Number(value) * 10
-        ) / 10
+    temperature: forecastData.list.map(
+      (entry) =>
+        roundTemperature(
+          entry.main.temp
+        )
     ),
   };
 
   // ==========================================================
-  // 9. FINAL WEATHER RESULT
+  // 7. FINAL WEATHER RESULT
   // ==========================================================
   //
   // IMPORTANT:
   // Keep the USER'S GPS coordinates here.
   //
-  // Open-Meteo's returned latitude/longitude represent the
-  // weather model grid location used for the forecast and can
-  // differ from the requested coordinates.
+  // OpenWeather returns the forecast for the requested
+  // coordinates, so the user's coordinates are preserved.
+  //
+  // OpenWeather does not return an elevation in the free
+  // endpoints, so elevation is reported as 0.
   //
   // ==========================================================
 
@@ -621,16 +598,16 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
       longitude: location.longitude,
     },
 
-    timezone,
-    timezoneAbbreviation,
+    timezone: TIMEZONE,
+    timezoneAbbreviation: TIMEZONE_ABBREVIATION,
     utcOffsetSeconds,
-    elevation,
+    elevation: 0,
 
     weather: {
       time: currentTime,
 
       temperature:
-        roundedTemperature,
+        currentTemperature,
 
       temperatureUnit: "°C",
 
