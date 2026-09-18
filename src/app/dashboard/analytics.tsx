@@ -16,7 +16,6 @@ import {
   ReportFrequency,
   ReportType,
   createAnalyticsReportContent,
-  createPresetRange,
   getApplianceChartData,
   getBatteryChartData,
   getBatteryTemperatureData,
@@ -418,15 +417,77 @@ export default function AnalyticsScreen() {
      DATE RANGE
      ========================================================== */
 
-  const applyPresetRange =
+  /*
+   * Custom date selection.
+   *
+   * The To date can never go beyond today, and From is always
+   * kept on or before To so the range stays valid.
+   */
+
+  const setFromDate =
     useCallback(
       (
-        days: number,
+        date: Date,
       ) => {
         setRange(
-          createPresetRange(
-            days,
-          ),
+          (currentRange) => {
+            const today =
+              new Date();
+
+            const from =
+              new Date(
+                Math.min(
+                  date.getTime(),
+                  today.getTime(),
+                ),
+              );
+
+            const end =
+              from.getTime() >
+              currentRange.end.getTime()
+                ? from
+                : currentRange.end;
+
+            return {
+              start: from,
+              end,
+            };
+          },
+        );
+      },
+      [],
+    );
+
+  const setToDate =
+    useCallback(
+      (
+        date: Date,
+      ) => {
+        setRange(
+          (currentRange) => {
+            const today =
+              new Date();
+
+            const to =
+              new Date(
+                Math.min(
+                  date.getTime(),
+                  today.getTime(),
+                ),
+              );
+
+            const end =
+              to.getTime() <
+              currentRange.start.getTime()
+                ? currentRange.start
+                : to;
+
+            return {
+              start:
+                currentRange.start,
+              end,
+            };
+          },
         );
       },
       [],
@@ -533,8 +594,11 @@ export default function AnalyticsScreen() {
             setFrequencyModalVisible
           }
           range={range}
-          applyPresetRange={
-            applyPresetRange
+          onFromDateChange={
+            setFromDate
+          }
+          onToDateChange={
+            setToDate
           }
           generateReport={
             generateReport
@@ -776,6 +840,7 @@ export default function AnalyticsScreen() {
                     color={
                       Colors.light.primary
                     }
+                    
                   />
 
                   <AppText

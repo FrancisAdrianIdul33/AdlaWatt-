@@ -1063,7 +1063,7 @@ export default function ApplianceModal({
             })}
 
             {/* No Search Results */}
-            {normalizedSearch &&
+            {normalizedSearch.length > 0 &&
               filteredAppliances.length === 0 && (
                 <View style={styles.noResults}>
                   <Ionicons

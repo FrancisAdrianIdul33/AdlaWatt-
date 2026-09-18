@@ -1,6 +1,6 @@
 import {
-    Image,
-    Platform,
+  Image,
+  Platform,
 } from "react-native";
 
 const adlawattLogo =
@@ -37,6 +37,10 @@ export interface MonitoringHistoryRow {
   time_remaining: string | null;
   solar_input: number | null;
   solar_status: string | null;
+  solar_timer: string | null;
+  solar_voltage: number | null;
+  solar_current: number | null;
+  total_energy: number | null;
   current_load: number | null;
   device_status: string | null;
   last_seen: string | null;
@@ -125,6 +129,11 @@ export interface ReportSummary {
   latestSolarTemperature: number;
   latestSolarTemperatureStatus: string;
 
+  latestSolarTimer: string;
+  latestSolarVoltage: number;
+  latestSolarCurrent: number;
+  latestTotalEnergy: number;
+
   latestDeviceStatus: string;
   latestTimeRemaining: string;
 
@@ -140,6 +149,10 @@ export interface ReportMonitoringRow {
   timeRemaining: string;
   solarInput: string;
   solarStatus: string;
+  solarTimer: string;
+  solarVoltage: string;
+  solarCurrent: string;
+  totalEnergy: string;
   currentLoad: string;
   deviceStatus: string;
   batteryTemperature: string;
@@ -493,6 +506,34 @@ export function createPresetRange(
   };
 }
 
+/*
+ * Returns a Date set to the very end of the range's To date so
+ * a selected date period includes all of its final day.
+ *
+ * The AnalyticsCard date range feature produces midnight-anchored
+ * From/To dates, so a raw `lte(end.toISOString())` query would
+ * silently drop every record recorded after midnight on the To
+ * date. Both the exported PDF/CSV and the charts share the same
+ * loaded data, so this keeps every report period inclusive.
+ */
+export function getInclusiveRangeEnd(
+  range: AnalyticsRange,
+): Date {
+  const end =
+    new Date(
+      range.end,
+    );
+
+  end.setHours(
+    23,
+    59,
+    59,
+    999,
+  );
+
+  return end;
+}
+
 /* ============================================================
    CSV AND REPORT DATA PROCESSING
    ============================================================ */
@@ -531,6 +572,10 @@ export function createCsv(
     "Time Remaining",
     "Solar Input (W)",
     "Solar Status",
+    "Solar Timer",
+    "Solar Voltage (V)",
+    "Solar Current (A)",
+    "Total Energy (Wh)",
     "Current Load (W)",
     "Device Status",
     "Battery Temperature (C)",
@@ -565,6 +610,16 @@ export function createCsv(
             row.solar_input,
           ),
           row.solar_status,
+          row.solar_timer,
+          toNumber(
+            row.solar_voltage,
+          ),
+          toNumber(
+            row.solar_current,
+          ),
+          toNumber(
+            row.total_energy,
+          ),
           toNumber(
             row.current_load,
           ),
@@ -700,6 +755,41 @@ export function formatMonitoringReportRows(
       solarStatus:
         row.solar_status ??
         "Unknown",
+
+      solarTimer:
+        formatSolarTimer(
+          row.solar_timer,
+        ),
+
+      solarVoltage:
+        formatNumber(
+          Math.max(
+            0,
+            toNumber(
+              row.solar_voltage,
+            ),
+          ),
+        ),
+
+      solarCurrent:
+        formatNumber(
+          Math.max(
+            0,
+            toNumber(
+              row.solar_current,
+            ),
+          ),
+        ),
+
+      totalEnergy:
+        formatNumber(
+          Math.max(
+            0,
+            toNumber(
+              row.total_energy,
+            ),
+          ),
+        ),
 
       currentLoad:
         formatNumber(
@@ -1102,6 +1192,42 @@ export function createReportSummary(
       latest?.solar_temperature_status ??
       "No data",
 
+    latestSolarTimer:
+      formatSolarTimer(
+        latest?.solar_timer ??
+          null,
+      ),
+
+    latestSolarVoltage:
+      latest
+        ? Math.max(
+            0,
+            toNumber(
+              latest.solar_voltage,
+            ),
+          )
+        : 0,
+
+    latestSolarCurrent:
+      latest
+        ? Math.max(
+            0,
+            toNumber(
+              latest.solar_current,
+            ),
+          )
+        : 0,
+
+    latestTotalEnergy:
+      latest
+        ? Math.max(
+            0,
+            toNumber(
+              latest.total_energy,
+            ),
+          )
+        : 0,
+
     latestDeviceStatus:
       latest?.device_status ??
       "No data",
@@ -1265,6 +1391,59 @@ export function formatDuration(
 }
 
 /* ============================================================
+   SOLAR TIMER FORMATTER
+   ============================================================ */
+
+export function formatSolarTimer(
+  timer: string | null,
+): string {
+  const value =
+    String(timer ?? "")
+      .trim();
+
+  if (!value) {
+    return "00:00:00";
+  }
+
+  // PostgreSQL interval values can be returned as
+  // HH:MM:SS, H:MM:SS, or values containing days.
+
+  const dayMatch =
+    value.match(
+      /(-?\d+)\s+days?/i,
+    );
+
+  const timeMatch =
+    value.match(
+      /(\d{1,3}):(\d{2}):(\d{2})/,
+    );
+
+  if (timeMatch) {
+    const days = dayMatch
+      ? Number(dayMatch[1])
+      : 0;
+
+    const hours =
+      Number(timeMatch[1]) +
+      days * 24;
+
+    const minutes =
+      Number(timeMatch[2]);
+
+    const seconds =
+      Number(timeMatch[3]);
+
+    return [
+      String(hours).padStart(2, "0"),
+      String(minutes).padStart(2, "0"),
+      String(seconds).padStart(2, "0"),
+    ].join(":");
+  }
+
+  return value;
+}
+
+/* ============================================================
    SUPABASE ANALYTICS DATA LOADING
    ============================================================ */
 
@@ -1313,6 +1492,10 @@ export async function loadAnalyticsData(
             "time_remaining",
             "solar_input",
             "solar_status",
+            "solar_timer",
+            "solar_voltage",
+            "solar_current",
+            "total_energy",
             "current_load",
             "device_status",
             "last_seen",
@@ -1338,7 +1521,9 @@ export async function loadAnalyticsData(
         )
         .lte(
           "recorded_at",
-          range.end.toISOString(),
+          getInclusiveRangeEnd(
+            range,
+          ).toISOString(),
         )
         .order(
           "recorded_at",
@@ -1389,7 +1574,9 @@ export async function loadAnalyticsData(
         )
         .lte(
           "recorded_at",
-          range.end.toISOString(),
+          getInclusiveRangeEnd(
+            range,
+          ).toISOString(),
         )
         .order(
           "recorded_at",
@@ -2026,21 +2213,17 @@ export function generateAdlaWattCsv(
 
   const monitoringHeaders = [
     "Recorded At",
-    "Battery Level (%)",
-    "Battery Status",
-    "Time Remaining",
-    "Solar Input (W)",
-    "Solar Status",
-    "Current Load (W)",
-    "Device Status",
-    "Battery Temperature (C)",
-    "Battery Temperature Status",
-    "Solar Temperature (C)",
-    "Solar Temperature Status",
-    "Voltage (V)",
-    "Watt Hours",
-    "Energy Input (Wh)",
-    "Energy Output (Wh)",
+    "Battery %",
+    "Battery",
+    "Solar W",
+    "Load W",
+    "Device",
+    "Battery C",
+    "Solar C",
+    "Sol Timer",
+    "Sol V",
+    "Sol A",
+    "Total Wh",
   ];
 
   const monitoringCsvRows =
@@ -2049,19 +2232,15 @@ export function generateAdlaWattCsv(
         row.recordedAt,
         row.batteryLevel,
         row.batteryStatus,
-        row.timeRemaining,
         row.solarInput,
-        row.solarStatus,
         row.currentLoad,
         row.deviceStatus,
         row.batteryTemperature,
-        row.batteryTemperatureStatus,
         row.solarTemperature,
-        row.solarTemperatureStatus,
-        row.voltage,
-        row.wattHours,
-        row.energyInputWh,
-        row.energyOutputWh,
+        row.solarTimer,
+        row.solarVoltage,
+        row.solarCurrent,
+        row.totalEnergy,
       ],
     );
 
@@ -2105,6 +2284,29 @@ export function generateAdlaWattCsv(
       ],
     );
 
+  /*
+   * Every row is padded to a single uniform column count so the
+   * CSV opens as one clean, aligned grid in spreadsheet apps.
+   */
+  const uniformColumnCount =
+    monitoringHeaders.length;
+
+  const padCsvRow = (
+    row: (string | number)[],
+  ): (string | number)[] => {
+    const padded =
+      [...row];
+
+    while (
+      padded.length <
+      uniformColumnCount
+    ) {
+      padded.push("");
+    }
+
+    return padded;
+  };
+
   const sections: (string | number)[][] = [];
 
   sections.push(
@@ -2139,7 +2341,7 @@ export function generateAdlaWattCsv(
 
   return sections
     .map((row) =>
-      row
+      padCsvRow(row)
         .map(
           escapeCsvValue,
         )
@@ -2151,6 +2353,94 @@ export function generateAdlaWattCsv(
 /* ============================================================
    PDF HELPERS
    ============================================================ */
+
+/*
+ * Shared AdlaWatt PDF palette.
+ *
+ * Primary:    #00A86B
+ * Secondary:  #FFBF00
+ * Background: #F0EAD6
+ * Body fill:  rgba(255, 255, 255, 0.50) -> #F8F5EA
+ */
+const PDF_PRIMARY: [
+  number,
+  number,
+  number,
+] = [
+  0,
+  168,
+  107,
+];
+
+const PDF_SECONDARY: [
+  number,
+  number,
+  number,
+] = [
+  255,
+  191,
+  0,
+];
+
+const PDF_BACKGROUND: [
+  number,
+  number,
+  number,
+] = [
+  240,
+  234,
+  214,
+];
+
+const PDF_BODY_FILL: [
+  number,
+  number,
+  number,
+] = [
+  255,
+  255,
+  255,
+];
+
+const PDF_ALT_FILL: [
+  number,
+  number,
+  number,
+] = [
+  248,
+  245,
+  234,
+];
+
+const PDF_TEXT: [
+  number,
+  number,
+  number,
+] = [
+  31,
+  41,
+  55,
+];
+
+const PDF_MUTED: [
+  number,
+  number,
+  number,
+] = [
+  117,
+  117,
+  117,
+];
+
+const PDF_BORDER: [
+  number,
+  number,
+  number,
+] = [
+  216,
+  210,
+  194,
+];
 
 function getPdfStatusColor(
   status: string,
@@ -2208,25 +2498,25 @@ function addPdfStatusBox(
   width: number,
   height: number,
 ): void {
-  const statusColor =
-    getPdfStatusColor(
-      value,
-    );
-
+  /*
+   * Summary cards follow the reference layout: a clean white
+   * card with a subtle border, a small uppercase label and a
+   * large bold value.
+   */
   doc.setFillColor(
-    248,
-    250,
-    252,
+    PDF_BODY_FILL[0],
+    PDF_BODY_FILL[1],
+    PDF_BODY_FILL[2],
   );
 
   doc.setDrawColor(
-    statusColor[0],
-    statusColor[1],
-    statusColor[2],
+    PDF_BORDER[0],
+    PDF_BORDER[1],
+    PDF_BORDER[2],
   );
 
   doc.setLineWidth(
-    0.6,
+    0.3,
   );
 
   doc.roundedRect(
@@ -2241,23 +2531,23 @@ function addPdfStatusBox(
 
   doc.setFont(
     "helvetica",
-    "normal",
+    "bold",
   );
 
   doc.setFontSize(
-    8,
+    7.5,
   );
 
   doc.setTextColor(
-    100,
-    116,
-    139,
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
   );
 
   doc.text(
-    label,
+    label.toUpperCase(),
     x + 5,
-    y + 7,
+    y + 8,
   );
 
   doc.setFont(
@@ -2265,20 +2555,39 @@ function addPdfStatusBox(
     "bold",
   );
 
+  /*
+   * Shrink the value until it fits the card so long status
+   * strings never overflow the white card.
+   */
+  let valueFontSize =
+    15;
+
   doc.setFontSize(
-    11,
+    valueFontSize,
   );
 
   doc.setTextColor(
-    statusColor[0],
-    statusColor[1],
-    statusColor[2],
+    PDF_TEXT[0],
+    PDF_TEXT[1],
+    PDF_TEXT[2],
   );
+
+  while (
+    valueFontSize > 8 &&
+    doc.getTextWidth(value) >
+      width - 10
+  ) {
+    valueFontSize -= 0.5;
+
+    doc.setFontSize(
+      valueFontSize,
+    );
+  }
 
   doc.text(
     value,
     x + 5,
-    y + 15,
+    y + 19,
   );
 }
 
@@ -2293,13 +2602,13 @@ function addPdfSectionTitle(
   );
 
   doc.setFontSize(
-    12,
+    11.5,
   );
 
   doc.setTextColor(
-    31,
-    41,
-    55,
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
   );
 
   doc.text(
@@ -2308,11 +2617,97 @@ function addPdfSectionTitle(
     y,
   );
 
-  return y + 7;
+  /*
+   * Short secondary-colour accent bar under each section title
+   * mirrors the reference report styling.
+   */
+  doc.setFillColor(
+    PDF_SECONDARY[0],
+    PDF_SECONDARY[1],
+    PDF_SECONDARY[2],
+  );
+
+  doc.rect(
+    18,
+    y + 1.8,
+    16,
+    1,
+    "F",
+  );
+
+  return y + 8;
+}
+
+/*
+ * Paints the AdlaWatt page shell that must stay identical on
+ * every page: the cream background and a thin primary green
+ * top accent strip.
+ */
+function paintPdfPageBase(
+  doc: jsPDF,
+  pageWidth: number,
+  pageHeight: number,
+): void {
+  doc.setFillColor(
+    PDF_BACKGROUND[0],
+    PDF_BACKGROUND[1],
+    PDF_BACKGROUND[2],
+  );
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    pageHeight,
+    "F",
+  );
+
+  doc.setFillColor(
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
+  );
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    4,
+    "F",
+  );
+}
+
+/*
+ * Called from autoTable's willDrawPage hook, which fires before
+ * a table draws its head and body. Only pages created by the
+ * table (beyond its start page) are repainted, so the section
+ * content already drawn on the start page is never covered.
+ *
+ * hookData.pageNumber is relative to the table, so the
+ * document's absolute current page is used instead.
+ */
+function paintPdfContinuationPage(
+  doc: jsPDF,
+  _pageNumber: number,
+  tableStartPage: number,
+  pageWidth: number,
+  pageHeight: number,
+): void {
+  if (
+    doc.getCurrentPageInfo().pageNumber >
+    tableStartPage
+  ) {
+    paintPdfPageBase(
+      doc,
+      pageWidth,
+      pageHeight,
+    );
+  }
 }
 
 function addPdfFooter(
   doc: jsPDF,
+  periodLabel: string,
 ): void {
   const pageCount =
     doc.getNumberOfPages();
@@ -2323,6 +2718,9 @@ function addPdfFooter(
   const pageHeight =
     doc.internal.pageSize.getHeight();
 
+  const footerHeight =
+    10;
+
   for (
     let page = 1;
     page <= pageCount;
@@ -2331,22 +2729,25 @@ function addPdfFooter(
     doc.setPage(page);
 
     doc.setFillColor(
-      31,
-      41,
-      55,
+      PDF_PRIMARY[0],
+      PDF_PRIMARY[1],
+      PDF_PRIMARY[2],
     );
 
     doc.rect(
       0,
-      pageHeight - 14,
+      pageHeight - footerHeight,
       pageWidth,
-      14,
+      footerHeight,
       "F",
     );
 
+    const textY =
+      pageHeight - 3.8;
+
     doc.setFont(
       "helvetica",
-      "normal",
+      "bold",
     );
 
     doc.setFontSize(
@@ -2362,13 +2763,46 @@ function addPdfFooter(
     doc.text(
       "AdlaWatt Analytics Report",
       18,
-      pageHeight - 6,
+      textY,
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal",
+    );
+
+    doc.setTextColor(
+      PDF_SECONDARY[0],
+      PDF_SECONDARY[1],
+      PDF_SECONDARY[2],
+    );
+
+    doc.text(
+      page === 1
+        ? "Confidential | IoT Off-Grid Solar Backup Monitoring"
+        : periodLabel,
+      pageWidth / 2,
+      textY,
+      {
+        align: "center",
+      },
+    );
+
+    doc.setFont(
+      "helvetica",
+      "bold",
+    );
+
+    doc.setTextColor(
+      255,
+      255,
+      255,
     );
 
     doc.text(
       `Page ${page} of ${pageCount}`,
       pageWidth - 18,
-      pageHeight - 6,
+      textY,
       {
         align: "right",
       },
@@ -2441,18 +2875,10 @@ export async function generateAdlaWattPdf(
      PAGE BACKGROUND
      ---------------------------------------------------------- */
 
-  doc.setFillColor(
-    240,
-    234,
-    214,
-  );
-
-  doc.rect(
-    0,
-    0,
+  paintPdfPageBase(
+    doc,
     pageWidth,
     pageHeight,
-    "F",
   );
 
   /* ----------------------------------------------------------
@@ -2466,9 +2892,9 @@ export async function generateAdlaWattPdf(
     38;
 
   doc.setFillColor(
-    0,
-    168,
-    107,
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
   );
 
   doc.rect(
@@ -2483,9 +2909,9 @@ export async function generateAdlaWattPdf(
    * Secondary yellow accent line.
    */
   doc.setFillColor(
-    255,
-    191,
-    0,
+    PDF_SECONDARY[0],
+    PDF_SECONDARY[1],
+    PDF_SECONDARY[2],
   );
 
   doc.rect(
@@ -2510,23 +2936,71 @@ export async function generateAdlaWattPdf(
   let logoDataUrl:
     string | null = null;
 
-  try {
-    const assetSource =
-      Image.resolveAssetSource(
-        adlawattLogo,
-      );
+  /* 
+   * Resolve the bundled logo URI with fallbacks.
+   *
+   * Metro on web can return either an asset number needed by
+   * Image.resolveAssetSource, or an object that already carries
+   * a uri directly, so both paths are attempted.
+   */
+  const resolveLogoUri =
+    (): string | null => {
+      try {
+        const source =
+          Image.resolveAssetSource(
+            adlawattLogo,
+          );
 
-    if (
-      assetSource?.uri
-    ) {
-      const response =
+        if (source?.uri) {
+          return source.uri;
+        }
+      } catch (error) {
+        console.warn(
+          "Image.resolveAssetSource failed:",
+          error,
+        );
+      }
+
+      const directUri =
+        (
+          adlawattLogo as unknown as {
+            uri?: string;
+          } | null
+        )?.uri;
+
+      if (directUri) {
+        return directUri;
+      }
+
+      return null;
+    };
+
+  try {
+    const resolvedUri =
+      resolveLogoUri();
+
+    if (resolvedUri) {
+      let response =
         await fetch(
-          assetSource.uri,
+          resolvedUri,
         );
 
-      if (
-        response.ok
-      ) {
+      if (!response.ok) {
+        /*
+         * Retry once with a cache-buster query.
+         */
+        response =
+          await fetch(
+            resolvedUri +
+              (resolvedUri.includes("?")
+                ? "&"
+                : "?") +
+              "t=" +
+              Date.now(),
+          );
+      }
+
+      if (response.ok) {
         const blob =
           await response.blob();
 
@@ -2589,16 +3063,19 @@ export async function generateAdlaWattPdf(
    * The logo sits on the left side of the header.
    */
   const logoWidth =
-    30;
+    40;
 
   const logoHeight =
-    20;
+    25;
 
   const logoX =
     horizontalMargin;
 
   const logoY =
     6;
+
+  let logoRendered =
+    false;
 
   if (
     logoDataUrl
@@ -2614,12 +3091,44 @@ export async function generateAdlaWattPdf(
         undefined,
         "FAST",
       );
+
+      logoRendered =
+        true;
     } catch (error) {
       console.warn(
         "AdlaWatt logo could not be added to PDF:",
         error,
       );
     }
+  }
+
+  /*
+   * Branding fallback.
+   *
+   * If the image logo could not be loaded, draw the AdlaWatt
+   * wordmark in white so the header branding always appears.
+   */
+  if (!logoRendered) {
+    doc.setFont(
+      "helvetica",
+      "bold",
+    );
+
+    doc.setFontSize(
+      13,
+    );
+
+    doc.setTextColor(
+      255,
+      255,
+      255,
+    );
+
+    doc.text(
+      "AdlaWatt",
+      logoX,
+      logoY + 14,
+    );
   }
 
   /* ----------------------------------------------------------
@@ -2691,55 +3200,43 @@ export async function generateAdlaWattPdf(
   );
 
   /* ----------------------------------------------------------
-     REPORT INFORMATION
+     COVER
      ---------------------------------------------------------- */
 
   let currentY =
-    48;
-
-  currentY =
-    addPdfSectionTitle(
-      doc,
-      "REPORT INFORMATION",
-      currentY,
-    );
+    56;
 
   /*
-   * Information container.
-   *
-   * Body visually uses:
-   *
-   * rgba(255, 255, 255, 0.50)
+   * Light pill containing the report type.
    */
+  const pillWidth =
+    66;
+
+  const pillHeight =
+    9;
+
+  const pillX =
+    (pageWidth - pillWidth) / 2;
+
   doc.setFillColor(
-    248,
+    224,
     245,
-    234,
-  );
-
-  doc.setDrawColor(
-    203,
-    213,
-    225,
-  );
-
-  doc.setLineWidth(
-    0.25,
+    236,
   );
 
   doc.roundedRect(
-    horizontalMargin,
+    pillX,
     currentY,
-    contentWidth,
-    18,
-    3,
-    3,
-    "FD",
+    pillWidth,
+    pillHeight,
+    4.5,
+    4.5,
+    "F",
   );
 
   doc.setFont(
     "helvetica",
-    "normal",
+    "bold",
   );
 
   doc.setFontSize(
@@ -2747,29 +3244,268 @@ export async function generateAdlaWattPdf(
   );
 
   doc.setTextColor(
-    71,
-    85,
-    105,
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
   );
 
   doc.text(
-    `Frequency: ${reportData.frequency}`,
-    horizontalMargin + 6,
-    currentY + 7,
-  );
-
-  doc.text(
-    `Period: ${formatReportDate(
-      reportData.range.start,
-    )} - ${formatReportDate(
-      reportData.range.end,
-    )}`,
-    horizontalMargin + 6,
-    currentY + 13,
+    `${reportData.frequency.toUpperCase()} ANALYTICS REPORT`,
+    pageWidth / 2,
+    currentY + 6,
+    {
+      align: "center",
+    },
   );
 
   currentY +=
-    28;
+    pillHeight + 9;
+
+  doc.setFont(
+    "helvetica",
+    "normal",
+  );
+
+  doc.setFontSize(
+    14,
+  );
+
+  doc.setTextColor(
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
+  );
+
+  doc.text(
+    "Energy Monitoring",
+    pageWidth / 2,
+    currentY,
+    {
+      align: "center",
+    },
+  );
+
+  currentY +=
+    11;
+
+  doc.setFont(
+    "helvetica",
+    "bold",
+  );
+
+  doc.setFontSize(
+    24,
+  );
+
+  doc.setTextColor(
+    PDF_PRIMARY[0],
+    PDF_PRIMARY[1],
+    PDF_PRIMARY[2],
+  );
+
+  doc.text(
+    "& System Analytics",
+    pageWidth / 2,
+    currentY,
+    {
+      align: "center",
+    },
+  );
+
+  currentY +=
+    12;
+
+  /*
+   * Four-column information card.
+   */
+  const infoCardY =
+    currentY;
+
+  const infoCardHeight =
+    30;
+
+  doc.setFillColor(
+    PDF_BODY_FILL[0],
+    PDF_BODY_FILL[1],
+    PDF_BODY_FILL[2],
+  );
+
+  doc.setDrawColor(
+    PDF_BORDER[0],
+    PDF_BORDER[1],
+    PDF_BORDER[2],
+  );
+
+  doc.setLineWidth(
+    0.3,
+  );
+
+  doc.roundedRect(
+    horizontalMargin,
+    infoCardY,
+    contentWidth,
+    infoCardHeight,
+    3,
+    3,
+    "FD",
+  );
+
+  const infoColumns = [
+    {
+      label: "REPORT TYPE",
+      value: `${reportData.frequency} Report`,
+    },
+
+    {
+      label: "PERIOD",
+      value: `${formatReportDate(
+        reportData.range.start,
+      )} - ${formatReportDate(
+        reportData.range.end,
+      )}`,
+    },
+
+    {
+      label: "GENERATED",
+      value: formatReportDateTime(
+        new Date(),
+      ),
+    },
+
+    {
+      label: "SYSTEM",
+      value: "AdlaWatt IoT v1.0",
+    },
+  ];
+
+  const infoColumnWidth =
+    contentWidth /
+    infoColumns.length;
+
+  infoColumns.forEach(
+    (
+      column,
+      index,
+    ) => {
+      const columnX =
+        horizontalMargin +
+        infoColumnWidth * index +
+        6;
+
+      doc.setFont(
+        "helvetica",
+        "bold",
+      );
+
+      doc.setFontSize(
+        8,
+      );
+
+      doc.setTextColor(
+        PDF_MUTED[0],
+        PDF_MUTED[1],
+        PDF_MUTED[2],
+      );
+
+      doc.text(
+        column.label,
+        columnX,
+        infoCardY + 11,
+      );
+
+      doc.setFontSize(
+        9,
+      );
+
+      doc.setTextColor(
+        PDF_TEXT[0],
+        PDF_TEXT[1],
+        PDF_TEXT[2],
+      );
+
+      const valueLines =
+        doc.splitTextToSize(
+          column.value,
+          infoColumnWidth - 12,
+        );
+
+      doc.text(
+        valueLines.slice(
+          0,
+          2,
+        ),
+        columnX,
+        infoCardY + 19,
+      );
+
+      if (index > 0) {
+        doc.setDrawColor(
+          PDF_BORDER[0],
+          PDF_BORDER[1],
+          PDF_BORDER[2],
+        );
+
+        doc.setLineWidth(
+          0.3,
+        );
+
+        doc.line(
+          horizontalMargin +
+            infoColumnWidth * index,
+          infoCardY + 6,
+          horizontalMargin +
+            infoColumnWidth * index,
+          infoCardY +
+            infoCardHeight -
+            6,
+        );
+      }
+    },
+  );
+
+  currentY =
+    infoCardY +
+    infoCardHeight +
+    12;
+
+  doc.setFont(
+    "helvetica",
+    "italic",
+  );
+
+  doc.setFontSize(
+    8,
+  );
+
+  doc.setTextColor(
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
+  );
+
+  doc.text(
+    doc.splitTextToSize(
+      "This report provides a comprehensive overview of the AdlaWatt off-grid solar backup power monitoring system. All metrics are recorded at 5-minute intervals. Data source: AdlaWatt Mobile App and IoT hardware sensors.",
+      contentWidth,
+    ),
+    horizontalMargin,
+    currentY,
+  );
+
+  /*
+   * Summary sections begin on a fresh page, matching the
+   * reference report structure.
+   */
+  doc.addPage();
+
+  paintPdfPageBase(
+    doc,
+    pageWidth,
+    pageHeight,
+  );
+
+  currentY =
+    20;
 
   /* ----------------------------------------------------------
      SYSTEM SUMMARY
@@ -2802,6 +3538,16 @@ export async function generateAdlaWattPdf(
 
   const secondRowY =
     firstRowY +
+    boxHeight +
+    6;
+
+  const thirdRowY =
+    secondRowY +
+    boxHeight +
+    6;
+
+  const fourthRowY =
+    thirdRowY +
     boxHeight +
     6;
 
@@ -2899,10 +3645,108 @@ export async function generateAdlaWattPdf(
     boxHeight,
   );
 
+  /* ----------------------------------------------------------
+     SYSTEM SUMMARY - ROW 3
+     ---------------------------------------------------------- */
+
+  addPdfStatusBox(
+    doc,
+    "Solar Timer",
+    reportData.summary
+      .latestSolarTimer,
+    horizontalMargin,
+    thirdRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  addPdfStatusBox(
+    doc,
+    "Solar Voltage",
+    `${formatNumber(
+      reportData.summary
+        .latestSolarVoltage,
+    )} V`,
+    horizontalMargin +
+      boxWidth +
+      boxGap,
+    thirdRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  addPdfStatusBox(
+    doc,
+    "Solar Current",
+    `${formatNumber(
+      reportData.summary
+        .latestSolarCurrent,
+    )} A`,
+    horizontalMargin +
+      (
+        boxWidth +
+        boxGap
+      ) *
+        2,
+    thirdRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  /* ----------------------------------------------------------
+     SYSTEM SUMMARY - ROW 4
+     ---------------------------------------------------------- */
+
+  addPdfStatusBox(
+    doc,
+    "Total Energy",
+    `${formatNumber(
+      reportData.summary
+        .latestTotalEnergy,
+    )} Wh`,
+    horizontalMargin,
+    fourthRowY,
+    boxWidth,
+    boxHeight,
+  );
+
+  addPdfStatusBox(
+    doc,
+    "Time Remaining",
+    reportData.summary
+      .latestTimeRemaining,
+    horizontalMargin +
+      boxWidth +
+      boxGap,
+    fourthRowY,
+    boxWidth,
+    boxHeight,
+  );
+
   currentY =
-    secondRowY +
+    fourthRowY +
     boxHeight +
     10;
+
+  /*
+   * The SYSTEM SUMMARY now renders four rows of cards, so
+   * guard the ENERGY SUMMARY against running off the page.
+   */
+  if (
+    currentY >
+    pageHeight - 95
+  ) {
+    doc.addPage();
+
+    paintPdfPageBase(
+      doc,
+      pageWidth,
+      pageHeight,
+    );
+
+    currentY =
+      20;
+  }
 
   /* ----------------------------------------------------------
      ENERGY SUMMARY
@@ -2914,6 +3758,9 @@ export async function generateAdlaWattPdf(
       "ENERGY SUMMARY",
       currentY,
     );
+
+  const energyTableStartPage =
+    doc.getCurrentPageInfo().pageNumber;
 
   autoTable(
     doc,
@@ -2977,7 +3824,7 @@ export async function generateAdlaWattPdf(
       ],
 
       theme:
-        "grid",
+        "plain",
 
       styles: {
         font:
@@ -2994,15 +3841,6 @@ export async function generateAdlaWattPdf(
           41,
           55,
         ],
-
-        lineColor: [
-          203,
-          213,
-          225,
-        ],
-
-        lineWidth:
-          0.25,
 
         fillColor: [
           248,
@@ -3036,15 +3874,12 @@ export async function generateAdlaWattPdf(
        */
       bodyStyles: {
         fillColor: [
-          248,
-          245,
-          234,
+          255,
+          255,
+          255,
         ],
       },
 
-      /*
-       * No alternating gray rows.
-       */
       alternateRowStyles: {
         fillColor: [
           248,
@@ -3052,6 +3887,19 @@ export async function generateAdlaWattPdf(
           234,
         ],
       },
+
+      willDrawPage:
+        (
+          hookData,
+        ) => {
+          paintPdfContinuationPage(
+            doc,
+            hookData.pageNumber,
+            energyTableStartPage,
+            pageWidth,
+            pageHeight,
+          );
+        },
 
       columnStyles: {
         0: {
@@ -3093,6 +3941,9 @@ export async function generateAdlaWattPdf(
       "TEMPERATURE SUMMARY",
       currentY,
     );
+
+  const temperatureTableStartPage =
+    doc.getCurrentPageInfo().pageNumber;
 
   autoTable(
     doc,
@@ -3171,7 +4022,7 @@ export async function generateAdlaWattPdf(
       ],
 
       theme:
-        "grid",
+        "plain",
 
       styles: {
         font:
@@ -3188,15 +4039,6 @@ export async function generateAdlaWattPdf(
           41,
           55,
         ],
-
-        lineColor: [
-          203,
-          213,
-          225,
-        ],
-
-        lineWidth:
-          0.25,
 
         fillColor: [
           248,
@@ -3224,9 +4066,9 @@ export async function generateAdlaWattPdf(
 
       bodyStyles: {
         fillColor: [
-          248,
-          245,
-          234,
+          255,
+          255,
+          255,
         ],
       },
 
@@ -3237,6 +4079,19 @@ export async function generateAdlaWattPdf(
           234,
         ],
       },
+
+      willDrawPage:
+        (
+          hookData,
+        ) => {
+          paintPdfContinuationPage(
+            doc,
+            hookData.pageNumber,
+            temperatureTableStartPage,
+            pageWidth,
+            pageHeight,
+          );
+        },
 
       /*
        * The proportions total exactly 100%.
@@ -3326,21 +4181,10 @@ export async function generateAdlaWattPdf(
   ) {
     doc.addPage();
 
-    /*
-     * Every new page must also use the AdlaWatt background.
-     */
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
-
-    doc.rect(
-      0,
-      0,
+    paintPdfPageBase(
+      doc,
       pageWidth,
       pageHeight,
-      "F",
     );
 
     currentY =
@@ -3359,6 +4203,9 @@ export async function generateAdlaWattPdf(
       .length >
     0
   ) {
+    const applianceSummaryStartPage =
+      doc.getCurrentPageInfo().pageNumber;
+
     autoTable(
       doc,
       {
@@ -3400,7 +4247,7 @@ export async function generateAdlaWattPdf(
           ),
 
         theme:
-          "grid",
+          "plain",
 
         styles: {
           font:
@@ -3417,15 +4264,6 @@ export async function generateAdlaWattPdf(
             41,
             55,
           ],
-
-          lineColor: [
-            203,
-            213,
-            225,
-          ],
-
-          lineWidth:
-            0.25,
 
           fillColor: [
             248,
@@ -3453,9 +4291,9 @@ export async function generateAdlaWattPdf(
 
         bodyStyles: {
           fillColor: [
-            248,
-            245,
-            234,
+            255,
+            255,
+            255,
           ],
         },
 
@@ -3466,6 +4304,19 @@ export async function generateAdlaWattPdf(
             234,
           ],
         },
+
+        willDrawPage:
+          (
+            hookData,
+          ) => {
+            paintPdfContinuationPage(
+              doc,
+              hookData.pageNumber,
+              applianceSummaryStartPage,
+              pageWidth,
+              pageHeight,
+            );
+          },
 
         columnStyles: {
           0: {
@@ -3501,15 +4352,15 @@ export async function generateAdlaWattPdf(
       currentY + 30;
   } else {
     doc.setFillColor(
-      248,
-      245,
-      234,
+      255,
+      253,
+      230,
     );
 
     doc.setDrawColor(
-      203,
-      213,
-      225,
+      242,
+      222,
+      150,
     );
 
     doc.roundedRect(
@@ -3532,9 +4383,9 @@ export async function generateAdlaWattPdf(
     );
 
     doc.setTextColor(
-      71,
-      85,
-      105,
+      PDF_MUTED[0],
+      PDF_MUTED[1],
+      PDF_MUTED[2],
     );
 
     doc.text(
@@ -3554,29 +4405,20 @@ export async function generateAdlaWattPdf(
      MONITORING HISTORY
      ---------------------------------------------------------- */
 
-  if (
-    currentY >
-    pageHeight - 70
-  ) {
-    doc.addPage();
+  /*
+   * Monitoring History always begins on a fresh page so the
+   * dense data grid stays consistent, matching the reference.
+   */
+  doc.addPage();
 
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
+  paintPdfPageBase(
+    doc,
+    pageWidth,
+    pageHeight,
+  );
 
-    doc.rect(
-      0,
-      0,
-      pageWidth,
-      pageHeight,
-      "F",
-    );
-
-    currentY =
-      20;
-  }
+  currentY =
+    20;
 
   currentY =
     addPdfSectionTitle(
@@ -3584,6 +4426,30 @@ export async function generateAdlaWattPdf(
       "MONITORING HISTORY",
       currentY,
     );
+
+  doc.setFont(
+    "helvetica",
+    "normal",
+  );
+
+  doc.setFontSize(
+    8,
+  );
+
+  doc.setTextColor(
+    PDF_MUTED[0],
+    PDF_MUTED[1],
+    PDF_MUTED[2],
+  );
+
+  doc.text(
+    "5-minute interval readings",
+    horizontalMargin,
+    currentY,
+  );
+
+  currentY +=
+    4;
 
   if (
     reportData.monitoringRows
@@ -3599,6 +4465,9 @@ export async function generateAdlaWattPdf(
      * - 18 mm right margin
      * = 174 mm table width
      */
+    const monitoringTableStartPage =
+      doc.getCurrentPageInfo().pageNumber;
+
     autoTable(
       doc,
       {
@@ -3629,6 +4498,10 @@ export async function generateAdlaWattPdf(
             "Device",
             "Battery C",
             "Solar C",
+            "Sol Timer",
+            "Sol V",
+            "Sol A",
+            "Total Wh",
           ],
         ],
 
@@ -3643,11 +4516,15 @@ export async function generateAdlaWattPdf(
               row.deviceStatus,
               row.batteryTemperature,
               row.solarTemperature,
+              row.solarTimer,
+              row.solarVoltage,
+              row.solarCurrent,
+              row.totalEnergy,
             ],
           ),
 
         theme:
-          "grid",
+          "plain",
 
         styles: {
           font:
@@ -3667,15 +4544,6 @@ export async function generateAdlaWattPdf(
             41,
             55,
           ],
-
-          lineColor: [
-            203,
-            213,
-            225,
-          ],
-
-          lineWidth:
-            0.25,
 
           fillColor: [
             248,
@@ -3706,9 +4574,9 @@ export async function generateAdlaWattPdf(
 
         bodyStyles: {
           fillColor: [
-            248,
-            245,
-            234,
+            255,
+            255,
+            255,
           ],
         },
 
@@ -3720,6 +4588,19 @@ export async function generateAdlaWattPdf(
           ],
         },
 
+        willDrawPage:
+          (
+            hookData,
+          ) => {
+            paintPdfContinuationPage(
+              doc,
+              hookData.pageNumber,
+              monitoringTableStartPage,
+              pageWidth,
+              pageHeight,
+            );
+          },
+
         /*
          * The column proportions total 100%.
          *
@@ -3730,49 +4611,73 @@ export async function generateAdlaWattPdf(
           0: {
             cellWidth:
               contentWidth *
-              0.19,
+              0.17,
           },
 
           1: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.075,
           },
 
           2: {
             cellWidth:
               contentWidth *
-              0.15,
+              0.11,
           },
 
           3: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.075,
           },
 
           4: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.075,
           },
 
           5: {
             cellWidth:
               contentWidth *
-              0.125,
+              0.095,
           },
 
           6: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.07,
           },
 
           7: {
             cellWidth:
               contentWidth *
-              0.105,
+              0.07,
+          },
+
+          8: {
+            cellWidth:
+              contentWidth *
+              0.07,
+          },
+
+          9: {
+            cellWidth:
+              contentWidth *
+              0.06,
+          },
+
+          10: {
+            cellWidth:
+              contentWidth *
+              0.06,
+          },
+
+          11: {
+            cellWidth:
+              contentWidth *
+              0.07,
           },
         },
 
@@ -3859,18 +4764,10 @@ export async function generateAdlaWattPdf(
   ) {
     doc.addPage();
 
-    doc.setFillColor(
-      240,
-      234,
-      214,
-    );
-
-    doc.rect(
-      0,
-      0,
+    paintPdfPageBase(
+      doc,
       pageWidth,
       pageHeight,
-      "F",
     );
 
     currentY =
@@ -3882,6 +4779,9 @@ export async function generateAdlaWattPdf(
         "APPLIANCE USAGE HISTORY",
         currentY,
       );
+
+    const applianceUsageStartPage =
+      doc.getCurrentPageInfo().pageNumber;
 
     autoTable(
       doc,
@@ -3927,7 +4827,7 @@ export async function generateAdlaWattPdf(
           ),
 
         theme:
-          "grid",
+          "plain",
 
         styles: {
           font:
@@ -3947,15 +4847,6 @@ export async function generateAdlaWattPdf(
             41,
             55,
           ],
-
-          lineColor: [
-            203,
-            213,
-            225,
-          ],
-
-          lineWidth:
-            0.25,
 
           fillColor: [
             248,
@@ -3983,9 +4874,9 @@ export async function generateAdlaWattPdf(
 
         bodyStyles: {
           fillColor: [
-            248,
-            245,
-            234,
+            255,
+            255,
+            255,
           ],
         },
 
@@ -3996,6 +4887,19 @@ export async function generateAdlaWattPdf(
             234,
           ],
         },
+
+        willDrawPage:
+          (
+            hookData,
+          ) => {
+            paintPdfContinuationPage(
+              doc,
+              hookData.pageNumber,
+              applianceUsageStartPage,
+              pageWidth,
+              pageHeight,
+            );
+          },
 
         columnStyles: {
           0: {
@@ -4070,6 +4974,11 @@ export async function generateAdlaWattPdf(
 
   addPdfFooter(
     doc,
+    `${formatReportDate(
+      reportData.range.start,
+    )} - ${formatReportDate(
+      reportData.range.end,
+    )}  |  ${reportData.frequency} Report`,
   );
 
   return doc;

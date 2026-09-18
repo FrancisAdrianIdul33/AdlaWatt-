@@ -36,6 +36,15 @@ type WeatherData = {
 };
 
 // ============================================================
+// WEATHER AUTO-REFRESH
+// ============================================================
+
+// The weather is re-fetched on this interval so the displayed
+// temperature never stays frozen for too long.
+const WEATHER_REFRESH_INTERVAL_MS =
+  10 * 60 * 1000; // every 10 minutes
+
+// ============================================================
 // DASHBOARD SCREEN
 // ============================================================
 
@@ -83,10 +92,15 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     let isMounted = true;
+    let hasLoaded = false;
 
     const loadWeather = async () => {
       try {
-        setWeatherLoading(true);
+        // Only show the loading state on the first fetch;
+        // background refreshes keep the last known value.
+        if (!hasLoaded) {
+          setWeatherLoading(true);
+        }
 
         const forecast =
           await getCurrentWeatherForUser();
@@ -96,6 +110,8 @@ export default function DashboardScreen() {
         if (!isMounted) {
           return;
         }
+
+        hasLoaded = true;
 
         setWeather({
           city:
@@ -115,9 +131,12 @@ export default function DashboardScreen() {
           return;
         }
 
-        // Weather failure should not affect
-        // Supabase monitoring data.
-        setWeather(null);
+        // Keep the last known value on background
+        // refresh failures; only blank the card
+        // if nothing has loaded yet.
+        if (!hasLoaded) {
+          setWeather(null);
+        }
       } finally {
         if (isMounted) {
           setWeatherLoading(false);
@@ -125,10 +144,19 @@ export default function DashboardScreen() {
       }
     };
 
+    // Initial fetch.
     loadWeather();
+
+    // Keep the temperature from staying frozen by
+    // re-fetching on a fixed interval.
+    const refreshInterval = setInterval(
+      loadWeather,
+      WEATHER_REFRESH_INTERVAL_MS,
+    );
 
     return () => {
       isMounted = false;
+      clearInterval(refreshInterval);
     };
   }, []);
 

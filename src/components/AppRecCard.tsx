@@ -11,6 +11,7 @@ import React, {
 import {
   Animated,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -263,7 +264,7 @@ export default function AppRecCard({
   ) => {
     Animated.spring(buttonScale, {
       toValue: scale,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
       speed: 20,
       bounciness: 6,
     }).start();
