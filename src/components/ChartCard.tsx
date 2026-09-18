@@ -122,7 +122,7 @@ const SUN_RAY_START = 62;
 
 const SUN_RAY_END = 68;
 
-const SUN_GREY = "#C7C7C6";
+const SUN_GREY = "#dcdc6d";
 
 const SUN_MODERATE = "#EDEB44";
 
