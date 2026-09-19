@@ -1,14 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import React from "react";
+import React, {
+  useEffect,
+  useRef,
+} from "react";
 
 import {
+  Animated,
   StyleSheet,
   View,
 } from "react-native";
 
 import Svg, {
   Circle,
+  Line,
 } from "react-native-svg";
 
 import AppText from "@/components/ui/AppText";
@@ -45,20 +50,6 @@ type TemperatureStatus =
   | "Elevated"
   | "High"
   | "Critical";
-
-type BatteryStatus =
-  | "Charging"
-  | "Discharging"
-  | "Idle";
-
-type SolarStatus =
-  | "Low"
-  | "Moderate"
-  | "High";
-
-type DoDStatus =
-  | "Safe"
-  | "Unsafe";
 
 interface WeatherData {
   city: string;
@@ -111,6 +102,100 @@ const CIRCUMFERENCE =
 
 const LOW_BATTERY_THRESHOLD = 20;
 
+const WATT_HOURS_MIN = 0;
+
+const WATT_HOURS_MAX = 720;
+
+const LOW_WATT_HOURS_THRESHOLD = 144;
+
+// ============================================================
+// SUN GAUGE CONFIGURATION
+//
+// Single-layer sun: a solid fill color driven by the solar
+// status. Low = grey, Moderate = 50% yellow, High = 100%
+// yellow. A smooth animated transition cross-fades between
+// the three colors while the gauge stays fully colored.
+// ============================================================
+
+const SUN_RADIUS = 52;
+
+const SUN_RAYS_STROKE = STROKE;
+
+// Short capsule rays that float with a clear distance from the
+// circle edge and stay fully inside the gauge box (no clipping).
+
+const SUN_RAY_START = 62;
+
+const SUN_RAY_END = 68;
+
+const SUN_GREY = "#dcdc6d";
+
+const SUN_MODERATE = "#EDEB44";
+
+const SUN_HIGH = "#FFBF00";
+
+const SOLAR_ANIMATION_DURATION_MS = 2000;
+
+const SOLAR_RAYS = Array.from(
+  { length: 8 },
+  (_, index) => {
+    const angle =
+      (index * Math.PI) / 4;
+
+    return {
+      x1:
+        CENTER +
+        SUN_RAY_START *
+          Math.cos(angle),
+      y1:
+        CENTER +
+        SUN_RAY_START *
+          Math.sin(angle),
+      x2:
+        CENTER +
+        SUN_RAY_END *
+          Math.cos(angle),
+      y2:
+        CENTER +
+        SUN_RAY_END *
+          Math.sin(angle),
+    };
+  }
+);
+
+// ============================================================
+// SUN ANIMATION HELPERS
+//
+// The react-native-svg primitives are wrapped so they accept
+// animated props. The sun color is driven by an intensity value
+// that maps 0 → grey, 0.5 → 50% yellow, 1 → 100% yellow, with
+// every in-between shade resolved by color interpolation.
+// ============================================================
+
+const AnimatedCircle =
+  Animated.createAnimatedComponent(
+    Circle,
+  );
+
+const AnimatedLine =
+  Animated.createAnimatedComponent(
+    Line,
+  );
+
+function getSolarIntensity(
+  status: string | undefined,
+): number {
+  if (status === "High") {
+    return 1;
+  }
+
+  if (status === "Moderate") {
+    return 0.5;
+  }
+
+  return 0;
+}
+
 // ============================================================
 // COMPONENT
 // ============================================================
@@ -123,10 +208,71 @@ export default function ChartCard({
 }: ChartCardProps) {
 
   // ==========================================================
-  // BATTERY CARD
+  // SUN GAUGE ANIMATION
+  //
+  // A single animated intensity value drives the sun color so
+  // the gauge stays fully colored (no more grey/yellow layers).
+  // When the solar status flips the sun cross-fades between
+  // the three colors over SOLAR_ANIMATION_DURATION_MS.
   // ==========================================================
 
-  if (type === "battery") {
+  const sunIntensity =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const sunColor =
+    sunIntensity.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [
+        SUN_GREY,
+        SUN_MODERATE,
+        SUN_HIGH,
+      ],
+    });
+
+  const solarTarget =
+    getSolarIntensity(
+      monitoring?.solar_status,
+    );
+
+  useEffect(() => {
+    if (type !== "solar") {
+      return;
+    }
+
+    const animation =
+      Animated.timing(
+        sunIntensity,
+        {
+          toValue: solarTarget,
+          duration:
+            SOLAR_ANIMATION_DURATION_MS,
+          useNativeDriver: false,
+        },
+      );
+
+    animation.start();
+
+    // Cancel any in-flight transition if the status
+    // flips again before the 2s fade completes.
+    return () =>
+      animation.stop();
+  }, [
+    type,
+    solarTarget,
+    sunIntensity,
+  ]);
+
+  // ==========================================================
+  // BATTERY MONITORING GROUP
+  //
+  // The battery gauge block (ring + percentage + time remaining
+  // + status badges) was merged into this card's left column.
+  // Voltage, Watt-hour, and Load Now fill the right 2 × 3 grid.
+  // ==========================================================
+
+  if (type === "voltage") {
 
     const level =
       monitoring?.battery_level ?? 0;
@@ -167,17 +313,12 @@ export default function ChartCard({
       `scale(-1 1) ` +
       `rotate(-90 ${CENTER} ${CENTER})`;
 
-    // --------------------------------------------------------
-    // BATTERY STATUS
-    // --------------------------------------------------------
-
     const batteryStatus =
       monitoring?.battery_status ??
       "Idle";
 
-    // --------------------------------------------------------
-    // DEPTH OF DISCHARGE STATUS
-    // --------------------------------------------------------
+    const isIdle =
+      batteryStatus === "Idle";
 
     const dodStatus =
       monitoring?.dod_status ??
@@ -190,174 +331,6 @@ export default function ChartCard({
 
     const isDodUnsafe =
       dodStatus === "Unsafe";
-
-    return (
-      <View
-        style={styles.batterySection}
-      >
-
-        {/* ==================================================
-            BATTERY GAUGE
-            ================================================== */}
-
-        <View
-          style={styles.batteryCircle}
-        >
-
-          <Svg
-            width={RING_SIZE}
-            height={RING_SIZE}
-            viewBox={
-              `0 0 ${RING_SIZE} ${RING_SIZE}`
-            }
-          >
-
-            {/* Background Ring */}
-
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              stroke="#D8D6CC"
-              strokeWidth={STROKE}
-              fill="none"
-            />
-
-            {/* Battery Progress */}
-
-            <Circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              stroke={batteryColor}
-              strokeWidth={STROKE}
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={
-                `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
-              }
-              strokeDashoffset={
-                dashOffset
-              }
-              transform={
-                batteryTransform
-              }
-            />
-
-          </Svg>
-
-          {/* ==================================================
-              BATTERY CENTER
-              ================================================== */}
-
-          <View
-            style={
-              styles.batteryCenter
-            }
-          >
-
-            <AppText
-              variant="heading"
-              style={[
-                styles.batteryPercentage,
-                isLowBattery &&
-                  styles.lowBatteryText,
-              ]}
-            >
-              {loading
-                ? "—"
-                : `${level}%`}
-            </AppText>
-
-          </View>
-
-        </View>
-
-        {/* ==================================================
-            TIME REMAINING
-            ================================================== */}
-
-        <AppText
-          variant="caption"
-          style={
-            styles.remainingText
-          }
-        >
-          Time Remaining:{" "}
-          {loading
-            ? "—"
-            : monitoring
-                ?.time_remaining ??
-              "—"}
-        </AppText>
-
-        {/* ==================================================
-            BATTERY STATUS AND DoD STATUS
-            ================================================== */}
-
-        <View
-          style={
-            styles.batteryStatusRow
-          }
-        >
-
-          {/* Battery Status */}
-
-          <View
-            style={
-              styles.batteryStatus
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.batteryStatusText
-              }
-            >
-              {batteryStatus}
-            </AppText>
-
-          </View>
-
-          {/* DoD Status */}
-
-          <View
-            style={[
-              styles.dodStatusBadge,
-              isDodUnsafe
-                ? styles.dodUnsafeBadge
-                : styles.dodSafeBadge,
-            ]}
-          >
-
-            <AppText
-              variant="caption"
-              style={[
-                styles.dodStatusBadgeText,
-                isDodUnsafe
-                  ? styles.dodUnsafeBadgeText
-                  : styles.dodSafeBadgeText,
-              ]}
-            >
-              {dodLabel}
-            </AppText>
-
-          </View>
-
-        </View>
-
-      </View>
-    );
-  }
-
-  // ==========================================================
-  // BATTERY MONITORING GROUP
-  //
-  // Voltage + Watt-hour + Load Now
-  // ==========================================================
-
-  if (type === "voltage") {
 
     const voltageData =
       getCardData(
@@ -375,12 +348,62 @@ export default function ChartCard({
         loading,
       );
 
+    const isLowWattHours =
+      (monitoring?.watt_hours ?? 0) <=
+      LOW_WATT_HOURS_THRESHOLD;
+
     const loadData =
       getCardData(
         "load",
         monitoring,
         weather ?? null,
         loading,
+      );
+
+    /*
+     * The monitoring service data is extended here with the
+     * interior temperature fields so both temperatures can be
+     * surfaced inside this card without changing the shared
+     * MonitoringData import.
+     */
+
+    const temperatureMonitoring =
+      monitoring as (
+        MonitoringData & {
+          interior_temp: number;
+          interior_temp_status:
+            TemperatureStatus;
+        }
+      ) | null;
+
+    const interiorTemperatureStatus =
+      temperatureMonitoring
+        ?.interior_temp_status ??
+      "Nominal";
+
+    const batteryTemperatureData =
+      getCardData(
+        "temperature",
+        monitoring,
+        weather ?? null,
+        loading,
+      );
+
+    const interiorTemperatureValue =
+      loading
+        ? "—"
+        : `${temperatureMonitoring
+            ?.interior_temp ??
+          0}°C`;
+
+    const interiorTemperatureBadge =
+      getTemperatureBadgeStyle(
+        interiorTemperatureStatus,
+      );
+
+    const interiorTemperatureBadgeText =
+      getTemperatureBadgeTextStyle(
+        interiorTemperatureStatus,
       );
 
     return (
@@ -427,126 +450,390 @@ export default function ChartCard({
         </View>
 
         {/* ==================================================
-            BATTERY 1 × 3 MEASUREMENT GRID
+            BATTERY BODY ROW
             ================================================== */}
 
         <View
           style={
-            styles.groupMeasurementGrid
+            styles.batteryBodyRow
           }
         >
 
           {/* ==================================================
-              VOLTAGE
+              LEFT — BATTERY GAUGE COLUMN
               ================================================== */}
 
           <View
             style={
-              styles.groupMetricCell
+              styles.batteryGaugeColumn
             }
           >
+
+            <View
+              style={
+                styles.batteryCircle
+              }
+            >
+
+              <Svg
+                width={RING_SIZE}
+                height={RING_SIZE}
+                viewBox={
+                  `0 0 ${RING_SIZE} ${RING_SIZE}`
+                }
+              >
+
+                {/* Background Ring */}
+
+                <Circle
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={RADIUS}
+                  stroke="#D8D6CC"
+                  strokeWidth={STROKE}
+                  fill="none"
+                />
+
+                {/* Battery Progress */}
+
+                <Circle
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={RADIUS}
+                  stroke={batteryColor}
+                  strokeWidth={STROKE}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={
+                    `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
+                  }
+                  strokeDashoffset={
+                    dashOffset
+                  }
+                  transform={
+                    batteryTransform
+                  }
+                />
+
+              </Svg>
+
+              {/* ==============================================
+                  BATTERY CENTER
+                  ============================================== */}
+
+              <View
+                style={
+                  styles.batteryCenter
+                }
+              >
+
+                <AppText
+                  variant="heading"
+                  style={[
+                    styles.batteryPercentage,
+                    isLowBattery &&
+                      styles.lowBatteryText,
+                  ]}
+                >
+                  {loading
+                    ? "—"
+                    : `${level}%`}
+                </AppText>
+
+              </View>
+
+            </View>
+
+            {/* ==============================================
+                TIME REMAINING
+                ============================================== */}
 
             <AppText
               variant="caption"
               style={
-                styles.groupMetricLabel
+                styles.remainingText
               }
             >
-              {voltageData.label}
+              Time Remaining:{" "}
+              {loading
+                ? "—"
+                : monitoring
+                    ?.time_remaining ??
+                  "—"}
             </AppText>
 
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {voltageData.value}
-            </AppText>
-
-            {/* Reserved status slot for vertical alignment */}
+            {/* ==============================================
+                BATTERY STATUS AND DoD STATUS
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryStatusRow
               }
-            />
+            >
+
+              {/* Battery Status */}
+
+              <View
+                style={[
+                  styles.batteryStatus,
+                  isIdle
+                    ? styles.batteryStatusIdle
+                    : null,
+                ]}
+              >
+
+                <AppText
+                  variant="caption"
+                  style={
+                    styles.batteryStatusText
+                  }
+                >
+                  {batteryStatus}
+                </AppText>
+
+              </View>
+
+              {/* DoD Status */}
+
+              <View
+                style={[
+                  styles.dodStatusBadge,
+                  isDodUnsafe
+                    ? styles.dodUnsafeBadge
+                    : styles.dodSafeBadge,
+                ]}
+              >
+
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.dodStatusBadgeText,
+                    isDodUnsafe
+                      ? styles.dodUnsafeBadgeText
+                      : styles.dodSafeBadgeText,
+                  ]}
+                >
+                  {dodLabel}
+                </AppText>
+
+              </View>
+
+            </View>
 
           </View>
 
           {/* ==================================================
-              WATT-HOUR
+              RIGHT — BATTERY 2 × 3 MEASUREMENT GRID
               ================================================== */}
 
           <View
             style={
-              styles.groupMetricCell
+              styles.batteryMetricGrid
             }
           >
 
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              {wattHourData.label}
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {wattHourData.value}
-            </AppText>
-
-            {/* Reserved status slot for vertical alignment */}
+            {/* ==============================================
+                VOLTAGE
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
-              }
-            />
-
-          </View>
-
-          {/* ==================================================
-              CURRENT LOAD
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
+                styles.batteryMetricCell
               }
             >
-              {loadData.label}
-            </AppText>
 
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {loadData.value}
-            </AppText>
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                {voltageData.label}
+              </AppText>
 
-            {/* Reserved status slot for vertical alignment */}
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {voltageData.value}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                WATT-HOUR
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                {wattHourData.label}
+              </AppText>
+
+<AppText
+                  variant="heading"
+                  style={[
+                    styles.batteryMetricValue,
+                    isLowWattHours &&
+                      styles.lowBatteryText,
+                  ]}
+                >
+                  {wattHourData.value}
+                </AppText>
+
+            </View>
+
+            {/* ==============================================
+                CURRENT LOAD
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                {loadData.label}
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {loadData.value}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                RESERVED CELL (for future data)
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
               }
             />
+
+            {/* ==============================================
+                TEMPERATURE (battery temperature)
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Temperature
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {batteryTemperatureData.value}
+              </AppText>
+
+              {batteryTemperatureData.badge && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    batteryTemperatureData.badgeStyle,
+                  ]}
+                >
+
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusBadgeText,
+                      batteryTemperatureData.badgeTextStyle,
+                    ]}
+                  >
+                    {batteryTemperatureData.badge}
+                  </AppText>
+
+                </View>
+              )}
+
+            </View>
+
+            {/* ==============================================
+                INTERIOR TEMPERATURE
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Interior
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {interiorTemperatureValue}
+              </AppText>
+
+              <View
+                style={[
+                  styles.statusBadge,
+                  interiorTemperatureBadge,
+                ]}
+              >
+
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.statusBadgeText,
+                    interiorTemperatureBadgeText,
+                  ]}
+                >
+                  {interiorTemperatureStatus}
+                </AppText>
+
+              </View>
+
+            </View>
 
           </View>
 
@@ -559,8 +846,10 @@ export default function ChartCard({
   // ==========================================================
   // SOLAR MONITORING GROUP
   //
-  // Solar Timer + Solar Input + Solar Voltage
-  // + Solar Current + Total Energy
+  // Solar Input (inside the sun gauge), Timer, and the status
+  // badge fill the left column. Voltage, Current, Total Energy,
+  // and Solar Panel Temperature fill the right 2 × 3 grid.
+  // The Temperature Monitoring card no longer exists.
   // ==========================================================
 
   if (type === "solar") {
@@ -593,11 +882,30 @@ export default function ChartCard({
         ? "—"
         : `${monitoring?.total_energy ?? 0}Wh`;
 
+    const solarTemperatureData =
+      getCardData(
+        "solar_temperature",
+        monitoring,
+        weather ?? null,
+        loading,
+      );
+
+    // --------------------------------------------------------
+    // SOLAR STATUS BADGE COLORS
+    // --------------------------------------------------------
+
+    const solarBadgeStyle =
+      solarStatus === "High"
+        ? styles.normalBadge
+        : solarStatus === "Moderate"
+        ? styles.moderateBadge
+        : styles.lowBadge;
+
     return (
       <View
         style={[
           styles.monitorCard,
-          styles.solarMonitoringCard,
+          styles.groupMonitoringCard,
         ]}
       >
 
@@ -607,13 +915,13 @@ export default function ChartCard({
 
         <View
           style={
-            styles.solarHeaderPanel
+            styles.groupHeaderPanel
           }
         >
 
           <View
             style={
-              styles.solarHeaderLeft
+              styles.groupHeaderLeft
             }
           >
 
@@ -626,7 +934,7 @@ export default function ChartCard({
             <AppText
               variant="heading"
               style={
-                styles.solarHeaderTitle
+                styles.groupHeaderTitle
               }
             >
               Solar Monitoring
@@ -634,27 +942,103 @@ export default function ChartCard({
 
           </View>
 
+        </View>
+
+        {/* ==================================================
+            SOLAR BODY ROW
+            ================================================== */}
+
+        <View
+          style={
+            styles.batteryBodyRow
+          }
+        >
+
+          {/* ================================================
+              LEFT — SOLAR SUN GAUGE COLUMN
+              ================================================ */}
+
           <View
             style={
-              styles.solarTimerContainer
+              styles.batteryGaugeColumn
             }
           >
 
-            <AppText
-              variant="caption"
+            <View
               style={
-                styles.solarTimerLabel
+                styles.batteryCircle
               }
             >
-              Timer
-            </AppText>
+
+              <Svg
+                width={RING_SIZE}
+                height={RING_SIZE}
+                viewBox={
+                  `0 0 ${RING_SIZE} ${RING_SIZE}`
+                }
+              >
+
+                <AnimatedCircle
+                  cx={CENTER}
+                  cy={CENTER}
+                  r={SUN_RADIUS}
+                  fill={sunColor}
+                />
+
+                {SOLAR_RAYS.map((ray) => (
+                  <AnimatedLine
+                    key={
+                      `ray-${ray.x1}-${ray.y1}`
+                    }
+                    x1={ray.x1}
+                    y1={ray.y1}
+                    x2={ray.x2}
+                    y2={ray.y2}
+                    stroke={sunColor}
+                    strokeWidth={
+                      SUN_RAYS_STROKE
+                    }
+                    strokeLinecap="round"
+                  />
+                ))}
+
+              </Svg>
+
+              {/* ==============================================
+                  SOLAR INPUT CENTER
+                  ============================================== */}
+
+              <View
+                style={
+                  styles.batteryCenter
+                }
+              >
+
+                <AppText
+                  variant="heading"
+                  style={
+                    styles.batteryPercentage
+                  }
+                >
+                  {solarInput}
+                </AppText>
+
+              </View>
+
+            </View>
+
+            {/* ==============================================
+                TIMER
+                ============================================== */}
 
             <AppText
-              variant="heading"
-              style={
-                styles.solarTimerValue
-              }
+              variant="caption"
+              style={[
+                styles.remainingText,
+                styles.solarTimerText,
+              ]}
             >
+              Timer:{" "}
               {loading
                 ? "—"
                 : formatSolarTimer(
@@ -662,76 +1046,31 @@ export default function ChartCard({
                   )}
             </AppText>
 
-          </View>
-
-        </View>
-
-        {/* ==================================================
-            SOLAR 2 × 2 MEASUREMENT GRID
-            ================================================== */}
-
-        <View
-          style={
-            styles.solarMeasurementGrid
-          }
-        >
-
-          {/* ==================================================
-              SOLAR INPUT
-              ================================================== */}
-
-          <View
-            style={
-              styles.solarMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.solarMetricLabel
-              }
-            >
-              Solar Input
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.solarMetricValue
-              }
-            >
-              {solarInput}
-            </AppText>
-
-            {/* Status slot — always rendered for grid alignment */}
+            {/* ==============================================
+                SOLAR STATUS BADGE
+                ============================================== */}
 
             <View
-              style={
-                styles.statusSlot
-              }
+              style={[
+                styles.batteryStatusRow,
+                styles.solarStatusRow,
+              ]}
             >
 
               <View
                 style={[
-                  styles.statusBadge,
-                  solarStatus === "High"
-                    ? styles.normalBadge
-                    : solarStatus ===
-                        "Moderate"
-                    ? styles.moderateBadge
-                    : styles.lowBadge,
+                  styles.batteryStatus,
+                  solarBadgeStyle,
                 ]}
               >
 
                 <AppText
                   variant="caption"
                   style={[
-                    styles.statusBadgeText,
-                    solarStatus ===
-                      "Moderate"
+                    styles.batteryStatusText,
+                    solarStatus === "Moderate"
                       ? styles.darkBadgeText
-                      : styles.lightBadgeText,
+                      : null,
                   ]}
                 >
                   {solarStatus}
@@ -743,112 +1082,175 @@ export default function ChartCard({
 
           </View>
 
-          {/* ==================================================
-              SOLAR VOLTAGE
-              ================================================== */}
+          {/* ================================================
+              RIGHT — SOLAR 2 × 3 MEASUREMENT GRID
+              ================================================ */}
 
           <View
             style={
-              styles.solarMetricCell
+              styles.batteryMetricGrid
             }
           >
 
-            <AppText
-              variant="caption"
-              style={
-                styles.solarMetricLabel
-              }
-            >
-              Voltage
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.solarMetricValue
-              }
-            >
-              {solarVoltage}
-            </AppText>
-
-            {/* Empty status slot intentionally reserved for
-                horizontal alignment with Solar Input. */}
+            {/* ==============================================
+                VOLTAGE
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Voltage
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {solarVoltage}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                CURRENT
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Current
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {solarCurrent}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                TOTAL ENERGY
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
+              }
+            >
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Total Energy
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {totalEnergy}
+              </AppText>
+
+            </View>
+
+            {/* ==============================================
+                RESERVED CELL (for future data)
+                ============================================== */}
+
+            <View
+              style={
+                styles.batteryMetricCell
               }
             />
 
-          </View>
-
-          {/* ==================================================
-              SOLAR CURRENT
-              ================================================== */}
-
-          <View
-            style={
-              styles.solarMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.solarMetricLabel
-              }
-            >
-              Current
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.solarMetricValue
-              }
-            >
-              {solarCurrent}
-            </AppText>
+            {/* ==============================================
+                SOLAR PANEL TEMPERATURE
+                (moved from Temperature Monitoring)
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
-              }
-            />
-
-          </View>
-
-          {/* ==================================================
-              TOTAL ENERGY
-              ================================================== */}
-
-          <View
-            style={
-              styles.solarMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.solarMetricLabel
+                styles.batteryMetricCell
               }
             >
-              Total Energy
-            </AppText>
 
-            <AppText
-              variant="heading"
-              style={
-                styles.solarMetricValue
-              }
-            >
-              {totalEnergy}
-            </AppText>
+              <AppText
+                variant="caption"
+                style={
+                  styles.batteryMetricLabel
+                }
+              >
+                Solar Panel
+              </AppText>
+
+              <AppText
+                variant="heading"
+                style={
+                  styles.batteryMetricValue
+                }
+              >
+                {solarTemperatureData.value}
+              </AppText>
+
+              {solarTemperatureData.badge && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    solarTemperatureData.badgeStyle,
+                  ]}
+                >
+
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusBadgeText,
+                      solarTemperatureData.badgeTextStyle,
+                    ]}
+                  >
+                    {solarTemperatureData.badge}
+                  </AppText>
+
+                </View>
+              )}
+
+            </View>
+
+            {/* ==============================================
+                RESERVED CELL (for future data)
+                ============================================== */}
 
             <View
               style={
-                styles.statusSlot
+                styles.batteryMetricCell
               }
             />
 
@@ -865,8 +1267,7 @@ export default function ChartCard({
   //
   // Weather is intentionally separated from the solar card.
   // The weather card now follows the same grouped-card layout
-  // used by Battery Monitoring, Solar Monitoring, and
-  // Temperature Monitoring.
+  // used by Battery Monitoring and Solar Monitoring.
   // ==========================================================
 
   if (type === "weather") {
@@ -1006,304 +1407,6 @@ export default function ChartCard({
   }
 
   // ==========================================================
-  // TEMPERATURE MONITORING GROUP
-  //
-  // Interior Temperature + Battery Temperature
-  // + Solar Panel Temperature
-  // ==========================================================
-
-  if (type === "temperature") {
-
-    /*
-     * The monitoring service data is extended here with the
-     * newly added interior temperature fields.
-     *
-     * This keeps the existing MonitoringData import and all
-     * other ChartCard logic unchanged.
-     */
-
-    const temperatureMonitoring =
-      monitoring as (
-        MonitoringData & {
-          interior_temp: number;
-          interior_temp_status:
-            TemperatureStatus;
-        }
-      ) | null;
-
-    const interiorTemperatureStatus =
-      temperatureMonitoring
-        ?.interior_temp_status ??
-      "Nominal";
-
-    const batteryTemperatureData =
-      getCardData(
-        "temperature",
-        monitoring,
-        weather ?? null,
-        loading,
-      );
-
-    const solarTemperatureData =
-      getCardData(
-        "solar_temperature",
-        monitoring,
-        weather ?? null,
-        loading,
-      );
-
-    const interiorTemperatureValue =
-      loading
-        ? "—"
-        : `${temperatureMonitoring
-            ?.interior_temp ??
-          0}°C`;
-
-    const interiorTemperatureBadge =
-      getTemperatureBadgeStyle(
-        interiorTemperatureStatus,
-      );
-
-    const interiorTemperatureBadgeText =
-      getTemperatureBadgeTextStyle(
-        interiorTemperatureStatus,
-      );
-
-    return (
-      <View
-        style={[
-          styles.monitorCard,
-          styles.groupMonitoringCard,
-        ]}
-      >
-
-        {/* ==================================================
-            TEMPERATURE HEADER / ACCENT PANEL
-            ================================================== */}
-
-        <View
-          style={
-            styles.groupHeaderPanel
-          }
-        >
-
-          <View
-            style={
-              styles.groupHeaderLeft
-            }
-          >
-
-            <Ionicons
-              name="thermometer-outline"
-              size={30}
-              color="#FACC15"
-            />
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupHeaderTitle
-              }
-            >
-              Temperature Monitoring
-            </AppText>
-
-          </View>
-
-        </View>
-
-        {/* ==================================================
-            TEMPERATURE 1 × 3 MEASUREMENT GRID
-            ================================================== */}
-
-        <View
-          style={
-            styles.groupMeasurementGrid
-          }
-        >
-
-          {/* ==================================================
-              INTERIOR TEMPERATURE
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              Interior
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {interiorTemperatureValue}
-            </AppText>
-
-            <View
-              style={
-                styles.statusSlot
-              }
-            >
-
-              <View
-                style={[
-                  styles.statusBadge,
-                  interiorTemperatureBadge,
-                ]}
-              >
-
-                <AppText
-                  variant="caption"
-                  style={[
-                    styles.statusBadgeText,
-                    interiorTemperatureBadgeText,
-                  ]}
-                >
-                  {interiorTemperatureStatus}
-                </AppText>
-
-              </View>
-
-            </View>
-
-          </View>
-
-          {/* ==================================================
-              BATTERY TEMPERATURE
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              Battery
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {batteryTemperatureData.value}
-            </AppText>
-
-            <View
-              style={
-                styles.statusSlot
-              }
-            >
-
-              {batteryTemperatureData.badge && (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    batteryTemperatureData.badgeStyle,
-                  ]}
-                >
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.statusBadgeText,
-                      batteryTemperatureData.badgeTextStyle,
-                    ]}
-                  >
-                    {batteryTemperatureData.badge}
-                  </AppText>
-
-                </View>
-              )}
-
-            </View>
-
-          </View>
-
-          {/* ==================================================
-              SOLAR PANEL TEMPERATURE
-              ================================================== */}
-
-          <View
-            style={
-              styles.groupMetricCell
-            }
-          >
-
-            <AppText
-              variant="caption"
-              style={
-                styles.groupMetricLabel
-              }
-            >
-              Solar Panel
-            </AppText>
-
-            <AppText
-              variant="heading"
-              style={
-                styles.groupMetricValue
-              }
-            >
-              {solarTemperatureData.value}
-            </AppText>
-
-            <View
-              style={
-                styles.statusSlot
-              }
-            >
-
-              {solarTemperatureData.badge && (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    solarTemperatureData.badgeStyle,
-                  ]}
-                >
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.statusBadgeText,
-                      solarTemperatureData.badgeTextStyle,
-                    ]}
-                  >
-                    {solarTemperatureData.badge}
-                  </AppText>
-
-                </View>
-              )}
-
-            </View>
-
-          </View>
-
-        </View>
-
-      </View>
-    );
-  }
-
-  // ==========================================================
   // HIDDEN GROUP MEMBERS
   //
   // These values are rendered inside their respective
@@ -1311,6 +1414,7 @@ export default function ChartCard({
   // ==========================================================
 
   if (
+    type === "battery" ||
     type === "watt_hour" ||
     type === "solar_voltage" ||
     type === "solar_current" ||
@@ -1318,7 +1422,8 @@ export default function ChartCard({
     type === "solar_timer" ||
     type === "load" ||
     type === "dod" ||
-    type === "solar_temperature"
+    type === "solar_temperature" ||
+    type === "temperature"
   ) {
     return null;
   }
@@ -1470,7 +1575,16 @@ function getCardData(
     // WATT-HOUR
     // ========================================================
 
-    case "watt_hour":
+    case "watt_hour": {
+
+      const clamped =
+        Math.max(
+          WATT_HOURS_MIN,
+          Math.min(
+            WATT_HOURS_MAX,
+            monitoring?.watt_hours ?? 0,
+          ),
+        );
 
       return {
         icon:
@@ -1482,8 +1596,9 @@ function getCardData(
         value:
           loading
             ? "—"
-            : `${monitoring?.watt_hours ?? 0}Wh`,
+            : `${clamped}Wh`,
       };
+    }
 
     // ========================================================
     // SOLAR INPUT
@@ -2033,10 +2148,35 @@ const styles = StyleSheet.create({
   // BATTERY
   // ==========================================================
 
-  batterySection: {
+  // ==========================================================
+  // BATTERY BODY ROW
+  //
+  // Splits the card body into two equal flex halves. Both
+  // columns are flex:1 so the dividing boundary always lands
+  // on the true center of the card. The column gap sits in
+  // the middle, acting as the imaginary divider.
+  // ==========================================================
+
+  batteryBodyRow: {
+    flex: 1,
     width: "100%",
+    flexDirection: "row",
+    alignItems: "stretch",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    columnGap: 12,
+  },
+
+  // ==========================================================
+  // LEFT — BATTERY GAUGE COLUMN
+  // ==========================================================
+
+  batteryGaugeColumn: {
+    flex: 1,
     alignItems: "center",
-    marginBottom: 14,
+    justifyContent: "flex-start",
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
 
   batteryCircle: {
@@ -2059,7 +2199,7 @@ const styles = StyleSheet.create({
 
   batteryPercentage: {
     color: "#000000",
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: "800",
     lineHeight: 30,
   },
@@ -2068,19 +2208,12 @@ const styles = StyleSheet.create({
     color: Colors.light.error,
   },
 
-  batteryLabel: {
-    color:
-      Colors.light.textSecondary,
-    fontWeight: "600",
-    marginTop: 1,
-  },
-
   batteryStatusRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 7,
-    gap: 9,
+    gap: 8,
   },
 
   batteryStatus: {
@@ -2095,6 +2228,11 @@ const styles = StyleSheet.create({
     height: 25,
   },
 
+  batteryStatusIdle: {
+    backgroundColor:
+      Colors.light.error,
+  },
+
   batteryStatusText: {
     color: "#FFFFFF",
     fontSize: 12,
@@ -2106,6 +2244,67 @@ const styles = StyleSheet.create({
       Colors.light.textSecondary,
     marginTop: 3,
     textAlign: "center",
+    fontSize: 11,
+  },
+
+  // ==========================================================
+  // SOLAR MONITORING COLUMN OVERRIDES
+  //
+  // Pushes the timer and status badge slightly further away
+  // from the sun gauge (down by ~1px) without affecting the
+  // battery card that shares the base styles.
+  // ==========================================================
+
+  solarTimerText: {
+    marginTop: 12,
+  },
+
+  solarStatusRow: {
+    marginTop: 8,
+  },
+
+  // ==========================================================
+  // RIGHT — BATTERY 2 × 3 MEASUREMENT GRID
+  //
+  // Flex-wraps six equal cells (two per row × three rows).
+  // The bottom three cells are reserved for future data.
+  // ==========================================================
+
+  batteryMetricGrid: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "stretch",
+    alignContent: "flex-start",
+    justifyContent: "space-between",
+  },
+
+  batteryMetricCell: {
+    width: "50%",
+    minHeight: 78,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+
+  batteryMetricLabel: {
+    color: "#000000",
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    flexShrink: 1,
+  },
+
+  batteryMetricValue: {
+    color: "#000000",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 3,
+    lineHeight: 22,
+    flexShrink: 1,
   },
 
   // ==========================================================
@@ -2178,155 +2377,10 @@ const styles = StyleSheet.create({
   },
 
   // ==========================================================
-  // GROUP 1 × 3 MEASUREMENT GRID
-  // ==========================================================
-
-  groupMeasurementGrid: {
-    flex: 1,
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "stretch",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-  },
-
-  groupMetricCell: {
-    flex: 1,
-    minHeight: 70,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-
-  groupMetricLabel: {
-    color: "#000000",
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 17,
-    flexShrink: 1,
-  },
-
-  groupMetricValue: {
-    color: "#000000",
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    marginTop: 3,
-    lineHeight: 22,
-    flexShrink: 1,
-  },
-
-  // ==========================================================
-  // SOLAR MONITORING CARD
-  // ==========================================================
-
-  solarMonitoringCard: {
-    minHeight: 250,
-    flexDirection: "column",
-    alignItems: "stretch",
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    overflow: "hidden",
-  },
-
-  solarHeaderPanel: {
-    width: "100%",
-    backgroundColor:
-      Colors.light.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-
-  solarHeaderLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    minWidth: 0,
-    paddingRight: 10,
-  },
-
-  solarHeaderTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-    flexShrink: 1,
-  },
-
-  solarTimerContainer: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    minWidth: 86,
-  },
-
-  solarTimerLabel: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    lineHeight: 14,
-  },
-
-  solarTimerValue: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    lineHeight: 20,
-    textAlign: "right",
-  },
-
-  // ==========================================================
-  // SOLAR 2 × 2 MEASUREMENT GRID
-  // ==========================================================
-
-  solarMeasurementGrid: {
-    flex: 1,
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "stretch",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-
-  solarMetricCell: {
-    width: "50%",
-    minHeight: 95,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 8,
-  },
-
-  solarMetricLabel: {
-    color: "#000000",
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 17,
-    flexShrink: 1,
-  },
-
-  solarMetricValue: {
-    color: "#000000",
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-    marginTop: 3,
-    lineHeight: 24,
-    flexShrink: 1,
-  },
-
-  // ==========================================================
   // WEATHER MONITORING CARD
   //
-  // Uses the same grouped layout language as the Battery,
-  // Solar, and Temperature monitoring cards.
+  // Uses the same grouped layout language as the Battery and
+  // Solar monitoring cards.
   // ==========================================================
 
   weatherMonitoringCard: {
@@ -2401,20 +2455,6 @@ const styles = StyleSheet.create({
   },
 
   weatherStatusSlot: {
-    minHeight: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-
-  // ==========================================================
-  // STATUS SLOT
-  //
-  // Reserved minimum height keeps cells vertically aligned
-  // even when no badge is displayed.
-  // ==========================================================
-
-  statusSlot: {
     minHeight: 25,
     alignItems: "center",
     justifyContent: "center",

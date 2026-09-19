@@ -34,10 +34,11 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
 
-  // While the sidebar is open, stop the browser from applying
-  // pinch / trackpad zoom, which expands the page beyond its
-  // bounds and exposes a white screen. Restored on close.
-  useDisableWebZoom(visible);
+  // While the sidebar is open, lock page scrolling and stop the
+  // browser from applying pinch / trackpad zoom, which expands
+  // the page beyond its bounds and exposes a white screen.
+  // Restored on close.
+  useDisableSidebarScrollAndZoom(visible);
 
   if (!visible) {
     return null;
@@ -253,15 +254,17 @@ export default function Sidebar({
 }
 
 /*
- * Prevents the page from being zoomed while the sidebar is
- * visible:
- *   - mobile: blocks pinch + double-tap zoom gestures
- *   - desktop: blocks ctrl+wheel / trackpad pinch zoom
- * Zooming expands the page past the viewport bounds and shows
- * unwanted white space. On native builds (no DOM / document),
- * this safely does nothing.
+ * While the sidebar is open:
+ *  - web: the page scroll is locked (mouse wheel, trackpad and
+ *    touch drag) and pinch / double-tap / ctrl+wheel zoom is
+ *    blocked, so the content behind the overlay never moves.
+ *  - native: no-op. The full-screen overlay already swallows
+ *    touches, so the screen's ScrollView can't scroll behind
+ *    the sidebar.
  */
-function useDisableWebZoom(active: boolean) {
+function useDisableSidebarScrollAndZoom(
+  active: boolean,
+) {
   useEffect(() => {
     if (!active || typeof document === "undefined") {
       return;
@@ -278,6 +281,19 @@ function useDisableWebZoom(active: boolean) {
     };
 
     const root = document.documentElement;
+    const body = document.body;
+
+    // Lock the page so the background can't scroll while the
+    // sidebar is open. Wheel and touch events land on the
+    // overlay and can only scroll the document, which is now
+    // locked. The sidebar's own ScrollView is a nested scroll
+    // container and keeps its independent scrolling.
+    const previousOverflow = body.style.overflow;
+    const previousOverScroll =
+      body.style.overscrollBehavior;
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+
     const previousTouchAction = root.style.touchAction;
     root.style.touchAction = "pan-y";
 
@@ -308,7 +324,11 @@ function useDisableWebZoom(active: boolean) {
     );
 
     return () => {
-      root.style.touchAction = previousTouchAction;
+      body.style.overflow = previousOverflow;
+      body.style.overscrollBehavior =
+        previousOverScroll;
+      root.style.touchAction =
+        previousTouchAction;
 
       document.removeEventListener(
         "gesturestart",
