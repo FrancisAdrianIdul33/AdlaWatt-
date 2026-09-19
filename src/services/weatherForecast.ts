@@ -58,10 +58,24 @@ const FORECAST_STEPS = 40;
 const REQUEST_TIMEOUT_MS = 10 * 1000;
 
 /*
+ * One Call 4.0 requires the "One Call by Call" paid subscription.
+ * A free account returns HTTP 401. Because the app's API key is
+ * on the free tier, the 4.0 attempt always fails and only spams
+ * the console (401 network error + fallback warning), so it is
+ * disabled here and Current Weather 2.5 is used directly.
+ *
+ * Flip this to true once the account is subscribed and the
+ * preferred provider will be attempted again (remembering the
+ * failure for the rest of the session).
+ */
+const USE_ONE_CALL_V4 = false;
+
+/*
  * One Call 4.0 requires the "One Call by Call" subscription.
- * A free account returns HTTP 401, so once it fails we remember
- * the failure for the rest of the session and skip it instead
- * of spamming the console on every refresh.
+ * When it is enabled but the account is not entitled, a free
+ * account returns HTTP 401, so once it fails we remember the
+ * failure for the rest of the session and skip it instead of
+ * spamming the console on every refresh.
  */
 let oneCallV4Unavailable = false;
 
@@ -842,10 +856,11 @@ export async function getCurrentWeatherForUser(): Promise<WeatherForecast> {
 
   // ==========================================================
   // 2. PRIMARY PROVIDER - ONE CALL API 4.0
-  //    (attempted once per session)
+  //    (only attempted when USE_ONE_CALL_V4 is enabled, once
+  //    per session)
   // ==========================================================
 
-  if (!oneCallV4Unavailable) {
+  if (USE_ONE_CALL_V4 && !oneCallV4Unavailable) {
     try {
       return await getOneCallV4Weather(
         location
