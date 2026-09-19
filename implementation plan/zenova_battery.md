@@ -221,6 +221,7 @@ Rules:
 - Limit displayed percentage movement to about **1% every 30 – 60 seconds**.
 - Allow voltage-table correction only after confirmed rest/stability.
 - BMS cutoff, low-voltage protection, sensor failure, high temperature, or dangerous states override normal display behavior.
+- The dashboard battery voltage display is clamped to the table range **9.000 – 12.600 V**. When the raw live voltage reads **≤ 10.65 V** (20% SoC / 80% DoD cutoff), the voltage text turns **red** to flag that the preferred DoD limit has been reached.
 
 ---
 
