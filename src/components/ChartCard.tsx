@@ -102,6 +102,12 @@ const CIRCUMFERENCE =
 
 const LOW_BATTERY_THRESHOLD = 20;
 
+const WATT_HOURS_MIN = 0;
+
+const WATT_HOURS_MAX = 720;
+
+const LOW_WATT_HOURS_THRESHOLD = 144;
+
 // ============================================================
 // SUN GAUGE CONFIGURATION
 //
@@ -341,6 +347,10 @@ export default function ChartCard({
         weather ?? null,
         loading,
       );
+
+    const isLowWattHours =
+      (monitoring?.watt_hours ?? 0) <=
+      LOW_WATT_HOURS_THRESHOLD;
 
     const loadData =
       getCardData(
@@ -672,14 +682,16 @@ export default function ChartCard({
                 {wattHourData.label}
               </AppText>
 
-              <AppText
-                variant="heading"
-                style={
-                  styles.batteryMetricValue
-                }
-              >
-                {wattHourData.value}
-              </AppText>
+<AppText
+                  variant="heading"
+                  style={[
+                    styles.batteryMetricValue,
+                    isLowWattHours &&
+                      styles.lowBatteryText,
+                  ]}
+                >
+                  {wattHourData.value}
+                </AppText>
 
             </View>
 
@@ -1563,7 +1575,16 @@ function getCardData(
     // WATT-HOUR
     // ========================================================
 
-    case "watt_hour":
+    case "watt_hour": {
+
+      const clamped =
+        Math.max(
+          WATT_HOURS_MIN,
+          Math.min(
+            WATT_HOURS_MAX,
+            monitoring?.watt_hours ?? 0,
+          ),
+        );
 
       return {
         icon:
@@ -1575,8 +1596,9 @@ function getCardData(
         value:
           loading
             ? "—"
-            : `${monitoring?.watt_hours ?? 0}Wh`,
+            : `${clamped}Wh`,
       };
+    }
 
     // ========================================================
     // SOLAR INPUT
