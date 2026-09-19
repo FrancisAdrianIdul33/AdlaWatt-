@@ -108,6 +108,12 @@ const WATT_HOURS_MAX = 720;
 
 const LOW_WATT_HOURS_THRESHOLD = 144;
 
+const LOW_VOLTAGE_THRESHOLD = 10.65;
+
+const VOLTAGE_MIN = 9;
+
+const VOLTAGE_MAX = 12.6;
+
 // ============================================================
 // SUN GAUGE CONFIGURATION
 //
@@ -351,6 +357,10 @@ export default function ChartCard({
     const isLowWattHours =
       (monitoring?.watt_hours ?? 0) <=
       LOW_WATT_HOURS_THRESHOLD;
+
+    const isLowVoltage =
+      (monitoring?.voltage ?? 0) <=
+      LOW_VOLTAGE_THRESHOLD;
 
     const loadData =
       getCardData(
@@ -654,9 +664,11 @@ export default function ChartCard({
 
               <AppText
                 variant="heading"
-                style={
-                  styles.batteryMetricValue
-                }
+                style={[
+                  styles.batteryMetricValue,
+                  isLowVoltage &&
+                    styles.lowBatteryText,
+                ]}
               >
                 {voltageData.value}
               </AppText>
@@ -1556,7 +1568,16 @@ function getCardData(
     // VOLTAGE
     // ========================================================
 
-    case "voltage":
+    case "voltage": {
+
+      const clamped =
+        Math.max(
+          VOLTAGE_MIN,
+          Math.min(
+            VOLTAGE_MAX,
+            monitoring?.voltage ?? 0,
+          ),
+        );
 
       return {
         icon:
@@ -1568,8 +1589,9 @@ function getCardData(
         value:
           loading
             ? "—"
-            : `${monitoring?.voltage ?? 0}V`,
+            : `${clamped}V`,
       };
+    }
 
     // ========================================================
     // WATT-HOUR
