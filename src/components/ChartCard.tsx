@@ -8,6 +8,7 @@ import React, {
 
 import {
   Animated,
+  Easing,
   StyleSheet,
   View,
 } from "react-native";
@@ -114,6 +115,28 @@ const LOW_VOLTAGE_THRESHOLD = 10.65;
 const VOLTAGE_MIN = 9;
 
 const VOLTAGE_MAX = 12.6;
+
+// ============================================================
+// BATTERY GAUGE ANIMATION
+//
+// The ring sweeps smoothly whenever the battery percentage
+// changes, and while charging the gauge breathes (subtle zoom)
+// with a soft pulsing glow halo in the battery color.
+// ============================================================
+
+const RING_ANIMATION_DURATION_MS = 700;
+
+const CHARGING_PULSE_DURATION_MS = 800;
+
+const CHARGING_SCALE_MAX = 0.04;
+
+const CHARGING_GLOW_MIN_OPACITY = 0.12;
+
+const CHARGING_GLOW_MAX_OPACITY = 0.4;
+
+const CHARGING_GLOW_RADIUS_OFFSET = 3;
+
+const CHARGING_GLOW_STROKE_OFFSET = 5;
 
 // ============================================================
 // SUN GAUGE CONFIGURATION
@@ -240,6 +263,200 @@ export default function ChartCard({
       monitoring?.solar_status,
     );
 
+  // ==========================================================
+  // BATTERY GAUGE ANIMATION
+  //
+  // A progress value drives the ring sweep (offset + count-up
+  // percentage) and a looping pulse drives the charging "glow
+  // and zoom" breathing effect. Both forward each tick into
+  // React state so the plain SVG circle props animate without
+  // the Animated.createAnimatedComponent web caveat used by
+  // the sun gauge above.
+  // ==========================================================
+
+  const ringProgress =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const chargingPulse =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const [ringLevel, setRingLevel] =
+    useState(0);
+
+  const [chargingScale, setChargingScale] =
+    useState(1);
+
+  const [
+    chargingGlowOpacity,
+    setChargingGlowOpacity,
+  ] = useState(0);
+
+  const isCharging =
+    monitoring?.battery_status ===
+    "Charging";
+
+  const ringTarget =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        monitoring?.battery_level ?? 0,
+      ),
+    );
+
+  useEffect(() => {
+    // Forward each ring tick into state so the SVG circle's
+    // strokeDashoffset (and the displayed percentage) follow
+    // the animated progress value.
+    const listenerId =
+      ringProgress.addListener(
+        ({ value }) => {
+          setRingLevel(value);
+        },
+      );
+
+    return () =>
+      ringProgress.removeListener(
+        listenerId,
+      );
+  }, [ringProgress]);
+
+  useEffect(() => {
+    if (
+      type !== "voltage" ||
+      loading
+    ) {
+      return;
+    }
+
+    const animation =
+      Animated.timing(
+        ringProgress,
+        {
+          toValue: ringTarget,
+          duration:
+            RING_ANIMATION_DURATION_MS,
+          easing:
+            Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        },
+      );
+
+    animation.start();
+
+    // Cancel any in-flight sweep if the percentage flips
+    // again before the transition completes.
+    return () =>
+      animation.stop();
+  }, [
+    type,
+    loading,
+    ringTarget,
+    ringProgress,
+  ]);
+
+  useEffect(() => {
+    // Forward each pulse tick into state so the gauge scale
+    // and glow halo follow the looping animation.
+    const listenerId =
+      chargingPulse.addListener(
+        ({ value }) => {
+          if (!isCharging) {
+            return;
+          }
+
+          setChargingScale(
+            1 +
+              value *
+                CHARGING_SCALE_MAX,
+          );
+
+          setChargingGlowOpacity(
+            CHARGING_GLOW_MIN_OPACITY +
+              value *
+                (CHARGING_GLOW_MAX_OPACITY -
+                  CHARGING_GLOW_MIN_OPACITY),
+          );
+        },
+      );
+
+    return () =>
+      chargingPulse.removeListener(
+        listenerId,
+      );
+  }, [
+    chargingPulse,
+    isCharging,
+  ]);
+
+  useEffect(() => {
+    if (
+      type !== "voltage" ||
+      !isCharging
+    ) {
+      chargingPulse.stopAnimation();
+
+      chargingPulse.setValue(0);
+
+      setChargingScale(1);
+
+      setChargingGlowOpacity(0);
+
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(
+          chargingPulse,
+          {
+            toValue: 1,
+            duration:
+              CHARGING_PULSE_DURATION_MS,
+            easing:
+              Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          },
+        ),
+        Animated.timing(
+          chargingPulse,
+          {
+            toValue: 0,
+            duration:
+              CHARGING_PULSE_DURATION_MS,
+            easing:
+              Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          },
+        ),
+      ]),
+    );
+
+    loop.start();
+
+    // Stop breathing once charging ends or the card
+    // unmounts.
+    return () => {
+      loop.stop();
+
+      chargingPulse.stopAnimation();
+
+      chargingPulse.setValue(0);
+
+      setChargingScale(1);
+
+      setChargingGlowOpacity(0);
+    };
+  }, [
+    type,
+    isCharging,
+    chargingPulse,
+  ]);
+
   useEffect(() => {
     // Forward each animation tick into React state so the
     // plain SVG shapes below keep their cross-fade without
@@ -304,12 +521,6 @@ export default function ChartCard({
     const level =
       monitoring?.battery_level ?? 0;
 
-    const progress =
-      Math.max(
-        0,
-        Math.min(100, level),
-      ) / 100;
-
     const isLowBattery =
       level <=
       LOW_BATTERY_THRESHOLD;
@@ -321,7 +532,7 @@ export default function ChartCard({
 
     const dashOffset =
       CIRCUMFERENCE *
-      (1 - progress);
+      (1 - ringLevel / 100);
 
     // --------------------------------------------------------
     // BATTERY GAUGE DIRECTION
@@ -506,72 +717,107 @@ export default function ChartCard({
               }
             >
 
-              <Svg
-                width={RING_SIZE}
-                height={RING_SIZE}
-                viewBox={
-                  `0 0 ${RING_SIZE} ${RING_SIZE}`
-                }
+              <Animated.View
+                style={[
+                  styles.batteryPulse,
+                  {
+                    transform: [
+                      {
+                        scale: chargingScale,
+                      },
+                    ],
+                  },
+                ]}
               >
 
-                {/* Background Ring */}
-
-                <Circle
-                  cx={CENTER}
-                  cy={CENTER}
-                  r={RADIUS}
-                  stroke="#D8D6CC"
-                  strokeWidth={STROKE}
-                  fill="none"
-                />
-
-                {/* Battery Progress */}
-
-                <Circle
-                  cx={CENTER}
-                  cy={CENTER}
-                  r={RADIUS}
-                  stroke={batteryColor}
-                  strokeWidth={STROKE}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={
-                    `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
+                <Svg
+                  width={RING_SIZE}
+                  height={RING_SIZE}
+                  viewBox={
+                    `0 0 ${RING_SIZE} ${RING_SIZE}`
                   }
-                  strokeDashoffset={
-                    dashOffset
-                  }
-                  transform={
-                    batteryTransform
-                  }
-                />
-
-              </Svg>
-
-              {/* ==============================================
-                  BATTERY CENTER
-                  ============================================== */}
-
-              <View
-                style={
-                  styles.batteryCenter
-                }
-              >
-
-                <AppText
-                  variant="heading"
-                  style={[
-                    styles.batteryPercentage,
-                    isLowBattery &&
-                      styles.lowBatteryText,
-                  ]}
                 >
-                  {loading
-                    ? "—"
-                    : `${level}%`}
-                </AppText>
 
-              </View>
+                  {/* Charging Glow Halo */}
+
+                  <Circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={
+                      RADIUS +
+                      CHARGING_GLOW_RADIUS_OFFSET
+                    }
+                    stroke={batteryColor}
+                    strokeWidth={
+                      STROKE +
+                      CHARGING_GLOW_STROKE_OFFSET
+                    }
+                    fill="none"
+                    opacity={
+                      chargingGlowOpacity
+                    }
+                  />
+
+                  {/* Background Ring */}
+
+                  <Circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={RADIUS}
+                    stroke="#D8D6CC"
+                    strokeWidth={STROKE}
+                    fill="none"
+                  />
+
+                  {/* Battery Progress */}
+
+                  <Circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={RADIUS}
+                    stroke={batteryColor}
+                    strokeWidth={STROKE}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={
+                      `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
+                    }
+                    strokeDashoffset={
+                      dashOffset
+                    }
+                    transform={
+                      batteryTransform
+                    }
+                  />
+
+                </Svg>
+
+                {/* ==============================================
+                    BATTERY CENTER
+                    ============================================== */}
+
+                <View
+                  style={
+                    styles.batteryCenter
+                  }
+                >
+
+                  <AppText
+                    variant="heading"
+                    style={[
+                      styles.batteryPercentage,
+                      isLowBattery &&
+                        styles.lowBatteryText,
+                    ]}
+                  >
+                    {loading
+                      ? "—"
+                      : `${Math.round(ringLevel)}%`}
+                  </AppText>
+
+                </View>
+
+              </Animated.View>
 
             </View>
 
@@ -2223,6 +2469,13 @@ const styles = StyleSheet.create({
   },
 
   batteryCircle: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  batteryPulse: {
     width: RING_SIZE,
     height: RING_SIZE,
     alignItems: "center",
