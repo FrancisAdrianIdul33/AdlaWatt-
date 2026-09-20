@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 
 import React, {
   useEffect,
@@ -25,7 +24,6 @@ import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
-import { Routes } from "@/constants/routes";
 import { Radius } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
@@ -38,10 +36,6 @@ type Appliance = {
   name: string;
   watts: string;
   status: Status;
-};
-
-type AppRecCardProps = {
-  onViewAll?: () => void;
 };
 
 const defaultImage = require(
@@ -57,9 +51,7 @@ const tips = [
 
 
 
-export default function AppRecCard({
-  onViewAll,
-}: AppRecCardProps) {
+export default function AppRecCard() {
   const [mode, setMode] =
     useState<Status>("advisable");
 
@@ -578,36 +570,6 @@ export default function AppRecCard({
             </AppText>
           </Pressable>
         </View>
-
-        {/* View All */}
-        <Pressable
-          onPress={() =>
-            onViewAll
-              ? onViewAll()
-              : router.push(
-                Routes.APPLIANCES,
-              )
-          }
-          accessibilityRole="button"
-          accessibilityLabel="View all appliances"
-          style={({ pressed }) => [
-            styles.viewAll,
-            pressed && styles.pressed,
-          ]}
-        >
-          <AppText
-            variant="caption"
-            style={styles.viewAllText}
-          >
-            View All
-          </AppText>
-
-          <Ionicons
-            name="arrow-forward"
-            size={16}
-            color="#FFFFFF"
-          />
-        </Pressable>
       </View>
 
       <ApplianceModal
@@ -734,26 +696,6 @@ const styles = StyleSheet.create({
   // ============================================
   // VIEW ALL
   // ============================================
-
-  viewAll: {
-    width: "100%",
-    maxWidth: 360,
-    height: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.light.primary,
-    borderRadius: Radius.md,
-    marginTop: 12,
-    marginBottom: 15,
-  },
-
-  viewAllText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-  },
 
   // ============================================
   // TIP

@@ -19,6 +19,7 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Pagination from "@/components/ui/Pagination";
 import AppText from "@/components/ui/AppText";
 import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/DropdownModal";
+import ActivityLogCard, { ACTIVITY_LOG_GAP } from "@/components/ActivityLogCard";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
@@ -444,68 +445,12 @@ export default function ActivityLogsScreen() {
               description="No activities match the selected filters."
             />
           ) : (
-            currentPageLogs.map((activity) => {
-              const icon =
-                activity.type === "info"
-                  ? "information-circle-outline"
-                  : activity.type === "warning"
-                    ? "warning-outline"
-                    : "alert-circle-outline";
-
-              const color =
-                activity.type === "info"
-                  ? Colors.light.primary
-                  : activity.type === "warning"
-                    ? Colors.light.secondary
-                    : Colors.light.error;
-
-              return (
-                <View
-                  key={activity.id}
-                  style={styles.activityCard}
-                >
-                  <View
-                    style={styles.activityWrapper}
-                  >
-                    <Ionicons
-                      name={icon}
-                      size={24}
-                      color={color}
-                    />
-
-                    <View
-                      style={styles.activityContent}
-                    >
-                      <AppText
-                        variant="body"
-                        style={styles.activityTitle}
-                      >
-                        {activity.title}
-                      </AppText>
-
-                      <AppText
-                        variant="caption"
-                        style={
-                          styles.activityDescription
-                        }
-                      >
-                        {activity.details}
-                      </AppText>
-
-                      <AppText
-                        variant="caption"
-                        style={
-                          styles.activityTimestamp
-                        }
-                      >
-                        {activity.date} •{" "}
-                        {activity.time}
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-              );
-            })
+            currentPageLogs.map((activity) => (
+              <ActivityLogCard
+                key={activity.id}
+                item={activity}
+              />
+            ))
           )}
         </View>
 
@@ -636,8 +581,6 @@ const dashboardDimensions = {
     filterGap: 10,
     filterHeight: 48,
     filterRadius: 14,
-
-    activityGap: 12,
   };
 
   const styles = StyleSheet.create({
@@ -762,45 +705,8 @@ const dashboardDimensions = {
     activityList: {
       width: "100%",
 
-      gap: dashboardDimensions.activityGap,
+      gap: ACTIVITY_LOG_GAP,
 
       zIndex: 1,
     },
-
-    activityCard: {
-  width: "100%",
-  backgroundColor: Colors.glass.white,
-  borderWidth: 2,
-  borderColor: Colors.light.border,
-  borderRadius: 16,
-  padding: 12,
-},
-
-activityWrapper: {
-  width: "100%",
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: 10,
-},
-
-activityContent: {
-  flex: 1,
-},
-
-activityTitle: {
-  color: "#000000",
-  fontWeight: "700",
-},
-
-activityDescription: {
-  color: Colors.light.textSecondary,
-  marginTop: 3,
-  lineHeight: 18,
-},
-
-activityTimestamp: {
-  color: Colors.light.textSecondary,
-  marginTop: 5,
-  fontSize: 11,
-},
   });
