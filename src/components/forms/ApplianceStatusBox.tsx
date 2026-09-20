@@ -3,13 +3,14 @@ import React from "react";
 import {
   Image,
   ImageSourcePropType,
-  StyleSheet,
   View,
 } from "react-native";
 
+import {
+  applianceCardStyles,
+} from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
-import { Radius } from "@/constants/theme";
 
 type ApplianceStatusBoxProps = {
   name: string;
@@ -31,12 +32,22 @@ export default function ApplianceStatusBox({
   const isOkay = status === "OK to use";
 
   return (
-    <View style={[styles.container, { borderColor: color }]}>
+    <View
+      style={[
+        applianceCardStyles.box,
+        { borderColor: color },
+      ]}
+    >
       {/* Appliance Image */}
-      <View style={[styles.imageContainer, { borderColor: color }]}>
+      <View
+        style={[
+          applianceCardStyles.imageContainer,
+          { borderColor: color },
+        ]}
+      >
         <Image
           source={imageSource}
-          style={styles.image}
+          style={applianceCardStyles.image}
           resizeMode="cover"
         />
       </View>
@@ -44,23 +55,28 @@ export default function ApplianceStatusBox({
       {/* Appliance Name */}
       <AppText
         variant="caption"
-        style={styles.name}
+        style={applianceCardStyles.name}
         numberOfLines={2}
       >
         {name}
       </AppText>
 
       {/* Wattage */}
-      <AppText variant="caption" style={styles.wattage}>
+      <AppText
+        variant="caption"
+        style={applianceCardStyles.watts}
+      >
         {wattage}
       </AppText>
 
       {/* Status */}
       <View
         style={[
-          styles.status,
+          applianceCardStyles.status,
           {
-            backgroundColor: isOkay ? Colors.light.primary : "#EF4444",
+            backgroundColor: isOkay
+              ? Colors.light.primary
+              : "#EF4444",
           },
         ]}
       >
@@ -70,72 +86,13 @@ export default function ApplianceStatusBox({
           color="#FFFFFF"
         />
 
-        <AppText variant="caption" style={styles.statusText}>
+        <AppText
+          variant="caption"
+          style={applianceCardStyles.statusText}
+        >
           {status}
         </AppText>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    width: "48%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    padding: 14,
-    alignItems: "center",
-  },
-
-  imageContainer: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#dfdfdf",
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    overflow: "hidden",
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-
-  name: {
-    width: "100%",
-    color: "#000000",
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 12,
-  },
-
-  wattage: {
-    width: "100%",
-    color: Colors.light.textSecondary,
-    fontSize: 16,
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 3,
-    marginBottom: 8,
-  },
-
-  status: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    marginTop: "auto",
-  },
-
-  statusText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-});

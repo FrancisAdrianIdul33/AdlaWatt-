@@ -10,6 +10,9 @@ import {
 
 import ApplianceModal from "@/components/forms/ApplianceModal";
 import ApplianceStatusBox from "@/components/forms/ApplianceStatusBox";
+import {
+  applianceCardGrid,
+} from "@/components/forms/applianceCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
@@ -452,7 +455,7 @@ export default function AppliancesScreen() {
         </View>
 
         {/* Appliances */}
-        <View style={styles.applianceGrid}>
+        <View style={[applianceCardGrid, { marginTop: 20 }]}>
           {filteredAppliances.length === 0 ? (
             <EmptyState
               title={
@@ -569,12 +572,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  applianceGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 20,
+  sectionHeader: {
+    marginBottom: 12,
   },
 
   card: {

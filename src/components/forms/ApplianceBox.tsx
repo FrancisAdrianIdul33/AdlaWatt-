@@ -10,6 +10,9 @@ import {
 
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
+import {
+  applianceCardStyles,
+} from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Radius } from "@/constants/theme";
@@ -28,6 +31,8 @@ type ApplianceBoxProps = {
   isCustom?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  onCamera?: () => void;
+  onArchive?: () => void;
 };
 
 const defaultImage = require("@/assets/images/adlawatt-icon.png");
@@ -42,11 +47,15 @@ export default function ApplianceBox({
   isCustom = false,
   onEdit,
   onDelete,
+  onCamera,
+  onArchive,
 }: ApplianceBoxProps) {
   const [deleteMode, setDeleteMode] = useState(false);
+  const [menuMode, setMenuMode] = useState(false);
 
   const handleDeleteConfirm = () => {
     setDeleteMode(false);
+    setMenuMode(false);
     onDelete?.();
   };
 
@@ -54,207 +63,264 @@ export default function ApplianceBox({
     setDeleteMode(false);
   };
 
+  const renderMenuLayer = () => (
+    <>
+      {/* ================================================= */}
+      {/* BACK ARROW */}
+      {/* ================================================= */}
+
+      <Pressable
+        onPress={() => setMenuMode(false)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Back to appliance"
+        style={({ pressed }) => [
+          styles.menuBack,
+          pressed && styles.actionPressed,
+        ]}
+      >
+        <MaterialCommunityIcons
+          name="arrow-left"
+          size={24}
+          color={Colors.light.text}
+        />
+      </Pressable>
+
+      {/* ================================================= */}
+      {/* 2x2 ACTION GRID */}
+      {/* ================================================= */}
+
+      <View style={styles.menuGrid}>
+        {/* EDIT */}
+
+        <Pressable
+          onPress={onEdit}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Edit appliance"
+          style={({ pressed }) => [
+            styles.iconButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="pencil"
+            size={22}
+            color={Colors.light.primary}
+          />
+        </Pressable>
+
+        {/* CAMERA */}
+
+        <Pressable
+          onPress={onCamera}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Change appliance photo"
+          style={({ pressed }) => [
+            styles.iconButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="camera"
+            size={22}
+            color={Colors.light.primary}
+          />
+        </Pressable>
+
+        {/* ARCHIVE */}
+
+        <Pressable
+          onPress={onArchive}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Archive appliance"
+          style={({ pressed }) => [
+            styles.iconButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="archive"
+            size={22}
+            color={Colors.light.primary}
+          />
+        </Pressable>
+
+        {/* DELETE */}
+
+        <Pressable
+          onPress={() => setDeleteMode(true)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Delete appliance"
+          style={({ pressed }) => [
+            styles.iconButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="delete"
+            size={22}
+            color="#EF4444"
+          />
+        </Pressable>
+      </View>
+    </>
+  );
+
+  const renderDeleteConfirmation = () => (
+    <View style={styles.deleteConfirmation}>
+      <MaterialCommunityIcons
+        name="alert-circle-outline"
+        size={30}
+        color="#EF4444"
+      />
+
+      <AppText
+        variant="caption"
+        style={styles.deleteQuestion}
+      >
+        You want to delete this?
+      </AppText>
+
+      <View style={styles.confirmActions}>
+        {/* NO */}
+
+        <Pressable
+          onPress={handleDeleteCancel}
+          style={({ pressed }) => [
+            styles.confirmButton,
+            styles.noButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <AppText
+            variant="caption"
+            style={styles.noButtonText}
+          >
+            No
+          </AppText>
+        </Pressable>
+
+        {/* YES */}
+
+        <Pressable
+          onPress={handleDeleteConfirm}
+          style={({ pressed }) => [
+            styles.confirmButton,
+            styles.yesButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <AppText
+            variant="caption"
+            style={styles.yesButtonText}
+          >
+            Yes
+          </AppText>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const renderNormalLayer = () => (
+    <>
+      {/* ================================================= */}
+      {/* SELECTION CIRCLE */}
+      {/* ================================================= */}
+
+      <View
+        style={[
+          styles.selectionCircle,
+          {
+            borderColor: color,
+            backgroundColor: selected
+              ? color
+              : Colors.light.surface,
+          },
+        ]}
+      >
+        {selected && (
+          <MaterialCommunityIcons
+            name="check"
+            size={18}
+            color="#FFFFFF"
+          />
+        )}
+      </View>
+
+      {/* ================================================= */}
+      {/* APPLIANCE IMAGE */}
+      {/* ================================================= */}
+
+      <View
+        style={[
+          applianceCardStyles.imageContainer,
+          {
+            borderColor: color,
+          },
+        ]}
+      >
+        <Image
+          source={imageSource}
+          style={applianceCardStyles.image}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* ================================================= */}
+      {/* APPLIANCE NAME */}
+      {/* ================================================= */}
+
+      <AppText
+        variant="caption"
+        style={applianceCardStyles.name}
+        numberOfLines={2}
+      >
+        {name}
+      </AppText>
+
+      {/* ================================================= */}
+      {/* WATTAGE */}
+      {/* ================================================= */}
+
+      <AppText
+        variant="caption"
+        style={applianceCardStyles.watts}
+      >
+        {wattage}
+      </AppText>
+    </>
+  );
+
   return (
     <Pressable
-      onPress={deleteMode ? undefined : onPress}
+      onPress={menuMode || deleteMode ? undefined : onPress}
+      onLongPress={isCustom ? () => setMenuMode(true) : undefined}
       disabled={deleteMode || !onPress}
       style={({ pressed }) => [
-        styles.container,
+        applianceCardStyles.boxCompact,
         {
           borderColor: color,
+          position: "relative",
         },
         pressed && !deleteMode && styles.pressed,
       ]}
     >
-      {/* ===================================================== */}
-      {/* DELETE CONFIRMATION */}
-      {/* Only shown for custom appliances */}
-      {/* ===================================================== */}
-
       {deleteMode && isCustom ? (
-        <View style={styles.deleteConfirmation}>
-          <MaterialCommunityIcons
-            name="alert-circle-outline"
-            size={38}
-            color="#EF4444"
-          />
-
-          <AppText
-            variant="caption"
-            style={styles.deleteQuestion}
-          >
-            You want to delete this?
-          </AppText>
-
-          <View style={styles.confirmActions}>
-            {/* NO */}
-
-            <Pressable
-              onPress={handleDeleteCancel}
-              style={({ pressed }) => [
-                styles.confirmButton,
-                styles.noButton,
-                pressed && styles.actionPressed,
-              ]}
-            >
-              <AppText
-                variant="caption"
-                style={styles.noButtonText}
-              >
-                No
-              </AppText>
-            </Pressable>
-
-            {/* YES */}
-
-            <Pressable
-              onPress={handleDeleteConfirm}
-              style={({ pressed }) => [
-                styles.confirmButton,
-                styles.yesButton,
-                pressed && styles.actionPressed,
-              ]}
-            >
-              <AppText
-                variant="caption"
-                style={styles.yesButtonText}
-              >
-                Yes
-              </AppText>
-            </Pressable>
-          </View>
-        </View>
+        renderDeleteConfirmation()
+      ) : menuMode && isCustom ? (
+        renderMenuLayer()
       ) : (
-        <>
-          {/* ================================================= */}
-          {/* SELECTION CIRCLE */}
-          {/* ================================================= */}
-
-          <View
-            style={[
-              styles.selectionCircle,
-              {
-                borderColor: color,
-                backgroundColor: selected
-                  ? color
-                  : Colors.light.surface,
-              },
-            ]}
-          >
-            {selected && (
-              <MaterialCommunityIcons
-                name="check"
-                size={18}
-                color="#FFFFFF"
-              />
-            )}
-          </View>
-
-          {/* ================================================= */}
-          {/* APPLIANCE IMAGE */}
-          {/* ================================================= */}
-
-          <View
-            style={[
-              styles.imageContainer,
-              {
-                borderColor: color,
-              },
-            ]}
-          >
-            <Image
-              source={imageSource}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          </View>
-
-          {/* ================================================= */}
-          {/* APPLIANCE NAME */}
-          {/* ================================================= */}
-
-          <AppText
-            variant="caption"
-            style={styles.name}
-            numberOfLines={2}
-          >
-            {name}
-          </AppText>
-
-          {/* ================================================= */}
-          {/* WATTAGE */}
-          {/* ================================================= */}
-
-          <AppText
-            variant="caption"
-            style={styles.wattage}
-          >
-            {wattage}
-          </AppText>
-
-          {/* ================================================= */}
-          {/* CUSTOM APPLIANCE ACTIONS */}
-          {/* Only visible if isCustom = true */}
-          {/* ================================================= */}
-
-          {isCustom && (
-            <View style={styles.customActions}>
-              {/* DELETE */}
-
-              <Pressable
-                onPress={() => setDeleteMode(true)}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  styles.deleteButton,
-                  pressed && styles.actionPressed,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="delete"
-                  size={22}
-                  color="#EF4444"
-                />
-              </Pressable>
-
-              {/* EDIT */}
-
-              <Pressable
-                onPress={onEdit}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  styles.editButton,
-                  pressed && styles.actionPressed,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="pencil"
-                  size={22}
-                  color={Colors.light.primary}
-                />
-              </Pressable>
-            </View>
-          )}
-        </>
+        renderNormalLayer()
       )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: "48%",
-    backgroundColor: "#F0EAD6",
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    padding: 14,
-    paddingTop: 14,
-    alignItems: "center",
-    position: "relative",
-    minHeight: 280,
-  },
-
   selectionCircle: {
     position: "absolute",
     top: 10,
@@ -271,84 +337,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  imageContainer: {
-    width: "100%",
-    aspectRatio: 1,
-
-    backgroundColor: "#dfdfdf",
-
-    borderWidth: 2,
-    borderRadius: Radius.md,
-
-    overflow: "hidden",
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-
-  name: {
-    width: "100%",
-    color: "#000000",
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 12,
-  },
-
-  wattage: {
-    width: "100%",
-    color: Colors.light.textSecondary,
-    fontSize: 16,
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 3,
-
-    // Space between wattage and icons
-    marginBottom: 14,
-  },
-
   /* ======================================================= */
-  /* CUSTOM ACTION BUTTONS */
+  /* SECOND LAYER (LONG-PRESS MENU) */
   /* ======================================================= */
 
-  customActions: {
+  menuBack: {
+    alignSelf: "flex-start",
+    width: 32,
+    height: 32,
+
+    borderRadius: 16,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginLeft: -4,
+    marginBottom: 16,
+  },
+
+  menuGrid: {
     width: "100%",
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: "auto",
-    paddingHorizontal: 4,
+    gap: 10,
   },
 
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
 
-    borderRadius: 20,
+    borderRadius: 22,
 
     alignItems: "center",
     justifyContent: "center",
   },
 
-  deleteButton: {
-    backgroundColor: "transparent",
-  },
-
-  editButton: {
-    backgroundColor: "transparent",
-  },
-
   /* ======================================================= */
-  /* DELETE CONFIRMATION */
+  /* THIRD LAYER (DELETE CONFIRMATION) */
   /* ======================================================= */
 
   deleteConfirmation: {
     flex: 1,
     width: "100%",
-    minHeight: 240,
 
     alignItems: "center",
     justifyContent: "center",
@@ -356,22 +388,23 @@ const styles = StyleSheet.create({
 
   deleteQuestion: {
     color: "#000000",
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 14,
+    marginTop: 8,
   },
 
   confirmActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 20,
+    width: "100%",
+    flexDirection: "column",
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 6,
   },
 
   confirmButton: {
-    minWidth: 75,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    width: "100%",
+    paddingVertical: 9,
     borderRadius: Radius.md,
 
     alignItems: "center",

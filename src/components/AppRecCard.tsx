@@ -18,6 +18,9 @@ import {
 } from "react-native";
 
 import ApplianceModal from "@/components/forms/ApplianceModal";
+import {
+  applianceCardStyles,
+} from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -42,7 +45,7 @@ type AppRecCardProps = {
 };
 
 const defaultImage = require(
-  "@/assets/images/developers/avatar.jpg",
+  "@/assets/images/adlawatt-icon.png",
 );
 
 const tips = [
@@ -377,7 +380,7 @@ export default function AppRecCard({
                   <View
                     key={appliance.id}
                     style={[
-                      styles.applianceBox,
+                      applianceCardStyles.box,
                       {
                         borderColor:
                           statusColor,
@@ -387,7 +390,7 @@ export default function AppRecCard({
                     {/* Fixed Image Area */}
                     <View
                       style={[
-                        styles.imageContainer,
+                        applianceCardStyles.imageContainer,
                         {
                           borderColor:
                             statusColor,
@@ -396,7 +399,9 @@ export default function AppRecCard({
                     >
                       <Image
                         source={defaultImage}
-                        style={styles.image}
+                        style={
+                          applianceCardStyles.image
+                        }
                         resizeMode="cover"
                       />
                     </View>
@@ -404,7 +409,9 @@ export default function AppRecCard({
                     {/* Bounded Appliance Name */}
                     <AppText
                       variant="caption"
-                      style={styles.name}
+                      style={
+                        applianceCardStyles.name
+                      }
                       numberOfLines={2}
                     >
                       {appliance.name}
@@ -413,7 +420,9 @@ export default function AppRecCard({
                     {/* Wattage */}
                     <AppText
                       variant="caption"
-                      style={styles.watts}
+                      style={
+                        applianceCardStyles.watts
+                      }
                       numberOfLines={1}
                     >
                       {appliance.watts}
@@ -422,7 +431,7 @@ export default function AppRecCard({
                     {/* Status */}
                     <View
                       style={[
-                        styles.status,
+                        applianceCardStyles.status,
                         {
                           backgroundColor:
                             statusColor,
@@ -442,7 +451,7 @@ export default function AppRecCard({
                       <AppText
                         variant="caption"
                         style={
-                          styles.statusText
+                          applianceCardStyles.statusText
                         }
                         numberOfLines={1}
                       >
@@ -654,77 +663,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "flex-start",
     gap: 12,
-  },
-
-  applianceBox: {
-    width: "46%",
-    maxWidth: 150,
-    height: 240,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    padding: 12,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    overflow: "hidden",
-  },
-
-  imageContainer: {
-    width: 110,
-    height: 110,
-    flexShrink: 0,
-    backgroundColor: "#dfdfdf",
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    overflow: "hidden",
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-
-  name: {
-    width: "100%",
-    height: 40,
-    flexShrink: 0,
-    color: "#000000",
-    fontSize: 16,
-    fontWeight: "600",
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 8,
-  },
-
-  watts: {
-    width: "100%",
-    height: 18,
-    flexShrink: 0,
-    color: Colors.light.textSecondary,
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 2,
-  },
-
-  status: {
-    maxWidth: "100%",
-    minHeight: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    borderRadius: Radius.md,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    marginTop: 10,
-    flexShrink: 0,
-  },
-
-  statusText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "700",
-    flexShrink: 1,
   },
 
   // ============================================

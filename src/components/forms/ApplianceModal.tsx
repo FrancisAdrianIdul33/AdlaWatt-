@@ -15,6 +15,9 @@ import {
 } from "react-native";
 
 import ApplianceBox from "@/components/forms/ApplianceBox";
+import {
+  applianceCardGrid,
+} from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
 
@@ -742,39 +745,41 @@ export default function ApplianceModal({
             }
             showsVerticalScrollIndicator
           >
-            <AppText
-              variant="caption"
-              style={styles.subtitle}
-            >
-              Select the appliances you want to use with
-              your AdlaWatt system.
-            </AppText>
-
             {/* Battery Advisory */}
             <View style={styles.advisory}>
-              <Ionicons
-                name="battery-half-outline"
-                size={22}
-                color={Colors.light.primary}
-              />
+              <AppText
+                variant="caption"
+                style={styles.advisoryIntro}
+              >
+                Select the appliances you want to use with
+                your AdlaWatt system.
+              </AppText>
 
-              <View style={styles.advisoryText}>
-                <AppText
-                  variant="body"
-                  style={styles.advisoryTitle}
-                >
-                  Battery Capacity: 720 Wh
-                </AppText>
+              <View style={styles.advisoryRow}>
+                <Ionicons
+                  name="battery-half-outline"
+                  size={22}
+                  color={Colors.light.primary}
+                />
 
-                <AppText
-                  variant="caption"
-                  style={
-                    styles.advisoryDescription
-                  }
-                >
-                  Keep your selected appliances within the
-                  available energy capacity.
-                </AppText>
+                <View style={styles.advisoryText}>
+                  <AppText
+                    variant="body"
+                    style={styles.advisoryTitle}
+                  >
+                    Battery Capacity: 720 Wh
+                  </AppText>
+
+                  <AppText
+                    variant="caption"
+                    style={
+                      styles.advisoryDescription
+                    }
+                  >
+                    Keep your selected appliances within the
+                    available energy capacity.
+                  </AppText>
+                </View>
               </View>
             </View>
 
@@ -790,13 +795,6 @@ export default function ApplianceModal({
 
             {/* Custom Appliance */}
             <View style={styles.customSection}>
-              <AppText
-                variant="body"
-                style={styles.sectionTitle}
-              >
-                Custom Appliance
-              </AppText>
-
               <Pressable
                 onPress={() => {
                   if (customVisible) {
@@ -818,7 +816,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="add-circle-outline"
                   size={20}
-                  color={Colors.light.primary}
+                  color="#FFFFFF"
                 />
 
                 <AppText
@@ -1191,21 +1189,24 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
 
-  subtitle: {
-    color: Colors.light.textSecondary,
-    lineHeight: 20,
-    marginBottom: Spacing.md,
-  },
-
   advisory: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "rgba(0, 168, 107, 0.08)",
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: Radius.md,
     padding: 13,
     marginBottom: Spacing.lg,
+  },
+
+  advisoryIntro: {
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+
+  advisoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   advisoryText: {
@@ -1247,14 +1248,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary,
     borderRadius: Radius.md,
   },
 
   customButtonText: {
-    color: Colors.light.primary,
+    color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1275,12 +1274,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10,
-  },
+  grid: applianceCardGrid,
 
   noResults: {
     alignItems: "center",
