@@ -562,13 +562,21 @@ export default function ChartCard({
       monitoring?.dod_status ??
       "Safe";
 
-    const dodLabel =
-      dodStatus === "Unsafe"
-        ? "DoD Unsafe"
-        : "DoD Safe";
-
     const isDodUnsafe =
       dodStatus === "Unsafe";
+
+    // The DoD badge turns red not only when the DoD status is
+    // unsafe but also whenever the battery level is low (below
+    // LOW_BATTERY_THRESHOLD), because a low battery is still
+    // considered under load of the depth-of-discharge rule.
+    // The red badge always shows "DoD Unsafe".
+    const isDodBadgeRed =
+      isDodUnsafe || isLowBattery;
+
+    const dodLabel =
+      isDodBadgeRed
+        ? "DoD Unsafe"
+        : "DoD Safe";
 
     const voltageData =
       getCardData(
@@ -876,7 +884,7 @@ export default function ChartCard({
               <View
                 style={[
                   styles.dodStatusBadge,
-                  isDodUnsafe
+                  isDodBadgeRed
                     ? styles.dodUnsafeBadge
                     : styles.dodSafeBadge,
                 ]}
@@ -886,7 +894,7 @@ export default function ChartCard({
                   variant="caption"
                   style={[
                     styles.dodStatusBadgeText,
-                    isDodUnsafe
+                    isDodBadgeRed
                       ? styles.dodUnsafeBadgeText
                       : styles.dodSafeBadgeText,
                   ]}
