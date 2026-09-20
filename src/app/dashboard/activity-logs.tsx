@@ -18,7 +18,7 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Pagination from "@/components/ui/Pagination";
 import AppText from "@/components/ui/AppText";
-import { DropdownModal, TintedOptionRow } from "@/components/ui/DropdownModal";
+import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
@@ -552,19 +552,9 @@ export default function ActivityLogsScreen() {
             "This Year",
           ] as TimeFilter[]
         ).map((option) => (
-          <TintedOptionRow
+          <RadioOptionRow
             key={option}
             label={option}
-            icon={
-              option === "All"
-                ? "time-outline"
-                : "calendar-outline"
-            }
-            color={
-              timeFilter === option
-                ? Colors.light.primary
-                : Colors.light.textSecondary
-            }
             selected={timeFilter === option}
             onPress={() =>
               handleTimeFilter(option)

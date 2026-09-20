@@ -2,7 +2,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Alert,
   Dimensions,
   Modal,
   Platform,
@@ -1291,37 +1290,6 @@ export default function AnalyticsCards({
             message="No appliance usage history is available for this period."
           />
         )}
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.viewAllButton,
-            pressed &&
-              styles.buttonPressed,
-          ]}
-          onPress={() =>
-            Alert.alert(
-              "Appliance Usage",
-              "All recorded appliance usage is included in the selected analytics date range.",
-            )
-          }
-        >
-          <AppText
-            variant="caption"
-            style={
-              styles.viewAllButtonText
-            }
-          >
-            View All Appliances
-          </AppText>
-
-          <Ionicons
-            name="arrow-forward-outline"
-            size={16}
-            color={
-              Colors.light.primary
-            }
-          />
-        </Pressable>
       </AnalyticsCard>
 
       {/* ======================================================
@@ -1819,26 +1787,6 @@ export const styles =
         Colors.light.textSecondary,
       marginTop: 5,
       fontSize: 10,
-    },
-
-    viewAllButton: {
-      minHeight: 42,
-      marginTop: 17,
-      borderWidth: 2,
-      borderColor:
-        Colors.light.primary,
-      borderRadius: 12,
-      paddingHorizontal: 15,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 7,
-    },
-
-    viewAllButtonText: {
-      color:
-        Colors.light.primary,
-      fontWeight: "700",
     },
 
     /* ========================================================
