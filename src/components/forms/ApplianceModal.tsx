@@ -747,18 +747,10 @@ export default function ApplianceModal({
           >
             {/* Battery Advisory */}
             <View style={styles.advisory}>
-              <AppText
-                variant="caption"
-                style={styles.advisoryIntro}
-              >
-                Select the appliances you want to use with
-                your AdlaWatt system.
-              </AppText>
-
               <View style={styles.advisoryRow}>
                 <Ionicons
                   name="battery-half-outline"
-                  size={22}
+                  size={24}
                   color={Colors.light.primary}
                 />
 
@@ -776,8 +768,9 @@ export default function ApplianceModal({
                       styles.advisoryDescription
                     }
                   >
-                    Keep your selected appliances within the
-                    available energy capacity.
+                    Select the appliances you want to use
+                    and keep them within the available
+                    energy capacity.
                   </AppText>
                 </View>
               </View>
@@ -955,12 +948,24 @@ export default function ApplianceModal({
                 "Custom Appliances",
             ) && (
                 <View style={styles.section}>
-                  <AppText
-                    variant="body"
-                    style={styles.sectionTitle}
-                  >
-                    Custom Appliances
-                  </AppText>
+                  <View style={styles.sectionHeader}>
+                    <AppText
+                      variant="body"
+                      style={styles.sectionTitle}
+                    >
+                      Custom Appliances
+                    </AppText>
+
+                    <View
+                      style={[
+                        styles.sectionLine,
+                        {
+                          backgroundColor:
+                            Colors.light.primary,
+                        },
+                      ]}
+                    />
+                  </View>
 
                   <View style={styles.grid}>
                     {filteredAppliances
@@ -1024,12 +1029,24 @@ export default function ApplianceModal({
                   key={section}
                   style={styles.section}
                 >
-                  <AppText
-                    variant="body"
-                    style={styles.sectionTitle}
-                  >
-                    {section}
-                  </AppText>
+                  <View style={styles.sectionHeader}>
+                    <AppText
+                      variant="body"
+                      style={styles.sectionTitle}
+                    >
+                      {section}
+                    </AppText>
+
+                    <View
+                      style={[
+                        styles.sectionLine,
+                        {
+                          backgroundColor:
+                            getAreaColor(section),
+                        },
+                      ]}
+                    />
+                  </View>
 
                   <View style={styles.grid}>
                     {items.map((appliance) => {
@@ -1198,12 +1215,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
 
-  advisoryIntro: {
-    color: Colors.light.textSecondary,
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-
   advisoryRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1239,7 +1250,19 @@ const styles = StyleSheet.create({
     color: "#1b1b1b",
     fontWeight: "700",
     fontSize: 20,
-    marginBottom: Spacing.sm,
+  },
+
+  sectionHeader: {
+    alignSelf: "flex-start",
+    marginTop: 3,
+    marginBottom: Spacing.md,
+  },
+
+  sectionLine: {
+    width: "100%",
+    height: 3,
+    borderRadius: 2,
+    marginTop: 2,
   },
 
   customButton: {
