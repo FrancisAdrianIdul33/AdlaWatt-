@@ -1,0 +1,250 @@
+import { Ionicons } from "@expo/vector-icons";
+
+import React, { ReactNode } from "react";
+
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+
+import AppText from "@/components/ui/AppText";
+
+import { Colors } from "@/constants/colors";
+
+// ============================================================
+// STANDARD DROPDOWN MODAL
+//
+// The shared dropdown-picker used across the dashboard screens.
+// "Opened" state is always this centered bottom-sheet-style
+// modal so every dropdown looks and behaves the same.
+// ============================================================
+
+const MODAL_RADIUS = 18;
+
+interface DropdownModalProps {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+export function DropdownModal({
+  visible,
+  title,
+  onClose,
+  children,
+}: DropdownModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={dropdownModalStyles.overlay}
+        onPress={onClose}
+      >
+        <Pressable
+          style={dropdownModalStyles.card}
+          onPress={() => {}}
+        >
+          <View
+            style={dropdownModalStyles.header}
+          >
+            <AppText
+              variant="body"
+              style={dropdownModalStyles.title}
+            >
+              {title}
+            </AppText>
+
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
+              <Ionicons
+                name="close-outline"
+                size={22}
+                color="#000000"
+              />
+            </Pressable>
+          </View>
+
+          {children}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ============================================================
+// RADIO OPTION ROW
+// Used by dropdowns whose options carry no colored icon.
+// ============================================================
+
+interface RadioOptionRowProps {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}
+
+export function RadioOptionRow({
+  label,
+  selected,
+  onPress,
+}: RadioOptionRowProps) {
+  return (
+    <Pressable
+      style={[
+        dropdownModalStyles.option,
+        selected &&
+          dropdownModalStyles.optionSelected,
+      ]}
+      onPress={onPress}
+    >
+      <Ionicons
+        name={
+          selected
+            ? "radio-button-on-outline"
+            : "radio-button-off-outline"
+        }
+        size={18}
+        color={Colors.light.primary}
+      />
+
+      <AppText
+        variant="caption"
+        style={[
+          dropdownModalStyles.optionText,
+          selected &&
+            dropdownModalStyles.optionTextSelected,
+        ]}
+      >
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+// ============================================================
+// TINTED OPTION ROW
+// Used by dropdowns whose options carry a colored icon. No
+// radio dot - the pale background is tinted by the icon color.
+// ============================================================
+
+interface TintedOptionRowProps {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  selected: boolean;
+  onPress: () => void;
+}
+
+function withAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function TintedOptionRow({
+  label,
+  icon,
+  color,
+  selected,
+  onPress,
+}: TintedOptionRowProps) {
+  return (
+    <Pressable
+      style={[
+        dropdownModalStyles.option,
+        {
+          backgroundColor: withAlpha(
+            color,
+            selected ? 0.16 : 0.06,
+          ),
+        },
+      ]}
+      onPress={onPress}
+    >
+      <Ionicons
+        name={icon}
+        size={18}
+        color={color}
+      />
+
+      <AppText
+        variant="caption"
+        style={[
+          dropdownModalStyles.optionText,
+          selected &&
+            dropdownModalStyles.optionTextSelected,
+        ]}
+      >
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+const dropdownModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.40)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#FFFFFF",
+    borderRadius: MODAL_RADIUS,
+    padding: 17,
+  },
+
+  header: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  title: {
+    color: "#000000",
+    fontWeight: "700",
+    fontSize: 17,
+  },
+
+  option: {
+    width: "100%",
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginVertical: 2,
+  },
+
+  optionSelected: {
+    backgroundColor: "rgba(0, 168, 107, 0.08)",
+  },
+
+  optionText: {
+    color: "#000000",
+  },
+
+  optionTextSelected: {
+    fontWeight: "700",
+  },
+});

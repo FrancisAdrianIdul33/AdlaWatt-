@@ -6,7 +6,7 @@ import {
   ViewStyle,
 } from "react-native";
 
-import NavBarBottom from "@/components/layout/navbarBottom";
+import NavBarBottom from "@/components/layout/NavBarBottom";
 import { Colors } from "@/constants/colors";
 
 interface ScreenContainer2Props {

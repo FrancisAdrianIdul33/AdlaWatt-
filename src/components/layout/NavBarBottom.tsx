@@ -52,7 +52,7 @@ const TABS = [
   {
     icon: "menu" as const,
     label: "Menu",
-    href: Routes.SETTINGS,
+    href: Routes.MENU,
   },
 ];
 

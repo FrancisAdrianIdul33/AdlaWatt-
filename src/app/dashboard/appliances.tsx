@@ -17,6 +17,7 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
+import { DropdownModal, RadioOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
@@ -89,13 +90,13 @@ export default function AppliancesScreen() {
     useState<Area>("All Areas");
 
   const [
-    powerDropdownVisible,
-    setPowerDropdownVisible,
+    powerModalVisible,
+    setPowerModalVisible,
   ] = useState(false);
 
   const [
-    areaDropdownVisible,
-    setAreaDropdownVisible,
+    areaModalVisible,
+    setAreaModalVisible,
   ] = useState(false);
 
   const loadSelectedAppliances = async () => {
@@ -148,12 +149,12 @@ export default function AppliancesScreen() {
     filter: PowerLevel,
   ) => {
     setPowerFilter(filter);
-    setPowerDropdownVisible(false);
+    setPowerModalVisible(false);
   };
 
   const handleAreaFilter = (filter: Area) => {
     setAreaFilter(filter);
-    setAreaDropdownVisible(false);
+    setAreaModalVisible(false);
   };
 
   const filteredAppliances =
@@ -249,10 +250,8 @@ export default function AppliancesScreen() {
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
-                setPowerDropdownVisible(
-                  !powerDropdownVisible,
-                );
-                setAreaDropdownVisible(false);
+                setPowerModalVisible(true);
+                setAreaModalVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -273,63 +272,19 @@ export default function AppliancesScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  powerDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={17}
                 color={Colors.light.text}
               />
             </Pressable>
-
-            {powerDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "All",
-                    "Highest",
-                    "Moderate",
-                    "Low",
-                  ] as PowerLevel[]
-                ).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() =>
-                      handlePowerFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      powerFilter === option &&
-                        styles.selectedItem,
-                      pressed &&
-                        styles.dropdownPressed,
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownText,
-                        powerFilter === option &&
-                          styles.selectedText,
-                      ]}
-                    >
-                      {option}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
 
           {/* Area Filter */}
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
-                setAreaDropdownVisible(
-                  !areaDropdownVisible,
-                );
-                setPowerDropdownVisible(false);
+                setAreaModalVisible(true);
+                setPowerModalVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -350,57 +305,11 @@ export default function AppliancesScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  areaDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={17}
                 color={Colors.light.text}
               />
             </Pressable>
-
-            {areaDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "All Areas",
-                    "Living Area",
-                    "Bedroom",
-                    "Kitchen Area",
-                    "Work/Study Area",
-                    "Bathroom Area",
-                    "Porch",
-                    "Custom",
-                  ] as Area[]
-                ).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() =>
-                      handleAreaFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      areaFilter === option &&
-                        styles.selectedItem,
-                      pressed &&
-                        styles.dropdownPressed,
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownText,
-                        areaFilter === option &&
-                          styles.selectedText,
-                      ]}
-                    >
-                      {option}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
         </View>
 
@@ -547,6 +456,70 @@ export default function AppliancesScreen() {
         onSave={handleApplianceSave}
         selectedAppliances={selectedAppliances}
       />
+
+      {/* ========================================================
+          POWER LEVEL MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={powerModalVisible}
+        title="Power Level"
+        onClose={() =>
+          setPowerModalVisible(false)
+        }
+      >
+        {(
+          [
+            "All",
+            "Highest",
+            "Moderate",
+            "Low",
+          ] as PowerLevel[]
+        ).map((option) => (
+          <RadioOptionRow
+            key={option}
+            label={option}
+            selected={
+              powerFilter === option
+            }
+            onPress={() =>
+              handlePowerFilter(option)
+            }
+          />
+        ))}
+      </DropdownModal>
+
+      {/* ========================================================
+          AREA MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={areaModalVisible}
+        title="Area"
+        onClose={() =>
+          setAreaModalVisible(false)
+        }
+      >
+        {(
+          [
+            "All Areas",
+            "Living Area",
+            "Bedroom",
+            "Kitchen Area",
+            "Work/Study Area",
+            "Bathroom Area",
+            "Porch",
+            "Custom",
+          ] as Area[]
+        ).map((option) => (
+          <RadioOptionRow
+            key={option}
+            label={option}
+            selected={areaFilter === option}
+            onPress={() =>
+              handleAreaFilter(option)
+            }
+          />
+        ))}
+      </DropdownModal>
     </ScreenContainer2>
   );
 }
@@ -643,44 +616,6 @@ const styles = StyleSheet.create({
 
   pressed: {
     opacity: 0.7,
-  },
-
-  dropdown: {
-    position: "absolute",
-    top: 52,
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: 14,
-    paddingVertical: 5,
-    zIndex: 100,
-    elevation: 10,
-    boxShadow: "0px 4px 8px rgba(0,0,0,0.12)",
-  },
-
-  dropdownItem: {
-    minHeight: 42,
-    justifyContent: "center",
-    paddingHorizontal: 12,
-  },
-
-  selectedItem: {
-    backgroundColor: "rgba(0, 168, 107, 0.10)",
-  },
-
-  dropdownPressed: {
-    opacity: 0.7,
-  },
-
-  dropdownText: {
-    color: "#000000",
-  },
-
-  selectedText: {
-    fontWeight: "700",
-    color: Colors.light.primary,
   },
 
   applianceSection: {
