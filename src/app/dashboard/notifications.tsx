@@ -19,7 +19,7 @@ import NavBar from "@/components/layout/Navbar";
 
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 
-import Sidebar from "@/components/layout/Sidebar";
+
 
 import NotificationCard, {
   NotificationCardData,
@@ -48,9 +48,6 @@ type NotificationData = NotificationCardData & {
 };
 
 export default function NotificationsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [notifications, setNotifications] =
     useState<NotificationData[]>([]);
 
@@ -379,11 +376,7 @@ export default function NotificationsScreen() {
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -682,14 +675,6 @@ export default function NotificationsScreen() {
 
         <Copyright />
       </ScrollView>
-
-      {/* Sidebar */}
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
     </ScreenContainer2>
   );
 }

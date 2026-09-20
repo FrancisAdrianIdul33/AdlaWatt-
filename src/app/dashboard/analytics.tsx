@@ -2,7 +2,6 @@ import AnalyticsCards from "@/components/AnalyticsCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import {
@@ -56,11 +55,6 @@ import {
    ============================================================ */
 
 export default function AnalyticsScreen() {
-  const [
-    sidebarVisible,
-    setSidebarVisible,
-  ] = useState(false);
-
   const [
     monitoringHistory,
     setMonitoringHistory,
@@ -522,11 +516,7 @@ export default function AnalyticsScreen() {
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={
@@ -860,18 +850,6 @@ export default function AnalyticsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Sidebar */}
-      <Sidebar
-        visible={
-          sidebarVisible
-        }
-        onClose={() =>
-          setSidebarVisible(
-            false,
-          )
-        }
-      />
     </ScreenContainer2>
   );
 }

@@ -16,7 +16,6 @@ import {
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import Pagination from "@/components/ui/Pagination";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
@@ -48,9 +47,6 @@ type ActivityLog = {
 };
 
 export default function ActivityLogsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [activityLogs, setActivityLogs] =
     useState<ActivityLog[]>([]);
 
@@ -313,11 +309,7 @@ export default function ActivityLogsScreen() {
 
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -679,13 +671,6 @@ export default function ActivityLogsScreen() {
 
         <Copyright />
       </ScrollView>
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
     </ScreenContainer2>
   );
 }

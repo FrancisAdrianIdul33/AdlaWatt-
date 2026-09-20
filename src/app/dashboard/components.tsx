@@ -15,7 +15,6 @@ import Copyright from "@/components/forms/Copyright";
 
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
@@ -95,9 +94,6 @@ type DeviceStatus =
 // ============================================
 
 export default function ComponentsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [statusFilter, setStatusFilter] =
     useState<
       "All" | "Active" | "Inactive"
@@ -347,11 +343,7 @@ export default function ComponentsScreen() {
 
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -549,13 +541,6 @@ export default function ComponentsScreen() {
 
         <Copyright />
       </ScrollView>
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
     </ScreenContainer2>
   );
 }

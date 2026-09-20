@@ -16,7 +16,6 @@ import {
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -82,9 +81,6 @@ export default function AppliancesScreen() {
     applianceModalVisible,
     setApplianceModalVisible,
   ] = useState(false);
-
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
 
   const [powerFilter, setPowerFilter] =
     useState<PowerLevel>("All");
@@ -199,11 +195,7 @@ export default function AppliancesScreen() {
 
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -554,13 +546,6 @@ export default function AppliancesScreen() {
         }
         onSave={handleApplianceSave}
         selectedAppliances={selectedAppliances}
-      />
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
       />
     </ScreenContainer2>
   );

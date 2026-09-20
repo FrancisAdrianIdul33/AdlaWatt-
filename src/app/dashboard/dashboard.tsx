@@ -21,7 +21,6 @@ import ChartCard from "@/components/ChartCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Radius } from "@/constants/theme";
@@ -67,13 +66,6 @@ const QUICK_NAV_PRESSED_BG = "#33B98A";
 // ============================================================
 
 export default function DashboardScreen() {
-  // ==========================================================
-  // SIDEBAR STATE
-  // ==========================================================
-
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   // ==========================================================
   // QUICK-NAV SCROLL TARGETS
   // ==========================================================
@@ -284,9 +276,6 @@ export default function DashboardScreen() {
           ==================================================== */}
 
       <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
         deviceStatus={
           monitoring?.device_status === "Online"
             ? "Online"
@@ -516,17 +505,7 @@ export default function DashboardScreen() {
         <Copyright />
       </ScrollView>
 
-      {/* ====================================================
-          SIDEBAR
-          ==================================================== */}
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
-    </ScreenContainer2>
+      </ScreenContainer2>
   );
 }
 
