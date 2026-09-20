@@ -343,34 +343,6 @@ export default function DashboardScreen() {
           <Pressable
             onPress={() =>
               scrollToSection(
-                monitoringRef,
-              )
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Go to Real-Time Monitoring"
-            style={({ pressed }) => [
-              styles.quickNavButton,
-              pressed &&
-              styles.quickNavButtonPressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={styles.quickNavButtonText}
-            >
-              Real-Time Monitoring
-            </AppText>
-
-            <Ionicons
-              name="arrow-forward"
-              size={16}
-              color="#FFFFFF"
-            />
-          </Pressable>
-
-          <Pressable
-            onPress={() =>
-              scrollToSection(
                 applianceRef,
               )
             }

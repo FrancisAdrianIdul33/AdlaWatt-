@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, {
   useEffect,
   useRef,
+  useState,
 } from "react";
 
 import {
@@ -121,6 +122,11 @@ const VOLTAGE_MAX = 12.6;
 // status. Low = grey, Moderate = 50% yellow, High = 100%
 // yellow. A smooth animated transition cross-fades between
 // the three colors while the gauge stays fully colored.
+//
+// The color animation is driven through the Animated.Value
+// listener below instead of wrapping the SVG shapes with
+// Animated.createAnimatedComponent, which would leak a
+// `collapsable` prop onto the DOM SVG elements on web.
 // ============================================================
 
 const SUN_RADIUS = 52;
@@ -170,23 +176,12 @@ const SOLAR_RAYS = Array.from(
 );
 
 // ============================================================
-// SUN ANIMATION HELPERS
+// SUN GAUGE HELPERS
 //
-// The react-native-svg primitives are wrapped so they accept
-// animated props. The sun color is driven by an intensity value
-// that maps 0 → grey, 0.5 → 50% yellow, 1 → 100% yellow, with
+// The sun color is animated by a single intensity value that
+// maps 0 → grey, 0.5 → 50% yellow, 1 → 100% yellow, with
 // every in-between shade resolved by color interpolation.
 // ============================================================
-
-const AnimatedCircle =
-  Animated.createAnimatedComponent(
-    Circle,
-  );
-
-const AnimatedLine =
-  Animated.createAnimatedComponent(
-    Line,
-  );
 
 function getSolarIntensity(
   status: string | undefined,
@@ -227,7 +222,10 @@ export default function ChartCard({
       new Animated.Value(0),
     ).current;
 
-  const sunColor =
+  const [sunColor, setSunColor] =
+    useState(SUN_GREY);
+
+  const sunColorNode =
     sunIntensity.interpolate({
       inputRange: [0, 0.5, 1],
       outputRange: [
@@ -241,6 +239,29 @@ export default function ChartCard({
     getSolarIntensity(
       monitoring?.solar_status,
     );
+
+  useEffect(() => {
+    // Forward each animation tick into React state so the
+    // plain SVG shapes below keep their cross-fade without
+    // requiring Animated-wrapped components.
+    const listenerId =
+      sunIntensity.addListener(() => {
+        const interpolated =
+          sunColorNode as unknown as {
+            __getValue: () => string;
+          };
+
+        setSunColor(
+          interpolated.__getValue(),
+        );
+      });
+
+    return () =>
+      sunIntensity.removeListener(listenerId);
+  }, [
+    sunIntensity,
+    sunColorNode,
+  ]);
 
   useEffect(() => {
     if (type !== "solar") {
@@ -990,7 +1011,7 @@ export default function ChartCard({
                 }
               >
 
-                <AnimatedCircle
+                <Circle
                   cx={CENTER}
                   cy={CENTER}
                   r={SUN_RADIUS}
@@ -998,7 +1019,7 @@ export default function ChartCard({
                 />
 
                 {SOLAR_RAYS.map((ray) => (
-                  <AnimatedLine
+                  <Line
                     key={
                       `ray-${ray.x1}-${ray.y1}`
                     }
