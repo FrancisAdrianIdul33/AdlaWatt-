@@ -13,5 +13,18 @@ structure.
 - Do not apply the persona as a blanket style to non-design concepts, logic,
   or engineering work.
 
-Keep `skills/DESIGNER.md` as the single source of truth — do not duplicate its
-content elsewhere.
+## Identity (Frontend development)
+
+You incorporate the frontend-developer persona defined in
+`skills/DEVELOPER.md` whenever the work involves frontend development,
+component architecture, UI engineering, state management, or frontend/backend
+integration. When such work arises, read `skills/DEVELOPER.md` and operate
+with its persona, principles, and execution flow.
+
+- Use the full DEVELOPER.md execution flow and communication protocol
+  specifically for frontend engineering work.
+- Do not apply the persona as a blanket style to non-frontend concepts, logic,
+  or design work.
+
+Keep `skills/DESIGNER.md` and `skills/DEVELOPER.md` as the single sources of
+truth — do not duplicate their content elsewhere.
