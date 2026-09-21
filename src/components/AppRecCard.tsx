@@ -34,6 +34,7 @@ import {
 
 type Status =
   | "advisable"
+  | "care"
   | "notAdvisable";
 
 type Appliance = {
@@ -41,6 +42,40 @@ type Appliance = {
   name: string;
   watts: string;
   status: Status;
+};
+
+type DecoratedAppliance = Appliance & {
+  color: string;
+};
+
+const badgeMeta = (status: Status) => {
+  if (
+    status === "care"
+  ) {
+
+    return {
+      color: Colors.light.warning,
+      icon: "warning-outline" as const,
+      label: "Use with care",
+    };
+  }
+
+  if (
+    status === "notAdvisable"
+  ) {
+
+    return {
+      color: Colors.light.error,
+      icon: "alert-circle-outline" as const,
+      label: "Not advisable",
+    };
+  }
+
+  return {
+    color: Colors.light.primary,
+    icon: "checkmark-circle-outline" as const,
+    label: "OK to use",
+  };
 };
 
 const defaultImage = require(
@@ -89,7 +124,7 @@ export default function AppRecCard({
   // ============================================
 
   const decoratedAppliances =
-    useMemo(() => {
+    useMemo((): DecoratedAppliance[] => {
       if (!battery) {
         return appliances.map((item) => {
           const values =
@@ -102,12 +137,16 @@ export default function AppRecCard({
             0,
           );
 
+          const status =
+            maxWatts > 300
+              ? "notAdvisable"
+              : "advisable";
+
           return {
             ...item,
-            status:
-              maxWatts > 300
-                ? "notAdvisable"
-                : "advisable",
+            status,
+            color:
+              badgeMeta(status).color,
           };
         });
       }
@@ -123,13 +162,20 @@ export default function AppRecCard({
             },
           );
 
+        const status =
+          recommendation.verdict ===
+          "notRecommended"
+            ? "notAdvisable"
+            : recommendation.verdict ===
+                "care"
+              ? "care"
+              : "advisable";
+
         return {
           ...item,
-          status:
-            recommendation.verdict ===
-            "notRecommended"
-              ? "notAdvisable"
-              : "advisable",
+          status,
+          color:
+            badgeMeta(status).color,
         };
       });
     }, [appliances, battery]);
@@ -142,7 +188,11 @@ export default function AppRecCard({
     () =>
       decoratedAppliances.filter(
         (item) =>
-          item.status === mode,
+          mode === "advisable"
+            ? item.status !==
+              "notAdvisable"
+            : item.status ===
+              "notAdvisable",
       ),
     [decoratedAppliances, mode],
   );
@@ -173,10 +223,6 @@ export default function AppRecCard({
 
   const isAdvisable =
     mode === "advisable";
-
-  const statusColor = isAdvisable
-    ? Colors.light.primary
-    : "#EF4444";
 
   // ============================================
   // LOAD USER APPLIANCES
@@ -417,14 +463,20 @@ export default function AppRecCard({
           <>
             <View style={styles.applianceRow}>
               {currentAppliances.map(
-                (appliance) => (
+                (appliance) => {
+                  const meta =
+                    badgeMeta(
+                      appliance.status,
+                    );
+
+                  return (
                   <View
                     key={appliance.id}
                     style={[
                       applianceCardStyles.box,
                       {
                         borderColor:
-                          statusColor,
+                          meta.color,
                       },
                     ]}
                   >
@@ -434,7 +486,7 @@ export default function AppRecCard({
                         applianceCardStyles.imageContainer,
                         {
                           borderColor:
-                            statusColor,
+                            meta.color,
                         },
                       ]}
                     >
@@ -475,16 +527,12 @@ export default function AppRecCard({
                         applianceCardStyles.status,
                         {
                           backgroundColor:
-                            statusColor,
+                            meta.color,
                         },
                       ]}
                     >
                       <Ionicons
-                        name={
-                          isAdvisable
-                            ? "checkmark-circle-outline"
-                            : "alert-circle-outline"
-                        }
+                        name={meta.icon}
                         size={13}
                         color="#FFFFFF"
                       />
@@ -496,13 +544,12 @@ export default function AppRecCard({
                         }
                         numberOfLines={1}
                       >
-                        {isAdvisable
-                          ? "OK to use"
-                          : "Not advisable"}
+                        {meta.label}
                       </AppText>
                     </View>
                   </View>
-                ),
+                  );
+                },
               )}
             </View>
 
@@ -530,7 +577,8 @@ export default function AppRecCard({
                       {
                         backgroundColor:
                           itemIndex === activeIndicator
-                            ? statusColor
+                            ? currentAppliances[0]
+                                .color
                             : Colors.light.border,
                       },
                     ]}

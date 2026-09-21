@@ -9,20 +9,24 @@ It consumes two things:
 - A **live battery reading** (SoC, terminal voltage, remaining energy, depth-of-discharge guard).
 - A **wattage string** per appliance (e.g. `"35-75W"`, `"50W"`, `"15-20"`).
 
-It produces a **verdict** (`recommended`, `care`, `notRecommended`), a projected **runtime range**, and a human-readable **reason**. The UI intentionally exposes only **two badges** so the user is never overloaded:
+It produces a **verdict** (`recommended`, `care`, `notRecommended`), a projected **runtime range**, the per-hour **budget share** of usable energy, a charge-scaled **peak wattage cap**, a **projected voltage** after the estimated draw drop, and a human-readable **reason**. The UI exposes **two toggle groups** but renders **three visual badge states** so the user is never overloaded:
 
-| Badge              | Verdicts behind it          |
-|--------------------|-----------------------------|
-| **OK to use**      | `recommended` and `care`    |
-| **Not advisable**  | `notRecommended`            |
+| Badge             | Verdict behind it   | Group shown under |
+|-------------------|---------------------|-------------------|
+| **OK to use**     | `recommended`       | Advisable         |
+| **Use with care** | `care`              | Advisable         |
+| **Not advisable** | `notRecommended`    | Not Advisable     |
 
 The engine performs the full analysis pipeline:
 
 1. Battery tier classification (Safe / Caution / Unsafe).
 2. Reserve-floor usable energy calculation.
-3. Per-appliance wattage resolution and runtime estimate.
-4. Recommendation verdict and reason.
-5. Combined load-stack checks (reserved for a future catalog screen).
+3. Charge-scaled peak wattage cap (SoC-backed).
+4. Voltage headroom projection (estimated draw drop vs `UNSAFE_VOLTAGE`).
+5. Budget share (mid draw vs usable energy per hour).
+6. Per-appliance wattage resolution and runtime estimate.
+7. Recommendation verdict and reason.
+8. Combined load-stack checks (reserved for a future catalog screen).
 
 The battery the engine reasons about is the same **ZENOVA 12 V 30 Ah ×2 parallel** bank documented in `zenova_battery.md`.
 
@@ -65,10 +69,13 @@ The reserve floor is what separates "can be spent" from "cannot be spent." Remai
 | `CAUTION_SOC`                  | 20       | SoC at the recommended cutoff boundary              |
 | `CAUTION_VOLTAGE`              | 10.65    | Voltage at/below which only light loads are allowed |
 | `UNSAFE_VOLTAGE`               | 10.6     | Voltage at/below which everything is blocked        |
-| `MAX_SAFE_LOAD_W`              | 1000     | Inverter-safe combined-load limit                   |
+| `MAX_SAFE_LOAD_W`              | 1000     | Inverter-safe combined-load limit at 100% charge    |
 | `ALL_DAY_HOURS_LIMIT`          | 72       | Round-trip shown as "All day"                       |
-| `RUNTIME_RECOMMENDED_MIN_HOURS`| 0.5      | ≥ 30 min average runtime → recommended              |
-| `RUNTIME_CARE_MIN_HOURS`       | 0.1667   | ≥ 10 min average runtime → usable with care         |
+| `BUDGET_RECOMMENDED_MAX_RATIO` | 0.10     | Budget share at/below which an appliance is `recommended` |
+| `BUDGET_CARE_MAX_RATIO`        | 0.25     | Budget share above which an appliance is `notRecommended`; 0.10–0.25 → `care` |
+| `VOLTAGE_DROP_STEP_WATTS`      | 50       | Load increment for the voltage-drop model          |
+| `VOLTAGE_DROP_STEP_VOLTS`      | 0.1      | Voltage dropped per `VOLTAGE_DROP_STEP_WATTS` of load |
+| `RUNTIME_CARE_MIN_HOURS`       | 0.1667   | Display only: runtime below this renders "<10 min"  |
 
 ---
 
@@ -159,15 +166,66 @@ Higher wattage consumes energy faster, which is why `runtime_min` uses the **max
 
 ---
 
+## Budget, Wattage Cap & Voltage Headroom
+
+Three derived numbers gate the verdict before any runtime label matters:
+
+### Budget share (per-hour draw)
+
+The **drain ratio** is the fraction of the *usable* energy the appliance spends in one hour:
+
+```
+drainRatio = mid_wattage / usable_Wh
+```
+
+This is the exact inverse of the mid runtime (`drainRatio = 1 / runtimeMidHours`), so a ratio of 0.10 means ~10 hours and 0.25 means ~4 hours. It is the single budget rule:
+
+| Ratio range      | Meaning                                          |
+|------------------|--------------------------------------------------|
+| ≤ 0.10           | Barely touches the budget → `recommended`        |
+| 0.10 – 0.25      | Moderate share → `care`                          |
+| > 0.25           | Uses too much per hour → `notRecommended`        |
+
+### Charge-scaled wattage cap
+
+The peak safe draw shrinks as the battery discharges:
+
+```
+wattCap = (soc / 100) × MAX_SAFE_LOAD_W
+```
+
+At 100% charge the cap is the full 1000 W inverter assumption; at 50% it is 500 W. A peak draw above the cap is flagged `notRecommended`.
+
+### Voltage headroom projection
+
+High draws pull the terminal voltage down, so the engine projects the voltage *under load*:
+
+```
+estimatedVoltageDrop = (max_wattage / 50) × 0.1   // 0.1 V per 50 W
+projectedVoltage     = current_voltage − estimatedVoltageDrop
+```
+
+A `projectedVoltage` at or below `UNSAFE_VOLTAGE` (10.6 V) blocks the appliance even if the SoC and budget look fine. The estimate uses the **max** wattage — the worst case when the appliance surges.
+
+### Helper functions
+
+```
+computeDrainRatio(watts, usableWh)  = usableWh > 0 && watts > 0 ? watts / usableWh : 0
+computeWattCap(soc)                 = clamp(soc, 0, 100) / 100 × 1000
+estimateVoltageDrop(watts)          = watts > 0 ? (watts / 50) × 0.1 : 0
+```
+
+---
+
 ## Verdict Mapping
 
-Each appliance gets one verdict driven by the battery tier and its mid runtime:
+Each appliance gets one verdict driven by the battery tier, its per-hour **budget share**, the charge-scaled **wattage cap**, and the **projected voltage headroom**:
 
-| Verdict         | Meaning                                                    |
-|-----------------|------------------------------------------------------------|
-| `recommended`   | Average draw leaves ≥ 30 minutes of runtime; battery Safe  |
-| `care`          | 10–30 minutes runtime, or the battery is in the Caution zone |
-| `notRecommended`| Blocked, under 10 minutes, or invalid wattage              |
+| Verdict         | Meaning                                                                 |
+|-----------------|-------------------------------------------------------------------------|
+| `recommended`   | Budget share ≤ 10%/hr, battery Safe, and the cap/voltage checks pass    |
+| `care`          | Budget share 10–25%/hr, or the battery is in the Caution zone           |
+| `notRecommended`| Blocked, invalid watts, unsafe projected voltage, over the watt cap, or budget > 25%/hr |
 
 ### Decision ladder (checked in order)
 
@@ -175,30 +233,67 @@ Each appliance gets one verdict driven by the battery tier and its mid runtime:
    - Unsafe → "Battery is unsafe — recharge before using appliances."
    - Reserve-only → "Reserve only — no load recommended."
 2. **Invalid wattage range** → `notRecommended` → "Invalid wattage range."
-3. **midHours < 10 min** → `notRecommended` → "Under 10 minutes of runtime at the average draw."
-4. Tier is **Caution** → `care` → "Battery is in the caution zone — light loads only."
-5. **10–30 min** midHours → `care` → "Runtime is between 10 and 30 minutes."
-6. Otherwise → `recommended` → "Safe to use."
+3. **Projected voltage ≤ 10.6 V** → `notRecommended` → "Peak draw XW would drop voltage to unsafe levels (YV)."
+4. **Peak draw > wattCap** → `notRecommended` → "Peak draw XW exceeds the YW cap at Z% battery."
+5. **Budget > 25%/hr** → `notRecommended` → "Uses X% of the usable energy per hour."
+6. Tier is **Caution** → `care` → "Battery is in the caution zone — light loads only."
+7. **Budget > 10%/hr** (10–25%) → `care` → "Uses a moderate X% of the usable energy per hour."
+8. Otherwise → `recommended` → "Safe to use."
 
-> The order matters: the caution rule runs *before* the 10–30 minute rule, so a Caution battery with a long runtime still reports "light loads only," not a clean recommendation.
+> The order matters: the voltage, cap, and budget guards are **safety-first** and all run *before* the Caution-care rule, so a heavy draw is blocked on its own merits and a Caution battery with a long runtime still reports "light loads only," not a clean recommendation.
+
+### Worked example (80% SoC → usableWh 432)
+
+| Appliance     | Wattage     | Budget share | Projected V | Cap (800 W) | Verdict          |
+|---------------|-------------|--------------|-------------|-------------|------------------|
+| Wi-Fi router  | 10–25 W     | 4.2%/hr      | 12.4 V      | under       | `recommended`    |
+| Laptop        | 45–55 W     | 12.7%/hr     | 12.4 V      | under       | `care`           |
+| Mini fridge   | 65–85 W     | 17.4%/hr     | 12.3 V      | under       | `care`           |
+| Hair dryer    | 1200–1800 W | —            | 8.8 V       | over        | `notRecommended` |
+
+---
+
+## Recommendation Output
+
+`recommendAppliance` returns one flat object per appliance:
+
+| Field             | Meaning                                            |
+|-------------------|----------------------------------------------------|
+| `id`, `name`      | Appliance identity                                 |
+| `area`            | Optional location label                            |
+| `wattRange`       | Resolved min/mid/max range or `null`               |
+| `verdict`         | `recommended`, `care`, or `notRecommended`         |
+| `badgeLabel`      | Two-label grouping ("OK to use" / "Not advisable") |
+| `tier`            | Battery tier for this verdict                      |
+| `usableWh`        | Spendable energy above the reserve                 |
+| `runtime`         | `minHours` / `midHours` / `maxHours`               |
+| `displayRuntime`  | Formatted runtime label for the UI                 |
+| `reason`          | Human-readable explanation                         |
+| `drainRatio`      | mid watts / usable Wh (per-hour budget share)      |
+| `projectedVoltage`| Current voltage minus estimated draw drop           |
+| `wattCap`         | Charge-scaled peak wattage limit                   |
+
+The `drainRatio`, `projectedVoltage`, and `wattCap` fields are new budget-model outputs, retained for future detail views.
 
 ---
 
 ## Badge Mapping (UI-facing)
 
-The engine deliberately collapses three verdicts into two badges so the UI is uncluttered:
+The engine deliberately collapses three verdicts into two **grouping** labels so the toggle stays clean, while the UI renders each verdict with its own **visual state**:
 
 ```
-verdict === "notRecommended"  →  "Not advisable"
-otherwise                    →  "OK to use"
+verdict === "notRecommended"  →  "Not advisable"   (red)
+verdict === "care"            →  "Use with care"   (yellow)
+otherwise                     →  "OK to use"       (green)
 ```
 
-| Badge             | Verdicts     | User-facing meaning                                  |
-|-------------------|--------------|------------------------------------------------------|
-| **OK to use**     | recommended, care | The appliance can run on the existing charge      |
-| **Not advisable** | notRecommended    | Do not run it right now                            |
+| Badge             | Verdict     | Color   | User-facing meaning                                  |
+|-------------------|-------------|---------|------------------------------------------------------|
+| **OK to use**     | recommended | green   | Fits easily within the per-hour energy budget        |
+| **Use with care** | care        | yellow  | Draws a moderate budget share, or battery near cutoff |
+| **Not advisable** | notRecommended | red   | Blocked, unsafe, over the cap, or oversized budget   |
 
-"Use with care" appliances remain usable, so they stay grouped with "OK to use" in the simplified two-badge display.
+"Use with care" appliances remain usable, so they stay grouped under **Advisable** in the two-segment toggle alongside "OK to use".
 
 ---
 
@@ -210,6 +305,8 @@ otherwise                    →  "OK to use"
 sort key 1: verdict rank   recommended (0) → care (1) → notRecommended (2)
 sort key 2: mid runtime    highest average runtime first (within the same verdict)
 ```
+
+Each per-appliance recommendation in the batch carries the full new budget-model payload (`drainRatio`, `projectedVoltage`, `wattCap`).
 
 Returned payload:
 
@@ -249,7 +346,8 @@ The recommendation engine feeds two screens:
 
 Shared rules:
 
-- Wire the engine `verdict` straight into the badge. `notRecommended` → red "Not advisable"; otherwise → primary-color "OK to use".
+- Wire the engine `verdict` into one of **three visual states**: `recommended` → green "OK to use"; `care` → yellow "Use with care"; `notRecommended` → red "Not advisable". The badge color and icon follow the card's own state, even when cards mix inside the same carousel or grid.
+- Keep the toggle at **two segments**: "Advisable" groups `recommended` + `care`; "Not Advisable" shows `notRecommended` only.
 - **No live monitoring row yet** → fall back to the legacy wattage-only heuristic: `maxWatts < 300` means advisable. Once a monitoring row exists, the engine verdict takes over.
 - Pass the live battery into the engine as:
   - `soc` ← `monitoring.battery_level`
@@ -263,13 +361,16 @@ Shared rules:
 
 ## Errors to Avoid
 
-- Do not treat `care` as `notRecommended` — those appliances remain usable ("OK to use").
+- Do not treat `care` as `notRecommended` — those appliances remain usable and stay grouped under "OK to use".
 - Do not spend the 144 Wh reserve floor in a runtime estimate. Runtime must come from `usable_Wh = remaining − 144`.
 - Do not let a healthy SoC override a critically low voltage; voltage is the harder safety signal and forces Unsafe.
 - Do not resolve wattage by taking only the first number in the string; compile min/max/mid from every digit found.
 - Do not display the mid runtime as an exact number; present it as a min–max range or prose label.
-- Do not reorder the decision ladder; the caution check must precede the 10–30 minute check.
-- Do not expose three verdicts in the UI; the intended UX is exactly two badges.
+- Do not reorder the decision ladder; the voltage, cap, and budget guards are safety-first and must precede the Caution-care rule.
+- Do not stack `drainRatio` thresholds with a separate min-runtime floor — they are the same signal inverted and would double-count.
+- Do not apply the full 1000 W inverter cap regardless of charge; `wattCap` must scale with SoC (`soc / 100 × 1000`).
+- Do not ignore the projected voltage drop for high-draw appliances; a large peak can push past `UNSAFE_VOLTAGE` even on a healthy SoC.
+- Do not render `care` without its distinct yellow state; the UI shows three visual states even though the toggle grouping stays two.
 - Do not run heavy per-appliance Supabase queries in the engine — it must stay a pure, synchronous, network-free module.
 
 ---

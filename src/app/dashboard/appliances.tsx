@@ -60,6 +60,41 @@ type StatusFilter =
   | "Advisable"
   | "notAdvisable";
 
+type ApplianceStatus =
+  | "advisable"
+  | "care"
+  | "notAdvisable";
+
+const statusMeta = (
+  status: ApplianceStatus,
+) => {
+
+  if (
+    status === "care"
+  ) {
+
+    return {
+      label: "Use with care",
+      tone: "care" as const,
+    };
+  }
+
+  if (
+    status === "notAdvisable"
+  ) {
+
+    return {
+      label: "Not advised",
+      tone: "not" as const,
+    };
+  }
+
+  return {
+    label: "OK to use",
+    tone: "ok" as const,
+  };
+};
+
 /*
  * UI area names -> database area names
  */
@@ -176,9 +211,9 @@ export default function AppliancesScreen() {
   // keeps the prior behavior until data arrives.
   // ==========================================================
 
-  const isApplianceAdvisable = (
+  const getApplianceStatus = (
     appliance: SelectedAppliance,
-  ): boolean => {
+  ): ApplianceStatus => {
 
     if (
       !monitoring
@@ -194,7 +229,9 @@ export default function AppliancesScreen() {
         0,
       );
 
-      return maxWatts < 300;
+      return maxWatts < 300
+        ? "advisable"
+        : "notAdvisable";
     }
 
     const battery: BatteryStateInput = {
@@ -215,10 +252,23 @@ export default function AppliancesScreen() {
         },
       );
 
-    return (
-      recommendation.verdict !==
+    if (
+      recommendation.verdict ===
       "notRecommended"
-    );
+    ) {
+
+      return "notAdvisable";
+    }
+
+    if (
+      recommendation.verdict ===
+      "care"
+    ) {
+
+      return "care";
+    }
+
+    return "advisable";
   };
 
   const filteredAppliances =
@@ -244,12 +294,12 @@ export default function AppliancesScreen() {
         appliance.area === areaMap[areaFilter];
 
       const status =
-        isApplianceAdvisable(appliance)
-          ? "Advisable"
-          : "notAdvisable";
+        getApplianceStatus(appliance);
 
       const matchesStatus =
-        status === statusFilter;
+        statusFilter === "Advisable"
+          ? status !== "notAdvisable"
+          : status === "notAdvisable";
 
       return (
         matchesPower &&
@@ -482,9 +532,10 @@ export default function AppliancesScreen() {
                               : Colors.light.border;
 
               const status =
-                isApplianceAdvisable(appliance)
-                  ? "OK to use"
-                  : "Not advised";
+                getApplianceStatus(appliance);
+
+              const statusMapped =
+                statusMeta(status);
 
               return (
                 <ApplianceStatusBox
@@ -492,7 +543,12 @@ export default function AppliancesScreen() {
                   name={appliance.name}
                   wattage={appliance.watts}
                   color={color}
-                  status={status}
+                  status={
+                    statusMapped.label
+                  }
+                  statusTone={
+                    statusMapped.tone
+                  }
                 />
               );
             })

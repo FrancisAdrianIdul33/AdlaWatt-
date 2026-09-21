@@ -12,13 +12,18 @@
 // The engine performs the full analysis:
 //   - Battery tier classification
 //   - Reserve-floor usable energy
+//   - Charge-scaled wattage cap
+//   - Voltage headroom projection
+//   - Budget (per-hour share of usable energy)
 //   - Per-appliance runtime estimate
 //   - Recommendation verdict
 //   - Combined load-stack checks
 //
-// The UI only consumes the verdict through two badges:
-//   - "OK to use"       (recommended / care)
-//   - "Not advisable"   (not recommended)
+// Verdicts:
+//   - recommended      : draws <= 10%/hr of the usable energy
+//   - care             : draws 10-25%/hr, or battery in caution
+//   - notRecommended   : blocked, unsafe voltage, over the charge
+//                        wattage cap, or draws > 25%/hr
 // ============================================================
 
 // ============================================================
@@ -84,6 +89,9 @@ export interface ApplianceRecommendation {
   runtime: RuntimeEstimate;
   displayRuntime: string;
   reason: string;
+  drainRatio: number; // mid watts / usable Wh (per-hour budget share)
+  projectedVoltage: number; // current voltage minus estimated draw drop
+  wattCap: number; // charge-scaled peak wattage limit
 }
 
 export interface LoadStackResult {
@@ -124,12 +132,24 @@ export const MAX_SAFE_LOAD_W = 1000;
 
 export const ALL_DAY_HOURS_LIMIT = 72;
 
-// Runtime thresholds (hours) used to pick the verdict.
-export const RUNTIME_RECOMMENDED_MIN_HOURS =
-  30 / 60; // >= 30 minutes
+// Budget thresholds: the share of the usable energy an appliance
+// spends per hour (mid watts / usable Wh).
+export const BUDGET_RECOMMENDED_MAX_RATIO =
+  0.10; // <= 10%/hr -> recommended
 
+export const BUDGET_CARE_MAX_RATIO =
+  0.25; // 10-25%/hr -> care, > 25%/hr -> not recommended
+
+// Estimated voltage drop model: 0.1 V per 50 W of load.
+export const VOLTAGE_DROP_STEP_WATTS =
+  50;
+
+export const VOLTAGE_DROP_STEP_VOLTS =
+  0.1;
+
+// Display threshold for the runtime label.
 export const RUNTIME_CARE_MIN_HOURS =
-  10 / 60; // >= 10 minutes
+  10 / 60; // "<10 min" below this
 
 // Used when no live battery reading is available yet.
 export const DEFAULT_BATTERY_STATE: BatteryStateInput = {
@@ -428,6 +448,70 @@ export const formatRuntimeLabel = (
 };
 
 // ============================================================
+// 3B. BUDGET, WATT CAP, AND VOLTAGE HEADROOM
+//
+// budget   = mid_watts / usable_Wh  (fraction of usable
+//            energy spent per hour — inverse of runtime).
+// wattCap  = (soc / 100) * MAX_SAFE_LOAD_W  (peak draw the
+//            current charge can reasonably sustain).
+// voltage  = current_voltage - estimated_draw_drop. A punt
+//            past UNSAFE_VOLTAGE blocks the appliance.
+// ============================================================
+
+export const computeDrainRatio = (
+  watts: number,
+  usableWh: number,
+): number => {
+
+  if (
+    !Number.isFinite(watts) ||
+    !Number.isFinite(usableWh) ||
+    usableWh <= 0 ||
+    watts <= 0
+  ) {
+
+    return 0;
+  }
+
+  return watts / usableWh;
+};
+
+export const computeWattCap = (
+  soc: number,
+): number => {
+
+  const normalized = Math.max(
+    Math.min(
+      normalizeNumber(soc),
+      100,
+    ),
+    0,
+  );
+
+  return (
+    normalized / 100
+  ) * MAX_SAFE_LOAD_W;
+};
+
+export const estimateVoltageDrop = (
+  watts: number,
+): number => {
+
+  if (
+    !Number.isFinite(watts) ||
+    watts <= 0
+  ) {
+
+    return 0;
+  }
+
+  return (
+    (watts / VOLTAGE_DROP_STEP_WATTS) *
+    VOLTAGE_DROP_STEP_VOLTS
+  );
+};
+
+// ============================================================
 // 4. BADGE MAPPING
 //
 // The UI exposes only two badges:
@@ -455,9 +539,11 @@ export const verdictToBadge = (
 // ============================================================
 // 5. PER-APPLIANCE RECOMMENDATION
 //
-//  recommended     : average draw leaves >= 30 min runtime
-//  care            : 10-30 min runtime, or battery in caution
-//  notRecommended  : blocked, < 10 min runtime, or invalid watts
+//  recommended     : budget draw <= 10%/hr of usable energy
+//  care            : 10-25%/hr draw, or battery in caution zone
+//  notRecommended  : blocked, unsafe projected voltage, peak
+//                    draw over the charge wattage cap, invalid
+//                    watts, or budget draw > 25%/hr
 // ============================================================
 
 export const recommendAppliance = (
@@ -475,6 +561,9 @@ export const recommendAppliance = (
     parseWattageRange(
       appliance.wattage,
     );
+
+  const soc =
+    normalizeNumber(battery.soc);
 
   const minHours = wattRange
     ? estimateRuntime(
@@ -503,6 +592,23 @@ export const recommendAppliance = (
     maxHours,
   };
 
+  const wattCap =
+    computeWattCap(soc);
+
+  const projectedVoltage = wattRange
+    ? normalizeNumber(battery.voltage) -
+      estimateVoltageDrop(
+        wattRange.max,
+      )
+    : normalizeNumber(battery.voltage);
+
+  const drainRatio = wattRange
+    ? computeDrainRatio(
+        wattRange.mid,
+        usableWh,
+      )
+    : 0;
+
   let verdict: Verdict;
   let reason: string;
 
@@ -525,14 +631,32 @@ export const recommendAppliance = (
     reason =
       "Invalid wattage range.";
   } else if (
-    midHours <
-    RUNTIME_CARE_MIN_HOURS
+    projectedVoltage <=
+    UNSAFE_VOLTAGE
   ) {
 
     verdict = "notRecommended";
 
     reason =
-      `Under 10 minutes of runtime at the average draw (${midHours.toFixed(1)} hrs).`;
+      `Peak draw ${wattRange.max}W would drop voltage to unsafe levels (${projectedVoltage.toFixed(1)}V).`;
+  } else if (
+    wattRange.max >
+    wattCap
+  ) {
+
+    verdict = "notRecommended";
+
+    reason =
+      `Peak draw ${wattRange.max}W exceeds the ${wattCap}W cap at ${soc}% battery.`;
+  } else if (
+    drainRatio >
+    BUDGET_CARE_MAX_RATIO
+  ) {
+
+    verdict = "notRecommended";
+
+    reason =
+      `Uses ${(drainRatio * 100).toFixed(0)}% of the usable energy per hour.`;
   } else if (
     classification.tier === "Caution"
   ) {
@@ -542,14 +666,14 @@ export const recommendAppliance = (
     reason =
       "Battery is in the caution zone — light loads only.";
   } else if (
-    midHours <
-    RUNTIME_RECOMMENDED_MIN_HOURS
+    drainRatio >
+    BUDGET_RECOMMENDED_MAX_RATIO
   ) {
 
     verdict = "care";
 
     reason =
-      "Runtime is between 10 and 30 minutes.";
+      `Uses a moderate ${(drainRatio * 100).toFixed(0)}% of the usable energy per hour.`;
   } else {
 
     verdict = "recommended";
@@ -578,6 +702,9 @@ export const recommendAppliance = (
     runtime,
     displayRuntime,
     reason,
+    drainRatio,
+    projectedVoltage,
+    wattCap,
   };
 };
 
