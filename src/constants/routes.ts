@@ -14,6 +14,6 @@ export const Routes = {
   ANALYTICS: "/dashboard/analytics",
   
   NOTIFICATIONS: "/dashboard/notifications",
-  SETTINGS: "/dashboard/settings",
+  MENU: "/dashboard/menu",
   ABOUT_US: "/dashboard/about-us",
 } as const;

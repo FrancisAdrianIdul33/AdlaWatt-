@@ -2,42 +2,28 @@ import AnalyticsCards from "@/components/AnalyticsCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import {
   AnalyticsRange,
   ApplianceUsageHistoryRow,
-  ChartFrequency,
-  ChartPoint,
-  FREQUENCIES,
   MonitoringHistoryRow,
   REPORT_FREQUENCIES,
   ReportFrequency,
   ReportType,
   createAnalyticsReportContent,
-  getApplianceChartData,
-  getBatteryChartData,
-  getBatteryTemperatureData,
-  getChartLimits,
-  getDefaultRange,
-  getEnergyInputChartData,
-  getEnergyOutputChartData,
-  getSolarChartData,
-  getSolarTemperatureData,
-  groupMonitoringHistory,
-  loadAnalyticsData,
   downloadCsvOnWeb,
   downloadPdfOnWeb,
   generateAdlaWattCsv,
   generateAdlaWattPdf,
+  getDefaultRange,
+  loadAnalyticsData,
   prepareReportData,
 } from "@/services/analyticsService";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import {
@@ -57,11 +43,6 @@ import {
 
 export default function AnalyticsScreen() {
   const [
-    sidebarVisible,
-    setSidebarVisible,
-  ] = useState(false);
-
-  const [
     monitoringHistory,
     setMonitoringHistory,
   ] = useState<MonitoringHistoryRow[]>([]);
@@ -77,13 +58,6 @@ export default function AnalyticsScreen() {
   ] = useState(true);
 
   const [
-    chartFrequency,
-    setChartFrequency,
-  ] = useState<ChartFrequency>(
-    "Daily",
-  );
-
-  const [
     reportFrequency,
     setReportFrequency,
   ] = useState<ReportFrequency>(
@@ -93,11 +67,6 @@ export default function AnalyticsScreen() {
   const [
     reportModalVisible,
     setReportModalVisible,
-  ] = useState(false);
-
-  const [
-    frequencyModalVisible,
-    setFrequencyModalVisible,
   ] = useState(false);
 
   const [
@@ -144,134 +113,8 @@ export default function AnalyticsScreen() {
   ]);
 
   /* ==========================================================
-     GROUP MONITORING HISTORY
+     REPORT
      ========================================================== */
-
-  const groupedMonitoring =
-    useMemo(
-      () =>
-        groupMonitoringHistory(
-          monitoringHistory,
-          chartFrequency,
-        ),
-      [
-        monitoringHistory,
-        chartFrequency,
-      ],
-    );
-
-  /* ==========================================================
-     BATTERY CHART
-     ========================================================== */
-
-  const batteryChartData =
-    useMemo(
-      (): ChartPoint[] =>
-        getBatteryChartData(
-          groupedMonitoring,
-          chartFrequency,
-        ),
-      [
-        groupedMonitoring,
-        chartFrequency,
-      ],
-    );
-
-  /* ==========================================================
-     SOLAR CHART
-     ========================================================== */
-
-  const solarChartData =
-    useMemo(
-      (): ChartPoint[] =>
-        getSolarChartData(
-          groupedMonitoring,
-          chartFrequency,
-        ),
-      [
-        groupedMonitoring,
-        chartFrequency,
-      ],
-    );
-
-  /* ==========================================================
-     ENERGY CHARTS
-     ========================================================== */
-
-  const energyInputChartData =
-    useMemo(
-      (): ChartPoint[] =>
-        getEnergyInputChartData(
-          groupedMonitoring,
-          chartFrequency,
-        ),
-      [
-        groupedMonitoring,
-        chartFrequency,
-      ],
-    );
-
-  const energyOutputChartData =
-    useMemo(
-      (): ChartPoint[] =>
-        getEnergyOutputChartData(
-          groupedMonitoring,
-          chartFrequency,
-        ),
-      [
-        groupedMonitoring,
-        chartFrequency,
-      ],
-    );
-
-  /* ==========================================================
-     TEMPERATURE CHARTS
-     ========================================================== */
-
-  const batteryTemperatureData =
-    useMemo(
-      (): ChartPoint[] =>
-        getBatteryTemperatureData(
-          groupedMonitoring,
-          chartFrequency,
-        ),
-      [
-        groupedMonitoring,
-        chartFrequency,
-      ],
-    );
-
-  const solarTemperatureData =
-    useMemo(
-      (): ChartPoint[] =>
-        getSolarTemperatureData(
-          groupedMonitoring,
-          chartFrequency,
-        ),
-      [
-        groupedMonitoring,
-        chartFrequency,
-      ],
-    );
-
-  /* ==========================================================
-     APPLIANCE DATA
-     ========================================================== */
-
-  const applianceChartData =
-    useMemo(
-      () =>
-        getApplianceChartData(
-          applianceUsageHistory,
-        ),
-      [
-        applianceUsageHistory,
-      ],
-    );
-
-  /* ==========================================================
-   REPORT
-   ========================================================== */
 
   const generateReport =
     useCallback(
@@ -417,13 +260,6 @@ export default function AnalyticsScreen() {
      DATE RANGE
      ========================================================== */
 
-  /*
-   * Custom date selection.
-   *
-   * The To date can never go beyond today, and From is always
-   * kept on or before To so the range stays valid.
-   */
-
   const setFromDate =
     useCallback(
       (
@@ -493,40 +329,10 @@ export default function AnalyticsScreen() {
       [],
     );
 
-  /* ==========================================================
-     CHART LIMITS
-     ========================================================== */
-
-  const {
-    solarMax,
-    energyInputMax,
-    temperatureMax,
-  } = useMemo(
-    () =>
-      getChartLimits(
-        solarChartData,
-        energyInputChartData,
-        energyOutputChartData,
-        batteryTemperatureData,
-        solarTemperatureData,
-      ),
-    [
-      solarChartData,
-      energyInputChartData,
-      energyOutputChartData,
-      batteryTemperatureData,
-      solarTemperatureData,
-    ],
-  );
-
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={
@@ -541,7 +347,6 @@ export default function AnalyticsScreen() {
       >
         {/* ======================================================
             ANALYTICS HEADER
-            Kept unchanged from the previous Analytics header.
         ====================================================== */}
         <View
           style={
@@ -570,28 +375,16 @@ export default function AnalyticsScreen() {
         </View>
 
         {/* ======================================================
-            ANALYTICS CARDS
-            Card layouts and card-related styles are handled by
-            AnalyticsCard.tsx.
+            ANALYTICS PANEL
+            Placeholder + report export. Chart visuals are
+            temporarily disabled.
         ====================================================== */}
         <AnalyticsCards
-          chartFrequency={
-            chartFrequency
-          }
-          setChartFrequency={
-            setChartFrequency
-          }
           reportFrequency={
             reportFrequency
           }
-          setReportFrequency={
-            setReportFrequency
-          }
           setReportModalVisible={
             setReportModalVisible
-          }
-          setFrequencyModalVisible={
-            setFrequencyModalVisible
           }
           range={range}
           onFromDateChange={
@@ -604,151 +397,11 @@ export default function AnalyticsScreen() {
             generateReport
           }
           loading={loading}
-          batteryChartData={
-            batteryChartData
-          }
-          solarChartData={
-            solarChartData
-          }
-          energyInputChartData={
-            energyInputChartData
-          }
-          energyOutputChartData={
-            energyOutputChartData
-          }
-          batteryTemperatureData={
-            batteryTemperatureData
-          }
-          solarTemperatureData={
-            solarTemperatureData
-          }
-          applianceChartData={
-            applianceChartData
-          }
-          solarMax={
-            solarMax
-          }
-          energyInputMax={
-            energyInputMax
-          }
-          temperatureMax={
-            temperatureMax
-          }
         />
 
         {/* Copyright */}
         <Copyright />
       </ScrollView>
-
-      {/* ========================================================
-          FREQUENCY MODAL
-      ======================================================== */}
-      <Modal
-        visible={
-          frequencyModalVisible
-        }
-        transparent
-        animationType="fade"
-        onRequestClose={() =>
-          setFrequencyModalVisible(
-            false,
-          )
-        }
-      >
-        <Pressable
-          style={
-            styles.modalOverlay
-          }
-          onPress={() =>
-            setFrequencyModalVisible(
-              false,
-            )
-          }
-        >
-          <Pressable
-            style={
-              styles.modalCard
-            }
-            onPress={() => { }}
-          >
-            <View
-              style={
-                styles.modalHeader
-              }
-            >
-              <AppText
-                variant="body"
-                style={
-                  styles.modalTitle
-                }
-              >
-                Chart Frequency
-              </AppText>
-
-              <Pressable
-                onPress={() =>
-                  setFrequencyModalVisible(
-                    false,
-                  )
-                }
-              >
-                <Ionicons
-                  name="close-outline"
-                  size={22}
-                  color="#000000"
-                />
-              </Pressable>
-            </View>
-
-            {FREQUENCIES.map(
-              (option) => (
-                <Pressable
-                  key={option}
-                  style={[
-                    styles.modalOption,
-                    chartFrequency ===
-                    option &&
-                    styles.selectedModalOption,
-                  ]}
-                  onPress={() => {
-                    setChartFrequency(
-                      option,
-                    );
-                    setFrequencyModalVisible(
-                      false,
-                    );
-                  }}
-                >
-                  <Ionicons
-                    name={
-                      chartFrequency ===
-                        option
-                        ? "radio-button-on-outline"
-                        : "radio-button-off-outline"
-                    }
-                    size={18}
-                    color={
-                      Colors.light.primary
-                    }
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.modalOptionText,
-                      chartFrequency ===
-                      option &&
-                      styles.selectedModalOptionText,
-                    ]}
-                  >
-                    {option}
-                  </AppText>
-                </Pressable>
-              ),
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       {/* ========================================================
           REPORT FREQUENCY MODAL
@@ -840,7 +493,6 @@ export default function AnalyticsScreen() {
                     color={
                       Colors.light.primary
                     }
-                    
                   />
 
                   <AppText
@@ -860,18 +512,6 @@ export default function AnalyticsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Sidebar */}
-      <Sidebar
-        visible={
-          sidebarVisible
-        }
-        onClose={() =>
-          setSidebarVisible(
-            false,
-          )
-        }
-      />
     </ScreenContainer2>
   );
 }
@@ -922,7 +562,6 @@ const styles =
 
     /* ========================================================
        ANALYTICS HEADER
-       EXACT PREVIOUS HEADER STYLE
     ======================================================== */
 
     headerCard: {

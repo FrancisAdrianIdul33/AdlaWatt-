@@ -3,10 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 import React, {
   useEffect,
   useRef,
+  useState,
 } from "react";
 
 import {
   Animated,
+  Easing,
   StyleSheet,
   View,
 } from "react-native";
@@ -21,10 +23,6 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
 import { MonitoringData } from "@/services/monitoringService";
-
-import {
-  type WeatherCondition,
-} from "@/services/weatherForecast";
 
 // ============================================================
 // TYPES
@@ -54,7 +52,7 @@ type TemperatureStatus =
 interface WeatherData {
   city: string;
   temperature: number;
-  description: WeatherCondition;
+  description: string;
 }
 
 type NonBatteryChartType =
@@ -108,6 +106,34 @@ const WATT_HOURS_MAX = 720;
 
 const LOW_WATT_HOURS_THRESHOLD = 144;
 
+const LOW_VOLTAGE_THRESHOLD = 10.65;
+
+const VOLTAGE_MIN = 9;
+
+const VOLTAGE_MAX = 12.6;
+
+// ============================================================
+// BATTERY GAUGE ANIMATION
+//
+// The ring sweeps smoothly whenever the battery percentage
+// changes, and while charging the gauge breathes (subtle zoom)
+// with a soft pulsing glow halo in the battery color.
+// ============================================================
+
+const RING_ANIMATION_DURATION_MS = 700;
+
+const CHARGING_PULSE_DURATION_MS = 800;
+
+const CHARGING_SCALE_MAX = 0.04;
+
+const CHARGING_GLOW_MIN_OPACITY = 0.12;
+
+const CHARGING_GLOW_MAX_OPACITY = 0.4;
+
+const CHARGING_GLOW_RADIUS_OFFSET = 3;
+
+const CHARGING_GLOW_STROKE_OFFSET = 5;
+
 // ============================================================
 // SUN GAUGE CONFIGURATION
 //
@@ -115,6 +141,11 @@ const LOW_WATT_HOURS_THRESHOLD = 144;
 // status. Low = grey, Moderate = 50% yellow, High = 100%
 // yellow. A smooth animated transition cross-fades between
 // the three colors while the gauge stays fully colored.
+//
+// The color animation is driven through the Animated.Value
+// listener below instead of wrapping the SVG shapes with
+// Animated.createAnimatedComponent, which would leak a
+// `collapsable` prop onto the DOM SVG elements on web.
 // ============================================================
 
 const SUN_RADIUS = 52;
@@ -164,23 +195,12 @@ const SOLAR_RAYS = Array.from(
 );
 
 // ============================================================
-// SUN ANIMATION HELPERS
+// SUN GAUGE HELPERS
 //
-// The react-native-svg primitives are wrapped so they accept
-// animated props. The sun color is driven by an intensity value
-// that maps 0 → grey, 0.5 → 50% yellow, 1 → 100% yellow, with
+// The sun color is animated by a single intensity value that
+// maps 0 → grey, 0.5 → 50% yellow, 1 → 100% yellow, with
 // every in-between shade resolved by color interpolation.
 // ============================================================
-
-const AnimatedCircle =
-  Animated.createAnimatedComponent(
-    Circle,
-  );
-
-const AnimatedLine =
-  Animated.createAnimatedComponent(
-    Line,
-  );
 
 function getSolarIntensity(
   status: string | undefined,
@@ -221,7 +241,10 @@ export default function ChartCard({
       new Animated.Value(0),
     ).current;
 
-  const sunColor =
+  const [sunColor, setSunColor] =
+    useState(SUN_GREY);
+
+  const sunColorNode =
     sunIntensity.interpolate({
       inputRange: [0, 0.5, 1],
       outputRange: [
@@ -235,6 +258,223 @@ export default function ChartCard({
     getSolarIntensity(
       monitoring?.solar_status,
     );
+
+  // ==========================================================
+  // BATTERY GAUGE ANIMATION
+  //
+  // A progress value drives the ring sweep (offset + count-up
+  // percentage) and a looping pulse drives the charging "glow
+  // and zoom" breathing effect. Both forward each tick into
+  // React state so the plain SVG circle props animate without
+  // the Animated.createAnimatedComponent web caveat used by
+  // the sun gauge above.
+  // ==========================================================
+
+  const ringProgress =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const chargingPulse =
+    useRef(
+      new Animated.Value(0),
+    ).current;
+
+  const [ringLevel, setRingLevel] =
+    useState(0);
+
+  const [chargingScale, setChargingScale] =
+    useState(1);
+
+  const [
+    chargingGlowOpacity,
+    setChargingGlowOpacity,
+  ] = useState(0);
+
+  const isCharging =
+    monitoring?.battery_status ===
+    "Charging";
+
+  const ringTarget =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        monitoring?.battery_level ?? 0,
+      ),
+    );
+
+  useEffect(() => {
+    // Forward each ring tick into state so the SVG circle's
+    // strokeDashoffset (and the displayed percentage) follow
+    // the animated progress value.
+    const listenerId =
+      ringProgress.addListener(
+        ({ value }) => {
+          setRingLevel(value);
+        },
+      );
+
+    return () =>
+      ringProgress.removeListener(
+        listenerId,
+      );
+  }, [ringProgress]);
+
+  useEffect(() => {
+    if (
+      type !== "voltage" ||
+      loading
+    ) {
+      return;
+    }
+
+    const animation =
+      Animated.timing(
+        ringProgress,
+        {
+          toValue: ringTarget,
+          duration:
+            RING_ANIMATION_DURATION_MS,
+          easing:
+            Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        },
+      );
+
+    animation.start();
+
+    // Cancel any in-flight sweep if the percentage flips
+    // again before the transition completes.
+    return () =>
+      animation.stop();
+  }, [
+    type,
+    loading,
+    ringTarget,
+    ringProgress,
+  ]);
+
+  useEffect(() => {
+    // Forward each pulse tick into state so the gauge scale
+    // and glow halo follow the looping animation.
+    const listenerId =
+      chargingPulse.addListener(
+        ({ value }) => {
+          if (!isCharging) {
+            return;
+          }
+
+          setChargingScale(
+            1 +
+              value *
+                CHARGING_SCALE_MAX,
+          );
+
+          setChargingGlowOpacity(
+            CHARGING_GLOW_MIN_OPACITY +
+              value *
+                (CHARGING_GLOW_MAX_OPACITY -
+                  CHARGING_GLOW_MIN_OPACITY),
+          );
+        },
+      );
+
+    return () =>
+      chargingPulse.removeListener(
+        listenerId,
+      );
+  }, [
+    chargingPulse,
+    isCharging,
+  ]);
+
+  useEffect(() => {
+    if (
+      type !== "voltage" ||
+      !isCharging
+    ) {
+      chargingPulse.stopAnimation();
+
+      chargingPulse.setValue(0);
+
+      setChargingScale(1);
+
+      setChargingGlowOpacity(0);
+
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(
+          chargingPulse,
+          {
+            toValue: 1,
+            duration:
+              CHARGING_PULSE_DURATION_MS,
+            easing:
+              Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          },
+        ),
+        Animated.timing(
+          chargingPulse,
+          {
+            toValue: 0,
+            duration:
+              CHARGING_PULSE_DURATION_MS,
+            easing:
+              Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          },
+        ),
+      ]),
+    );
+
+    loop.start();
+
+    // Stop breathing once charging ends or the card
+    // unmounts.
+    return () => {
+      loop.stop();
+
+      chargingPulse.stopAnimation();
+
+      chargingPulse.setValue(0);
+
+      setChargingScale(1);
+
+      setChargingGlowOpacity(0);
+    };
+  }, [
+    type,
+    isCharging,
+    chargingPulse,
+  ]);
+
+  useEffect(() => {
+    // Forward each animation tick into React state so the
+    // plain SVG shapes below keep their cross-fade without
+    // requiring Animated-wrapped components.
+    const listenerId =
+      sunIntensity.addListener(() => {
+        const interpolated =
+          sunColorNode as unknown as {
+            __getValue: () => string;
+          };
+
+        setSunColor(
+          interpolated.__getValue(),
+        );
+      });
+
+    return () =>
+      sunIntensity.removeListener(listenerId);
+  }, [
+    sunIntensity,
+    sunColorNode,
+  ]);
 
   useEffect(() => {
     if (type !== "solar") {
@@ -277,12 +517,6 @@ export default function ChartCard({
     const level =
       monitoring?.battery_level ?? 0;
 
-    const progress =
-      Math.max(
-        0,
-        Math.min(100, level),
-      ) / 100;
-
     const isLowBattery =
       level <=
       LOW_BATTERY_THRESHOLD;
@@ -294,7 +528,7 @@ export default function ChartCard({
 
     const dashOffset =
       CIRCUMFERENCE *
-      (1 - progress);
+      (1 - ringLevel / 100);
 
     // --------------------------------------------------------
     // BATTERY GAUGE DIRECTION
@@ -324,13 +558,21 @@ export default function ChartCard({
       monitoring?.dod_status ??
       "Safe";
 
-    const dodLabel =
-      dodStatus === "Unsafe"
-        ? "DoD Unsafe"
-        : "DoD Safe";
-
     const isDodUnsafe =
       dodStatus === "Unsafe";
+
+    // The DoD badge turns red not only when the DoD status is
+    // unsafe but also whenever the battery level is low (below
+    // LOW_BATTERY_THRESHOLD), because a low battery is still
+    // considered under load of the depth-of-discharge rule.
+    // The red badge always shows "DoD Unsafe".
+    const isDodBadgeRed =
+      isDodUnsafe || isLowBattery;
+
+    const dodLabel =
+      isDodBadgeRed
+        ? "DoD Unsafe"
+        : "DoD Safe";
 
     const voltageData =
       getCardData(
@@ -351,6 +593,10 @@ export default function ChartCard({
     const isLowWattHours =
       (monitoring?.watt_hours ?? 0) <=
       LOW_WATT_HOURS_THRESHOLD;
+
+    const isLowVoltage =
+      (monitoring?.voltage ?? 0) <=
+      LOW_VOLTAGE_THRESHOLD;
 
     const loadData =
       getCardData(
@@ -475,72 +721,107 @@ export default function ChartCard({
               }
             >
 
-              <Svg
-                width={RING_SIZE}
-                height={RING_SIZE}
-                viewBox={
-                  `0 0 ${RING_SIZE} ${RING_SIZE}`
-                }
+              <Animated.View
+                style={[
+                  styles.batteryPulse,
+                  {
+                    transform: [
+                      {
+                        scale: chargingScale,
+                      },
+                    ],
+                  },
+                ]}
               >
 
-                {/* Background Ring */}
-
-                <Circle
-                  cx={CENTER}
-                  cy={CENTER}
-                  r={RADIUS}
-                  stroke="#D8D6CC"
-                  strokeWidth={STROKE}
-                  fill="none"
-                />
-
-                {/* Battery Progress */}
-
-                <Circle
-                  cx={CENTER}
-                  cy={CENTER}
-                  r={RADIUS}
-                  stroke={batteryColor}
-                  strokeWidth={STROKE}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={
-                    `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
+                <Svg
+                  width={RING_SIZE}
+                  height={RING_SIZE}
+                  viewBox={
+                    `0 0 ${RING_SIZE} ${RING_SIZE}`
                   }
-                  strokeDashoffset={
-                    dashOffset
-                  }
-                  transform={
-                    batteryTransform
-                  }
-                />
-
-              </Svg>
-
-              {/* ==============================================
-                  BATTERY CENTER
-                  ============================================== */}
-
-              <View
-                style={
-                  styles.batteryCenter
-                }
-              >
-
-                <AppText
-                  variant="heading"
-                  style={[
-                    styles.batteryPercentage,
-                    isLowBattery &&
-                      styles.lowBatteryText,
-                  ]}
                 >
-                  {loading
-                    ? "—"
-                    : `${level}%`}
-                </AppText>
 
-              </View>
+                  {/* Charging Glow Halo */}
+
+                  <Circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={
+                      RADIUS +
+                      CHARGING_GLOW_RADIUS_OFFSET
+                    }
+                    stroke={batteryColor}
+                    strokeWidth={
+                      STROKE +
+                      CHARGING_GLOW_STROKE_OFFSET
+                    }
+                    fill="none"
+                    opacity={
+                      chargingGlowOpacity
+                    }
+                  />
+
+                  {/* Background Ring */}
+
+                  <Circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={RADIUS}
+                    stroke="#D8D6CC"
+                    strokeWidth={STROKE}
+                    fill="none"
+                  />
+
+                  {/* Battery Progress */}
+
+                  <Circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={RADIUS}
+                    stroke={batteryColor}
+                    strokeWidth={STROKE}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={
+                      `${CIRCUMFERENCE} ${CIRCUMFERENCE}`
+                    }
+                    strokeDashoffset={
+                      dashOffset
+                    }
+                    transform={
+                      batteryTransform
+                    }
+                  />
+
+                </Svg>
+
+                {/* ==============================================
+                    BATTERY CENTER
+                    ============================================== */}
+
+                <View
+                  style={
+                    styles.batteryCenter
+                  }
+                >
+
+                  <AppText
+                    variant="heading"
+                    style={[
+                      styles.batteryPercentage,
+                      isLowBattery &&
+                        styles.lowBatteryText,
+                    ]}
+                  >
+                    {loading
+                      ? "—"
+                      : `${Math.round(ringLevel)}%`}
+                  </AppText>
+
+                </View>
+
+              </Animated.View>
 
             </View>
 
@@ -599,7 +880,7 @@ export default function ChartCard({
               <View
                 style={[
                   styles.dodStatusBadge,
-                  isDodUnsafe
+                  isDodBadgeRed
                     ? styles.dodUnsafeBadge
                     : styles.dodSafeBadge,
                 ]}
@@ -609,7 +890,7 @@ export default function ChartCard({
                   variant="caption"
                   style={[
                     styles.dodStatusBadgeText,
-                    isDodUnsafe
+                    isDodBadgeRed
                       ? styles.dodUnsafeBadgeText
                       : styles.dodSafeBadgeText,
                   ]}
@@ -654,9 +935,11 @@ export default function ChartCard({
 
               <AppText
                 variant="heading"
-                style={
-                  styles.batteryMetricValue
-                }
+                style={[
+                  styles.batteryMetricValue,
+                  isLowVoltage &&
+                    styles.lowBatteryText,
+                ]}
               >
                 {voltageData.value}
               </AppText>
@@ -978,7 +1261,7 @@ export default function ChartCard({
                 }
               >
 
-                <AnimatedCircle
+                <Circle
                   cx={CENTER}
                   cy={CENTER}
                   r={SUN_RADIUS}
@@ -986,7 +1269,7 @@ export default function ChartCard({
                 />
 
                 {SOLAR_RAYS.map((ray) => (
-                  <AnimatedLine
+                  <Line
                     key={
                       `ray-${ray.x1}-${ray.y1}`
                     }
@@ -1556,7 +1839,16 @@ function getCardData(
     // VOLTAGE
     // ========================================================
 
-    case "voltage":
+    case "voltage": {
+
+      const clamped =
+        Math.max(
+          VOLTAGE_MIN,
+          Math.min(
+            VOLTAGE_MAX,
+            monitoring?.voltage ?? 0,
+          ),
+        );
 
       return {
         icon:
@@ -1568,8 +1860,9 @@ function getCardData(
         value:
           loading
             ? "—"
-            : `${monitoring?.voltage ?? 0}V`,
+            : `${clamped}V`,
       };
+    }
 
     // ========================================================
     // WATT-HOUR
@@ -1937,45 +2230,101 @@ function formatSolarTimer(
 // WEATHER ICON
 // ============================================================
 
+// ============================================================
+// WEATHER ICON
+//
+// OpenWeather sends free-form descriptions (e.g. "moderate
+// rain", "few clouds"), so the mapping below matches on
+// keywords and always falls back to a valid icon.
+// ============================================================
+
 function getWeatherIcon(
-  description: WeatherCondition,
+  description: string,
 ): keyof typeof Ionicons.glyphMap {
+  const text = description.toLowerCase();
 
-  switch (description) {
-
-    case "Clear sky":
-    case "Mainly clear":
-
-      return "sunny-outline";
-
-    case "Partly cloudy":
-
-      return "partly-sunny-outline";
-
-    case "Overcast":
-    case "Fog":
-
-      return "cloud-outline";
-
-    case "Light drizzle":
-    case "Moderate drizzle":
-    case "Dense intensity drizzle":
-    case "Slight rain":
-    case "Moderate rain":
-    case "Heavy intensity rain":
-    case "Slight rain showers":
-    case "Moderate rain showers":
-    case "Violent rain showers":
-
-      return "rainy-outline";
-
-    case "Slight or moderate thunderstorm":
-    case "Thunderstorm with slight hail":
-    case "Thunderstorm with heavy hail":
-
-      return "thunderstorm-outline";
-
+  if (/thunder|storm/.test(text)) {
+    return "thunderstorm-outline";
   }
+
+  if (/snow|sleet|ice|freezing/.test(text)) {
+    return "snow-outline";
+  }
+
+  if (/rain|drizzle|shower/.test(text)) {
+    return "rainy-outline";
+  }
+
+  if (/clear|sunny/.test(text)) {
+    return "sunny-outline";
+  }
+
+  if (/cloud|overcast/.test(text)) {
+    return "cloud-outline";
+  }
+
+  if (/fog|mist|haze|smoke|dust/.test(text)) {
+    return "cloud-outline";
+  }
+
+  return "partly-sunny-outline";
+}
+
+// ============================================================
+// WEATHER SEVERITY
+//
+// Collapses any OpenWeather description into one of a small
+// set of severity buckets used to pick a badge color.
+// ============================================================
+
+type WeatherSeverity =
+  | "clear"
+  | "cloudy"
+  | "fog"
+  | "light"
+  | "moderate"
+  | "severe";
+
+function getWeatherSeverity(
+  description: string,
+): WeatherSeverity {
+  const text = description.toLowerCase();
+
+  if (
+    /thunder|heavy|violent|torrential|extreme|hail/.test(
+      text,
+    )
+  ) {
+    return "severe";
+  }
+
+  if (
+    /moderate/.test(text)
+  ) {
+    return "moderate";
+  }
+
+  if (
+    /drizzle|light|slight|patchy|shower/.test(
+      text,
+    )
+  ) {
+    return "light";
+  }
+
+  if (
+    /fog|mist|haze|smoke|dust|sand|ash/.test(
+      text,
+    )
+  ) {
+    return "fog";
+  }
+
+  if (/cloud|overcast/.test(text)) {
+    return "cloudy";
+  }
+
+  return "clear";
 }
 
 // ============================================================
@@ -1983,49 +2332,38 @@ function getWeatherIcon(
 // ============================================================
 
 function getWeatherBadgeStyle(
-  description: WeatherCondition,
+  description: string,
 ) {
-
-  switch (description) {
-
-    case "Clear sky":
-    case "Mainly clear":
-
+  switch (getWeatherSeverity(description)) {
+    case "clear":
       return styles.clearWeatherBadge;
 
-    case "Partly cloudy":
-
-      return styles.partlyCloudyWeatherBadge;
-
-    case "Overcast":
+    case "cloudy":
+      // Few / scattered / broken clouds feel "partly".
+      if (
+        /partly|few|scattered|broken/.test(
+          description.toLowerCase(),
+        )
+      ) {
+        return styles.partlyCloudyWeatherBadge;
+      }
 
       return styles.overcastWeatherBadge;
 
-    case "Fog":
-
+    case "fog":
       return styles.fogWeatherBadge;
 
-    case "Light drizzle":
-    case "Moderate drizzle":
-    case "Dense intensity drizzle":
-    case "Slight rain":
-    case "Slight rain showers":
-
+    case "light":
       return styles.yellowWeatherBadge;
 
-    case "Moderate rain":
-    case "Moderate rain showers":
-    case "Slight or moderate thunderstorm":
-
+    case "moderate":
       return styles.orangeWeatherBadge;
 
-    case "Heavy intensity rain":
-    case "Violent rain showers":
-    case "Thunderstorm with slight hail":
-    case "Thunderstorm with heavy hail":
-
+    case "severe":
       return styles.redWeatherBadge;
 
+    default:
+      return styles.clearWeatherBadge;
   }
 }
 
@@ -2034,49 +2372,38 @@ function getWeatherBadgeStyle(
 // ============================================================
 
 function getWeatherBadgeTextStyle(
-  description: WeatherCondition,
+  description: string,
 ) {
-
-  switch (description) {
-
-    case "Clear sky":
-    case "Mainly clear":
-
+  switch (getWeatherSeverity(description)) {
+    case "clear":
       return styles.clearWeatherBadgeText;
 
-    case "Partly cloudy":
-
-      return styles.partlyCloudyWeatherBadgeText;
-
-    case "Overcast":
+    case "cloudy":
+      // Few / scattered / broken clouds feel "partly".
+      if (
+        /partly|few|scattered|broken/.test(
+          description.toLowerCase(),
+        )
+      ) {
+        return styles.partlyCloudyWeatherBadgeText;
+      }
 
       return styles.overcastWeatherBadgeText;
 
-    case "Fog":
-
+    case "fog":
       return styles.fogWeatherBadgeText;
 
-    case "Light drizzle":
-    case "Moderate drizzle":
-    case "Dense intensity drizzle":
-    case "Slight rain":
-    case "Slight rain showers":
-
+    case "light":
       return styles.yellowWeatherBadgeText;
 
-    case "Moderate rain":
-    case "Moderate rain showers":
-    case "Slight or moderate thunderstorm":
-
+    case "moderate":
       return styles.orangeWeatherBadgeText;
 
-    case "Heavy intensity rain":
-    case "Violent rain showers":
-    case "Thunderstorm with slight hail":
-    case "Thunderstorm with heavy hail":
-
+    case "severe":
       return styles.redWeatherBadgeText;
 
+    default:
+      return styles.clearWeatherBadgeText;
   }
 }
 
@@ -2180,6 +2507,13 @@ const styles = StyleSheet.create({
   },
 
   batteryCircle: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  batteryPulse: {
     width: RING_SIZE,
     height: RING_SIZE,
     alignItems: "center",

@@ -15,12 +15,12 @@ import Copyright from "@/components/forms/Copyright";
 
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 
 import AppText from "@/components/ui/AppText";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+import { Radius } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
 // ============================================
@@ -95,13 +95,10 @@ type DeviceStatus =
 // ============================================
 
 export default function ComponentsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [statusFilter, setStatusFilter] =
     useState<
-      "All" | "Active" | "Inactive"
-    >("All");
+      "Active" | "Inactive"
+    >("Active");
 
   const [components, setComponents] =
     useState<ComponentData[]>([]);
@@ -347,11 +344,7 @@ export default function ComponentsScreen() {
 
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -380,7 +373,6 @@ export default function ComponentsScreen() {
         <View style={styles.statusToggle}>
           {(
             [
-              "All",
               "Active",
               "Inactive",
             ] as const
@@ -390,6 +382,8 @@ export default function ComponentsScreen() {
               onPress={() =>
                 setStatusFilter(option)
               }
+              accessibilityRole="button"
+              accessibilityLabel={`Show ${option.toLowerCase()} components`}
               style={({ pressed }) => [
                 styles.statusButton,
 
@@ -431,16 +425,6 @@ export default function ComponentsScreen() {
                 )
                 .filter((component) => {
                   // ==================================
-                  // ALL FILTER
-                  // ==================================
-
-                  if (
-                    statusFilter === "All"
-                  ) {
-                    return true;
-                  }
-
-                  // ==================================
                   // CHECK IF COMPONENT IS ESP32
                   // ==================================
 
@@ -480,20 +464,14 @@ export default function ComponentsScreen() {
               return (
                 <EmptyState
                   title={
-                    statusFilter === "All"
-                      ? "No Components"
-                      : statusFilter ===
-                          "Active"
-                        ? "No Active Components"
-                        : "No Inactive Components"
+                    statusFilter === "Active"
+                      ? "No Active Components"
+                      : "No Inactive Components"
                   }
                   description={
-                    statusFilter === "All"
-                      ? "No components are available for this account."
-                      : statusFilter ===
-                          "Active"
-                        ? "No components are currently active."
-                        : "No components are currently inactive."
+                    statusFilter === "Active"
+                      ? "No components are currently active."
+                      : "No components are currently inactive."
                   }
                   icon="hardware-chip-outline"
                 />
@@ -549,13 +527,6 @@ export default function ComponentsScreen() {
 
         <Copyright />
       </ScrollView>
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
     </ScreenContainer2>
   );
 }
@@ -633,6 +604,12 @@ const styles = StyleSheet.create({
 
     width: "100%",
 
+    maxWidth: 360,
+
+    alignSelf: "center",
+
+    height: 51,
+
     flexDirection: "row",
 
     backgroundColor:
@@ -643,7 +620,7 @@ const styles = StyleSheet.create({
     borderColor:
       Colors.light.border,
 
-    borderRadius: 14,
+    borderRadius: Radius.md,
 
     padding: 3,
 
@@ -655,13 +632,13 @@ const styles = StyleSheet.create({
 
     flex: 1,
 
-    minHeight: 40,
+    height: 41,
 
     alignItems: "center",
 
     justifyContent: "center",
 
-    borderRadius: 11,
+    borderRadius: Radius.md,
 
   },
 

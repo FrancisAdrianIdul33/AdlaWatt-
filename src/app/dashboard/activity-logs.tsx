@@ -16,9 +16,10 @@ import {
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import Pagination from "@/components/ui/Pagination";
 import AppText from "@/components/ui/AppText";
+import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/DropdownModal";
+import ActivityLogCard, { ACTIVITY_LOG_GAP } from "@/components/ActivityLogCard";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
@@ -48,9 +49,6 @@ type ActivityLog = {
 };
 
 export default function ActivityLogsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [activityLogs, setActivityLogs] =
     useState<ActivityLog[]>([]);
 
@@ -60,10 +58,10 @@ export default function ActivityLogsScreen() {
   const [typeFilter, setTypeFilter] =
     useState<"all" | ActivityType>("all");
 
-  const [timeDropdownVisible, setTimeDropdownVisible] =
+  const [timeModalVisible, setTimeModalVisible] =
     useState(false);
 
-  const [typeDropdownVisible, setTypeDropdownVisible] =
+  const [typeModalVisible, setTypeModalVisible] =
     useState(false);
 
   const [totalActivityLogs, setTotalActivityLogs] =
@@ -251,7 +249,7 @@ export default function ActivityLogsScreen() {
   ) => {
     setTimeFilter(filter);
     setCurrentPage(1);
-    setTimeDropdownVisible(false);
+    setTimeModalVisible(false);
   };
 
   const handleTypeFilter = (
@@ -259,7 +257,7 @@ export default function ActivityLogsScreen() {
   ) => {
     setTypeFilter(filter);
     setCurrentPage(1);
-    setTypeDropdownVisible(false);
+    setTypeModalVisible(false);
   };
 
   // ============================================
@@ -313,11 +311,7 @@ export default function ActivityLogsScreen() {
 
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -366,11 +360,9 @@ export default function ActivityLogsScreen() {
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
-                setTimeDropdownVisible(
-                  !timeDropdownVisible,
-                );
+                setTimeModalVisible(true);
 
-                setTypeDropdownVisible(false);
+                setTypeModalVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -392,68 +384,11 @@ export default function ActivityLogsScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  timeDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={18}
                 color={Colors.light.text}
               />
             </Pressable>
-
-            {timeDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "All",
-                    "Last Hour",
-                    "Today",
-                    "This Week",
-                    "This Year",
-                  ] as TimeFilter[]
-                ).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() =>
-                      handleTimeFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      timeFilter === option &&
-                        styles.selectedDropdownItem,
-                      pressed &&
-                        styles.dropdownItemPressed,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        option === "All"
-                          ? "time-outline"
-                          : "calendar-outline"
-                      }
-                      size={18}
-                      color={
-                        timeFilter === option
-                          ? Colors.light.primary
-                          : Colors.light.textSecondary
-                      }
-                    />
-
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownText,
-                        timeFilter === option &&
-                          styles.selectedDropdownText,
-                      ]}
-                    >
-                      {option}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
 
           {/* Activity Type Filter */}
@@ -461,11 +396,9 @@ export default function ActivityLogsScreen() {
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
-                setTypeDropdownVisible(
-                  !typeDropdownVisible,
-                );
+                setTypeModalVisible(true);
 
-                setTimeDropdownVisible(false);
+                setTimeModalVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -494,90 +427,11 @@ export default function ActivityLogsScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  typeDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={18}
                 color={Colors.light.text}
               />
             </Pressable>
-
-            {typeDropdownVisible && (
-              <View style={styles.dropdown}>
-                {[
-                  {
-                    value: "all",
-                    label: "All",
-                    icon: "list-outline",
-                    color: Colors.light.primary,
-                  },
-                  {
-                    value: "info",
-                    label: "Info",
-                    icon:
-                      "information-circle-outline",
-                    color: Colors.light.primary,
-                  },
-                  {
-                    value: "warning",
-                    label: "Warning",
-                    icon: "warning-outline",
-                    color: Colors.light.secondary,
-                  },
-                  {
-                    value: "error",
-                    label: "Error",
-                    icon: "alert-circle-outline",
-                    color: Colors.light.error,
-                  },
-                  {
-                    value: "critical",
-                    label: "Critical",
-                    icon: "alert-circle-outline",
-                    color: Colors.light.error,
-                  },
-                ].map((option) => (
-                  <Pressable
-                    key={option.value}
-                    onPress={() =>
-                      handleTypeFilter(
-                        option.value as
-                          | "all"
-                          | ActivityType,
-                      )
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      typeFilter === option.value &&
-                        styles.selectedDropdownItem,
-                      pressed &&
-                        styles.dropdownItemPressed,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        option.icon as keyof typeof Ionicons.glyphMap
-                      }
-                      size={18}
-                      color={option.color}
-                    />
-
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownText,
-                        typeFilter === option.value &&
-                          styles.selectedDropdownText,
-                      ]}
-                    >
-                      {option.label}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
         </View>
 
@@ -591,68 +445,12 @@ export default function ActivityLogsScreen() {
               description="No activities match the selected filters."
             />
           ) : (
-            currentPageLogs.map((activity) => {
-              const icon =
-                activity.type === "info"
-                  ? "information-circle-outline"
-                  : activity.type === "warning"
-                    ? "warning-outline"
-                    : "alert-circle-outline";
-
-              const color =
-                activity.type === "info"
-                  ? Colors.light.primary
-                  : activity.type === "warning"
-                    ? Colors.light.secondary
-                    : Colors.light.error;
-
-              return (
-                <View
-                  key={activity.id}
-                  style={styles.activityCard}
-                >
-                  <View
-                    style={styles.activityWrapper}
-                  >
-                    <Ionicons
-                      name={icon}
-                      size={24}
-                      color={color}
-                    />
-
-                    <View
-                      style={styles.activityContent}
-                    >
-                      <AppText
-                        variant="body"
-                        style={styles.activityTitle}
-                      >
-                        {activity.title}
-                      </AppText>
-
-                      <AppText
-                        variant="caption"
-                        style={
-                          styles.activityDescription
-                        }
-                      >
-                        {activity.details}
-                      </AppText>
-
-                      <AppText
-                        variant="caption"
-                        style={
-                          styles.activityTimestamp
-                        }
-                      >
-                        {activity.date} •{" "}
-                        {activity.time}
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-              );
-            })
+            currentPageLogs.map((activity) => (
+              <ActivityLogCard
+                key={activity.id}
+                item={activity}
+              />
+            ))
           )}
         </View>
 
@@ -680,12 +478,96 @@ export default function ActivityLogsScreen() {
         <Copyright />
       </ScrollView>
 
-      <Sidebar
-        visible={sidebarVisible}
+      {/* ========================================================
+          TIME RANGE MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={timeModalVisible}
+        title="Time Range"
         onClose={() =>
-          setSidebarVisible(false)
+          setTimeModalVisible(false)
         }
-      />
+      >
+        {(
+          [
+            "All",
+            "Last Hour",
+            "Today",
+            "This Week",
+            "This Year",
+          ] as TimeFilter[]
+        ).map((option) => (
+          <RadioOptionRow
+            key={option}
+            label={option}
+            selected={timeFilter === option}
+            onPress={() =>
+              handleTimeFilter(option)
+            }
+          />
+        ))}
+      </DropdownModal>
+
+      {/* ========================================================
+          ACTIVITY TYPE MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={typeModalVisible}
+        title="Activity Type"
+        onClose={() =>
+          setTypeModalVisible(false)
+        }
+      >
+        {[
+          {
+            value: "all" as const,
+            label: "All",
+            icon: "list-outline" as const,
+            color: Colors.light.primary,
+          },
+          {
+            value: "info" as const,
+            label: "Info",
+            icon: "information-circle-outline" as const,
+            color: Colors.light.primary,
+          },
+          {
+            value: "warning" as const,
+            label: "Warning",
+            icon: "warning-outline" as const,
+            color: Colors.light.secondary,
+          },
+          {
+            value: "error" as const,
+            label: "Error",
+            icon: "alert-circle-outline" as const,
+            color: Colors.light.error,
+          },
+          {
+            value: "critical" as const,
+            label: "Critical",
+            icon: "alert-circle-outline" as const,
+            color: Colors.light.error,
+          },
+        ].map((option) => (
+          <TintedOptionRow
+            key={option.value}
+            label={option.label}
+            icon={option.icon}
+            color={option.color}
+            selected={
+              typeFilter === option.value
+            }
+            onPress={() =>
+              handleTypeFilter(
+                option.value as
+                  | "all"
+                  | ActivityType,
+              )
+            }
+          />
+        ))}
+      </DropdownModal>
     </ScreenContainer2>
   );
 }
@@ -699,11 +581,6 @@ const dashboardDimensions = {
     filterGap: 10,
     filterHeight: 48,
     filterRadius: 14,
-
-    dropdownRadius: 14,
-    dropdownItemHeight: 44,
-
-    activityGap: 12,
   };
 
   const styles = StyleSheet.create({
@@ -823,109 +700,13 @@ const dashboardDimensions = {
       opacity: 0.75,
     },
 
-    /* Dropdown */
-
-    dropdown: {
-      position: "absolute",
-
-      top:
-        dashboardDimensions.filterHeight + 6,
-
-      left: 0,
-      right: 0,
-
-      backgroundColor: "#FFFFFF",
-
-      borderWidth: 2,
-
-      borderColor: Colors.light.primary,
-
-      borderRadius:
-        dashboardDimensions.dropdownRadius,
-
-      paddingVertical: 5,
-
-      zIndex: 100,
-
-      elevation: 10,
-
-      boxShadow: "0px 4px 8px rgba(0,0,0,0.12)",
-    },
-
-    dropdownItem: {
-      minHeight:
-        dashboardDimensions.dropdownItemHeight,
-
-      flexDirection: "row",
-
-      alignItems: "center",
-
-      paddingHorizontal: 13,
-
-      gap: 10,
-    },
-
-    selectedDropdownItem: {
-      backgroundColor:
-        "rgba(0, 168, 107, 0.10)",
-    },
-
-    dropdownItemPressed: {
-      opacity: 0.7,
-    },
-
-    dropdownText: {
-      color: "#000000",
-    },
-
-    selectedDropdownText: {
-      fontWeight: "700",
-    },
-
     /* Activity List */
 
     activityList: {
       width: "100%",
 
-      gap: dashboardDimensions.activityGap,
+      gap: ACTIVITY_LOG_GAP,
 
       zIndex: 1,
     },
-
-    activityCard: {
-  width: "100%",
-  backgroundColor: Colors.glass.white,
-  borderWidth: 2,
-  borderColor: Colors.light.border,
-  borderRadius: 16,
-  padding: 12,
-},
-
-activityWrapper: {
-  width: "100%",
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: 10,
-},
-
-activityContent: {
-  flex: 1,
-},
-
-activityTitle: {
-  color: "#000000",
-  fontWeight: "700",
-},
-
-activityDescription: {
-  color: Colors.light.textSecondary,
-  marginTop: 3,
-  lineHeight: 18,
-},
-
-activityTimestamp: {
-  color: Colors.light.textSecondary,
-  marginTop: 5,
-  fontSize: 11,
-},
   });

@@ -19,7 +19,7 @@ import NavBar from "@/components/layout/Navbar";
 
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 
-import Sidebar from "@/components/layout/Sidebar";
+import { DropdownModal, RadioOptionRow, TintedOptionRow } from "@/components/ui/DropdownModal";
 
 import NotificationCard, {
   NotificationCardData,
@@ -48,9 +48,6 @@ type NotificationData = NotificationCardData & {
 };
 
 export default function NotificationsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [notifications, setNotifications] =
     useState<NotificationData[]>([]);
 
@@ -60,10 +57,10 @@ export default function NotificationsScreen() {
   const [typeFilter, setTypeFilter] =
     useState<"All" | NotificationType>("All");
 
-  const [timeDropdownVisible, setTimeDropdownVisible] =
+  const [timeModalVisible, setTimeModalVisible] =
     useState(false);
 
-  const [typeDropdownVisible, setTypeDropdownVisible] =
+  const [typeModalVisible, setTypeModalVisible] =
     useState(false);
 
   // ============================================
@@ -286,7 +283,7 @@ export default function NotificationsScreen() {
   ) => {
     setTimeFilter(value);
     setCurrentPage(1);
-    setTimeDropdownVisible(false);
+    setTimeModalVisible(false);
   };
 
   const handleTypeFilter = (
@@ -294,7 +291,7 @@ export default function NotificationsScreen() {
   ) => {
     setTypeFilter(value);
     setCurrentPage(1);
-    setTypeDropdownVisible(false);
+    setTypeModalVisible(false);
   };
 
   // ============================================
@@ -379,11 +376,7 @@ export default function NotificationsScreen() {
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -431,11 +424,9 @@ export default function NotificationsScreen() {
             <Pressable
               style={styles.dropdownButton}
               onPress={() => {
-                setTimeDropdownVisible(
-                  !timeDropdownVisible,
-                );
+                setTimeModalVisible(true);
 
-                setTypeDropdownVisible(false);
+                setTypeModalVisible(false);
               }}
             >
               <Ionicons
@@ -452,48 +443,11 @@ export default function NotificationsScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  timeDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={17}
                 color={Colors.light.primary}
               />
             </Pressable>
-
-            {timeDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "All",
-                    "Last Hour",
-                    "Today",
-                    "This Week",
-                    "This Year",
-                  ] as TimeFilter[]
-                ).map((option) => (
-                  <Pressable
-                    key={option}
-                    style={styles.dropdownItem}
-                    onPress={() =>
-                      handleTimeFilter(option)
-                    }
-                  >
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownItemText,
-                        timeFilter === option &&
-                          styles.selectedDropdownText,
-                      ]}
-                    >
-                      {option}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
 
           {/* Type Dropdown */}
@@ -501,11 +455,9 @@ export default function NotificationsScreen() {
             <Pressable
               style={styles.dropdownButton}
               onPress={() => {
-                setTypeDropdownVisible(
-                  !typeDropdownVisible,
-                );
+                setTypeModalVisible(true);
 
-                setTimeDropdownVisible(false);
+                setTimeModalVisible(false);
               }}
             >
               <Ionicons
@@ -526,72 +478,11 @@ export default function NotificationsScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  typeDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={17}
                 color={Colors.light.primary}
               />
             </Pressable>
-
-            {typeDropdownVisible && (
-              <View style={styles.dropdown}>
-                {[
-                  {
-                    value: "All",
-                    label: "All",
-                    icon: "list-outline",
-                  },
-                  {
-                    value: "normal",
-                    label: "Normal",
-                    icon: "notifications-outline",
-                  },
-                  {
-                    value: "alert",
-                    label: "Alert",
-                    icon: "alert-circle-outline",
-                  },
-                ].map((option) => (
-                  <Pressable
-                    key={option.value}
-                    style={styles.dropdownItem}
-                    onPress={() =>
-                      handleTypeFilter(
-                        option.value as
-                          | "All"
-                          | NotificationType,
-                      )
-                    }
-                  >
-                    <Ionicons
-                      name={
-                        option.icon as keyof typeof Ionicons.glyphMap
-                      }
-                      size={17}
-                      color={
-                        option.value === "alert"
-                          ? Colors.light.error
-                          : Colors.light.primary
-                      }
-                    />
-
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownItemText,
-                        typeFilter === option.value &&
-                          styles.selectedDropdownText,
-                      ]}
-                    >
-                      {option.label}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
 
           {/* Mark as Read */}
@@ -683,13 +574,84 @@ export default function NotificationsScreen() {
         <Copyright />
       </ScrollView>
 
-      {/* Sidebar */}
-      <Sidebar
-        visible={sidebarVisible}
+      {/* ========================================================
+          TIME RANGE MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={timeModalVisible}
+        title="Time Range"
         onClose={() =>
-          setSidebarVisible(false)
+          setTimeModalVisible(false)
         }
-      />
+      >
+        {(
+          [
+            "All",
+            "Last Hour",
+            "Today",
+            "This Week",
+            "This Year",
+          ] as TimeFilter[]
+        ).map((option) => (
+          <RadioOptionRow
+            key={option}
+            label={option}
+            selected={timeFilter === option}
+            onPress={() =>
+              handleTimeFilter(option)
+            }
+          />
+        ))}
+      </DropdownModal>
+
+      {/* ========================================================
+          NOTIFICATION TYPE MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={typeModalVisible}
+        title="Notification Type"
+        onClose={() =>
+          setTypeModalVisible(false)
+        }
+      >
+        {[
+          {
+            value: "All" as const,
+            label: "All",
+            icon: "list-outline" as const,
+            color: Colors.light.primary,
+          },
+          {
+            value: "normal" as const,
+            label: "Normal",
+            icon: "notifications-outline" as const,
+            color: Colors.light.primary,
+          },
+          {
+            value: "alert" as const,
+            label: "Alert",
+            icon: "alert-circle-outline" as const,
+            color: Colors.light.error,
+          },
+        ].map((option) => (
+          <TintedOptionRow
+            key={option.value}
+            label={option.label}
+            icon={option.icon}
+            color={option.color}
+            selected={
+              typeFilter === option.value
+            }
+            onPress={() =>
+              handleTypeFilter(
+                option.value as
+                  | "All"
+                  | NotificationType,
+              )
+            }
+          />
+        ))}
+      </DropdownModal>
     </ScreenContainer2>
   );
 }
@@ -700,9 +662,6 @@ const notificationDimensions = {
 
   filterHeight: 42,
   filterRadius: 12,
-
-  dropdownRadius: 12,
-  dropdownItemHeight: 42,
 
   buttonRadius: 12,
 };
@@ -824,59 +783,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
 
     flexShrink: 1,
-  },
-
-  dropdown: {
-    position: "absolute",
-
-    top:
-      notificationDimensions.filterHeight + 6,
-
-    left: 0,
-
-    right: 0,
-
-    backgroundColor: "#FFFFFF",
-
-    borderWidth: 2,
-
-    borderColor: Colors.light.primary,
-
-    borderRadius:
-      notificationDimensions.dropdownRadius,
-
-    paddingVertical: 5,
-
-    zIndex: 200,
-
-    elevation: 10,
-
-    boxShadow: "0px 4px 8px rgba(0,0,0,0.12)",
-  },
-
-  dropdownItem: {
-    minHeight:
-      notificationDimensions.dropdownItemHeight,
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    gap: 8,
-
-    paddingHorizontal: 13,
-  },
-
-  dropdownItemText: {
-    color: "#000000",
-
-    fontWeight: "500",
-  },
-
-  selectedDropdownText: {
-    color: Colors.light.primary,
-
-    fontWeight: "700",
   },
 
   /* Mark as Read */

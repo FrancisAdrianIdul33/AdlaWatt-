@@ -6,6 +6,7 @@ import {
   ViewStyle,
 } from "react-native";
 
+import NavBarBottom from "@/components/layout/NavBarBottom";
 import { Colors } from "@/constants/colors";
 
 interface ScreenContainer2Props {
@@ -22,6 +23,10 @@ export default function ScreenContainer2({
       <View style={[styles.content, style]}>
         {children}
       </View>
+
+      {/* Bottom nav sits in normal flow so it never overlaps
+          the scrollable content above it. */}
+      <NavBarBottom />
     </View>
   );
 }

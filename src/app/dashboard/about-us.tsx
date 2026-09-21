@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React from "react";
 import {
   Image,
   Pressable,
@@ -11,19 +11,15 @@ import {
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
 export default function AboutUsScreen() {
-  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   return (
     <ScreenContainer2>
       {/* Fixed Navbar */}
-      <NavBar
-        onMenuPress={() => setSidebarVisible(true)}
-      />
+      <NavBar />
 
       {/* Scrollable About Us Content */}
       <ScrollView
@@ -182,12 +178,6 @@ export default function AboutUsScreen() {
         {/* Copyright */}
         <Copyright />
       </ScrollView>
-
-      {/* Sidebar */}
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
-      />
     </ScreenContainer2>
   );
 }

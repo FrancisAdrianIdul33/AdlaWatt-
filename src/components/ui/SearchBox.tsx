@@ -23,7 +23,7 @@ export default function AppSearchBox({
       />
 
       <Ionicons
-        name="search-outline"
+        name="search"
         size={20}
         color={Colors.light.primary}
         style={styles.icon}
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: Colors.light.surface,
     color: Colors.light.textSecondary,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: 12,
     paddingLeft: 16,

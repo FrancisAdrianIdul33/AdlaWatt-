@@ -26,7 +26,6 @@ import type { DeviceStatus } from "@/services/monitoringService";
 
 interface NavBarProps {
   onNotificationPress?: () => void;
-  onMenuPress?: () => void;
   deviceStatus?: DeviceStatus;
 }
 
@@ -36,7 +35,6 @@ interface NavBarProps {
 
 export default function NavBar({
   onNotificationPress,
-  onMenuPress,
   deviceStatus = "Offline",
 }: NavBarProps) {
   const [
@@ -194,9 +192,7 @@ export default function NavBar({
               size={
                 navBarDimensions.notificationIconSize
               }
-              color={
-                Colors.light.text
-              }
+              color="#FFFFFF"
             />
 
             {hasUnreadNotifications && (
@@ -206,29 +202,6 @@ export default function NavBar({
                 }
               />
             )}
-          </Pressable>
-
-          {/* ==================================================
-              MENU
-              ================================================== */}
-
-          <Pressable
-            onPress={onMenuPress}
-            style={
-              navBarStyles.iconButton
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Menu"
-          >
-            <Ionicons
-              name="menu-outline"
-              size={
-                navBarDimensions.menuIconSize
-              }
-              color={
-                Colors.light.text
-              }
-            />
           </Pressable>
         </View>
       </View>
@@ -252,7 +225,6 @@ const navBarDimensions = {
   iconButtonWidth: 42,
   iconButtonHeight: 42,
   notificationIconSize: 27,
-  menuIconSize: 31,
   notificationDotSize: 8,
   accentHeight: 3,
 

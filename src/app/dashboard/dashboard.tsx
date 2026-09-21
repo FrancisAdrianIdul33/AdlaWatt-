@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
+  Animated,
+  Easing,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -12,28 +21,18 @@ import ChartCard from "@/components/ChartCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
+import { Radius } from "@/constants/theme";
 
 import {
-  getCurrentWeatherForUser,
-  type WeatherCondition,
+  type WeatherData,
+  getWeather,
 } from "@/services/weatherForecast";
 
 import {
   useMonitoring,
 } from "@/services/monitoringService";
-
-// ============================================================
-// TYPES
-// ============================================================
-
-type WeatherData = {
-  city: string;
-  temperature: number;
-  description: WeatherCondition;
-};
 
 // ============================================================
 // WEATHER AUTO-REFRESH
@@ -45,16 +44,36 @@ const WEATHER_REFRESH_INTERVAL_MS =
   10 * 60 * 1000; // every 10 minutes
 
 // ============================================================
+// QUICK-NAV SCROLL
+// ============================================================
+
+const QUICK_NAV_SCROLL_MS = 1500;
+const QUICK_NAV_SCROLL_INSET = 12;
+const QUICK_NAV_PRESSED_BG = "#33B98A";
+
+// ============================================================
 // DASHBOARD SCREEN
 // ============================================================
 
 export default function DashboardScreen() {
   // ==========================================================
-  // SIDEBAR STATE
+  // QUICK-NAV SCROLL TARGETS
   // ==========================================================
 
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
+  const scrollRef =
+    useRef<ScrollView>(null);
+
+  const monitoringRef =
+    useRef<View>(null);
+
+  const applianceRef =
+    useRef<View>(null);
+
+  const scrollYRef =
+    useRef(0);
+
+  const scrollOffset =
+    useRef(new Animated.Value(0)).current;
 
   // ==========================================================
   // ADLAWATT MONITORING
@@ -103,7 +122,7 @@ export default function DashboardScreen() {
         }
 
         const forecast =
-          await getCurrentWeatherForUser();
+          await getWeather();
 
         // Prevent state updates if the screen
         // has already been unmounted.
@@ -113,27 +132,23 @@ export default function DashboardScreen() {
 
         hasLoaded = true;
 
-        setWeather({
-          city:
-            forecast.location.city,
-          temperature:
-            forecast.weather.temperature,
-          description:
-            forecast.weather.condition,
-        });
+        setWeather(forecast);
       } catch (error) {
-        console.error(
-          "Failed to load weather:",
-          error,
+        // Keep the last known value on background refresh
+        // failures; only blank the card if nothing has
+        // loaded yet. Log a warning (not an error) so
+        // transient weather failures stay quiet.
+        console.warn(
+          "Weather refresh failed:",
+          error instanceof Error
+            ? error.message
+            : error,
         );
 
         if (!isMounted) {
           return;
         }
 
-        // Keep the last known value on background
-        // refresh failures; only blank the card
-        // if nothing has loaded yet.
         if (!hasLoaded) {
           setWeather(null);
         }
@@ -161,6 +176,82 @@ export default function DashboardScreen() {
   }, []);
 
   // ==========================================================
+  // SMOOTH SCROLL-TO-SECTION
+  // ==========================================================
+
+  // Drive the ScrollView with an Animated.Value so the
+  // scroll transition can run for a fixed 1.5s duration.
+  useEffect(() => {
+    const scrollListenerId =
+      scrollOffset.addListener(
+        ({ value }) => {
+          scrollRef.current?.scrollTo({
+            y: value,
+            animated: false,
+          });
+        },
+      );
+
+    return () => {
+      scrollOffset.removeListener(
+        scrollListenerId,
+      );
+    };
+  }, [scrollOffset]);
+
+  const scrollToSection = (
+    sectionRef: React.RefObject<View | null>,
+  ) => {
+    const section = sectionRef.current;
+    const scroll = scrollRef.current;
+
+    if (!section || !scroll) {
+      return;
+    }
+
+    const nativeScroll =
+      scroll.getNativeScrollRef();
+
+    if (!nativeScroll) {
+      return;
+    }
+
+    // Measure both views in window coordinates so the
+    // target scroll offset stays correct no matter the
+    // current scroll position, on native and web.
+    section.measureInWindow(
+      (_sx, sectionWindowY) => {
+        nativeScroll.measureInWindow(
+          (_fx, scrollWindowY) => {
+            const target = Math.max(
+              sectionWindowY -
+                scrollWindowY +
+                scrollYRef.current -
+                QUICK_NAV_SCROLL_INSET,
+              0,
+            );
+
+            scrollOffset.setValue(
+              scrollYRef.current,
+            );
+
+            Animated.timing(scrollOffset, {
+              toValue: target,
+              duration:
+                QUICK_NAV_SCROLL_MS,
+              easing:
+                Easing.inOut(
+                  Easing.cubic,
+                ),
+              useNativeDriver: false,
+            }).start();
+          },
+        );
+      },
+    );
+  };
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
@@ -171,9 +262,6 @@ export default function DashboardScreen() {
           ==================================================== */}
 
       <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
         deviceStatus={
           monitoring?.device_status === "Online"
             ? "Online"
@@ -186,11 +274,17 @@ export default function DashboardScreen() {
           ==================================================== */}
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={
           styles.scrollContent
         }
         showsVerticalScrollIndicator={false}
+        onScroll={(event) => {
+          scrollYRef.current =
+            event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         {/* ==================================================
             DASHBOARD HEADER
@@ -215,10 +309,47 @@ export default function DashboardScreen() {
         </View>
 
         {/* ==================================================
+            QUICK NAV BUTTONS
+            ================================================== */}
+
+        <View
+          style={styles.quickNavRow}
+        >
+          <Pressable
+            onPress={() =>
+              scrollToSection(
+                applianceRef,
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Go to Appliance Recommendation"
+            style={({ pressed }) => [
+              styles.quickNavButton,
+              pressed &&
+              styles.quickNavButtonPressed,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              style={styles.quickNavButtonText}
+            >
+              Appliance Recommendation
+            </AppText>
+
+            <Ionicons
+              name="arrow-forward"
+              size={16}
+              color="#FFFFFF"
+            />
+          </Pressable>
+        </View>
+
+        {/* ==================================================
             REAL-TIME MONITORING
             ================================================== */}
 
         <View
+          ref={monitoringRef}
           style={styles.section}
         >
           <AppText
@@ -330,6 +461,7 @@ export default function DashboardScreen() {
             ================================================== */}
 
         <View
+          ref={applianceRef}
           style={styles.section}
         >
           <AppText
@@ -359,17 +491,7 @@ export default function DashboardScreen() {
         <Copyright />
       </ScrollView>
 
-      {/* ====================================================
-          SIDEBAR
-          ==================================================== */}
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
-    </ScreenContainer2>
+      </ScreenContainer2>
   );
 }
 
@@ -415,6 +537,35 @@ const styles = StyleSheet.create({
     color:
       Colors.light.textSecondary,
     marginTop: 6,
+  },
+
+  quickNavRow: {
+    width: "100%",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 18,
+  },
+
+  quickNavButton: {
+    width: "100%",
+    maxWidth: 360,
+    height: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.light.primary,
+    borderRadius: Radius.md,
+  },
+
+  quickNavButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  quickNavButtonPressed: {
+    backgroundColor: QUICK_NAV_PRESSED_BG,
   },
 
   section: {

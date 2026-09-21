@@ -10,14 +10,20 @@ import {
 
 import ApplianceModal from "@/components/forms/ApplianceModal";
 import ApplianceStatusBox from "@/components/forms/ApplianceStatusBox";
+import {
+  applianceCardGrid,
+} from "@/components/forms/applianceCard";
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
+import { DropdownModal, RadioOptionRow } from "@/components/ui/DropdownModal";
 import EmptyState from "@/components/ui/EmptyState";
 
 import { Colors } from "@/constants/colors";
+import {
+  Radius,
+} from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
 type PowerLevel =
@@ -44,7 +50,6 @@ type SelectedAppliance = {
 };
 
 type StatusFilter =
-  | "All"
   | "Advisable"
   | "notAdvisable";
 
@@ -66,7 +71,7 @@ const areaMap: Record<
 
 export default function AppliancesScreen() {
   const [statusFilter, setStatusFilter] =
-    useState<StatusFilter>("All");
+    useState<StatusFilter>("Advisable");
 
   const [
     selectedAppliances,
@@ -78,9 +83,6 @@ export default function AppliancesScreen() {
     setApplianceModalVisible,
   ] = useState(false);
 
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   const [powerFilter, setPowerFilter] =
     useState<PowerLevel>("All");
 
@@ -88,13 +90,13 @@ export default function AppliancesScreen() {
     useState<Area>("All Areas");
 
   const [
-    powerDropdownVisible,
-    setPowerDropdownVisible,
+    powerModalVisible,
+    setPowerModalVisible,
   ] = useState(false);
 
   const [
-    areaDropdownVisible,
-    setAreaDropdownVisible,
+    areaModalVisible,
+    setAreaModalVisible,
   ] = useState(false);
 
   const loadSelectedAppliances = async () => {
@@ -147,12 +149,12 @@ export default function AppliancesScreen() {
     filter: PowerLevel,
   ) => {
     setPowerFilter(filter);
-    setPowerDropdownVisible(false);
+    setPowerModalVisible(false);
   };
 
   const handleAreaFilter = (filter: Area) => {
     setAreaFilter(filter);
-    setAreaDropdownVisible(false);
+    setAreaModalVisible(false);
   };
 
   const filteredAppliances =
@@ -183,7 +185,6 @@ export default function AppliancesScreen() {
           : "Advisable";
 
       const matchesStatus =
-        statusFilter === "All" ||
         status === statusFilter;
 
       return (
@@ -195,11 +196,7 @@ export default function AppliancesScreen() {
 
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -253,10 +250,8 @@ export default function AppliancesScreen() {
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
-                setPowerDropdownVisible(
-                  !powerDropdownVisible,
-                );
-                setAreaDropdownVisible(false);
+                setPowerModalVisible(true);
+                setAreaModalVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -277,63 +272,19 @@ export default function AppliancesScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  powerDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={17}
                 color={Colors.light.text}
               />
             </Pressable>
-
-            {powerDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "All",
-                    "Highest",
-                    "Moderate",
-                    "Low",
-                  ] as PowerLevel[]
-                ).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() =>
-                      handlePowerFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      powerFilter === option &&
-                        styles.selectedItem,
-                      pressed &&
-                        styles.dropdownPressed,
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownText,
-                        powerFilter === option &&
-                          styles.selectedText,
-                      ]}
-                    >
-                      {option}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
 
           {/* Area Filter */}
           <View style={styles.filterWrapper}>
             <Pressable
               onPress={() => {
-                setAreaDropdownVisible(
-                  !areaDropdownVisible,
-                );
-                setPowerDropdownVisible(false);
+                setAreaModalVisible(true);
+                setPowerModalVisible(false);
               }}
               style={({ pressed }) => [
                 styles.filterButton,
@@ -354,105 +305,72 @@ export default function AppliancesScreen() {
               </AppText>
 
               <Ionicons
-                name={
-                  areaDropdownVisible
-                    ? "chevron-up-outline"
-                    : "chevron-down-outline"
-                }
+                name="chevron-down-outline"
                 size={17}
                 color={Colors.light.text}
               />
             </Pressable>
-
-            {areaDropdownVisible && (
-              <View style={styles.dropdown}>
-                {(
-                  [
-                    "All Areas",
-                    "Living Area",
-                    "Bedroom",
-                    "Kitchen Area",
-                    "Work/Study Area",
-                    "Bathroom Area",
-                    "Porch",
-                    "Custom",
-                  ] as Area[]
-                ).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() =>
-                      handleAreaFilter(option)
-                    }
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      areaFilter === option &&
-                        styles.selectedItem,
-                      pressed &&
-                        styles.dropdownPressed,
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      style={[
-                        styles.dropdownText,
-                        areaFilter === option &&
-                          styles.selectedText,
-                      ]}
-                    >
-                      {option}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
           </View>
         </View>
 
         {/* Status Filter */}
         <View style={styles.statusToggle}>
-          {(
-            [
-              "All",
-              "Advisable",
-              "notAdvisable",
-            ] as StatusFilter[]
-          ).map((option) => (
-            <Pressable
-              key={option}
-              onPress={() =>
-                setStatusFilter(option)
-              }
-              style={({ pressed }) => [
-                styles.statusButton,
-                statusFilter === option && {
-                  backgroundColor:
-                    option === "Advisable"
-                      ? Colors.light.primary
-                      : option === "notAdvisable"
-                        ? "#EF4444"
-                        : Colors.light.primary,
-                },
-                pressed && styles.pressed,
+          <Pressable
+            onPress={() =>
+              setStatusFilter("Advisable")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Show advisable appliances"
+            style={({ pressed }) => [
+              styles.statusButton,
+              statusFilter === "Advisable" && {
+                backgroundColor:
+                  Colors.light.primary,
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              style={[
+                styles.statusText,
+                statusFilter === "Advisable" &&
+                  styles.activeStatusText,
               ]}
             >
-              <AppText
-                variant="caption"
-                style={[
-                  styles.statusText,
-                  statusFilter === option &&
-                    styles.activeStatusText,
-                ]}
-              >
-                {option === "notAdvisable"
-                  ? "Not Advisable"
-                  : option}
-              </AppText>
-            </Pressable>
-          ))}
+              Advisable
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              setStatusFilter("notAdvisable")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Show not advisable appliances"
+            style={({ pressed }) => [
+              styles.statusButton,
+              statusFilter === "notAdvisable" && {
+                backgroundColor: "#EF4444",
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              style={[
+                styles.statusText,
+                statusFilter === "notAdvisable" &&
+                  styles.activeStatusText,
+              ]}
+            >
+              Not Advisable
+            </AppText>
+          </Pressable>
         </View>
 
         {/* Appliances */}
-        <View style={styles.applianceGrid}>
+        <View style={[applianceCardGrid, { marginTop: 20 }]}>
           {filteredAppliances.length === 0 ? (
             <EmptyState
               title={
@@ -460,9 +378,7 @@ export default function AppliancesScreen() {
                   ? "No Appliances"
                   : statusFilter === "Advisable"
                     ? "No Advisable Appliances"
-                    : statusFilter === "notAdvisable"
-                      ? "No Not Advisable Appliances"
-                      : "No Appliances"
+                    : "No Not Advisable Appliances"
               }
               description={
                 selectedAppliances.length === 0
@@ -470,11 +386,11 @@ export default function AppliancesScreen() {
                   : "No appliances match the selected filters."
               }
               icon={
-                statusFilter === "Advisable"
-                  ? "checkmark-circle-outline"
-                  : statusFilter === "notAdvisable"
-                    ? "warning-outline"
-                    : "cube-outline"
+                selectedAppliances.length === 0
+                  ? "cube-outline"
+                  : statusFilter === "Advisable"
+                    ? "checkmark-circle-outline"
+                    : "warning-outline"
               }
             />
           ) : (
@@ -541,12 +457,69 @@ export default function AppliancesScreen() {
         selectedAppliances={selectedAppliances}
       />
 
-      <Sidebar
-        visible={sidebarVisible}
+      {/* ========================================================
+          POWER LEVEL MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={powerModalVisible}
+        title="Power Level"
         onClose={() =>
-          setSidebarVisible(false)
+          setPowerModalVisible(false)
         }
-      />
+      >
+        {(
+          [
+            "All",
+            "Highest",
+            "Moderate",
+            "Low",
+          ] as PowerLevel[]
+        ).map((option) => (
+          <RadioOptionRow
+            key={option}
+            label={option}
+            selected={
+              powerFilter === option
+            }
+            onPress={() =>
+              handlePowerFilter(option)
+            }
+          />
+        ))}
+      </DropdownModal>
+
+      {/* ========================================================
+          AREA MODAL
+      ======================================================== */}
+      <DropdownModal
+        visible={areaModalVisible}
+        title="Area"
+        onClose={() =>
+          setAreaModalVisible(false)
+        }
+      >
+        {(
+          [
+            "All Areas",
+            "Living Area",
+            "Bedroom",
+            "Kitchen Area",
+            "Work/Study Area",
+            "Bathroom Area",
+            "Porch",
+            "Custom",
+          ] as Area[]
+        ).map((option) => (
+          <RadioOptionRow
+            key={option}
+            label={option}
+            selected={areaFilter === option}
+            onPress={() =>
+              handleAreaFilter(option)
+            }
+          />
+        ))}
+      </DropdownModal>
     </ScreenContainer2>
   );
 }
@@ -569,12 +542,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  applianceGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 20,
+  sectionHeader: {
+    marginBottom: 12,
   },
 
   card: {
@@ -649,44 +618,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  dropdown: {
-    position: "absolute",
-    top: 52,
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: 14,
-    paddingVertical: 5,
-    zIndex: 100,
-    elevation: 10,
-    boxShadow: "0px 4px 8px rgba(0,0,0,0.12)",
-  },
-
-  dropdownItem: {
-    minHeight: 42,
-    justifyContent: "center",
-    paddingHorizontal: 12,
-  },
-
-  selectedItem: {
-    backgroundColor: "rgba(0, 168, 107, 0.10)",
-  },
-
-  dropdownPressed: {
-    opacity: 0.7,
-  },
-
-  dropdownText: {
-    color: "#000000",
-  },
-
-  selectedText: {
-    fontWeight: "700",
-    color: Colors.light.primary,
-  },
-
   applianceSection: {
     width: "100%",
     marginBottom: 18,
@@ -700,21 +631,24 @@ const styles = StyleSheet.create({
 
   statusToggle: {
     width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
+    height: 51,
     flexDirection: "row",
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
     borderColor: Colors.light.border,
-    borderRadius: 14,
+    borderRadius: Radius.md,
     padding: 3,
     marginTop: 10,
   },
 
   statusButton: {
     flex: 1,
-    minHeight: 40,
+    height: 41,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 11,
+    borderRadius: Radius.md,
   },
 
   statusText: {

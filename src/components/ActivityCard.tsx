@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import React, { useEffect, useState } from "react";
@@ -9,30 +8,20 @@ import {
   View,
 } from "react-native";
 
+import ActivityLogCard, {
+  ACTIVITY_LOG_GAP,
+  ActivityLogItem,
+  ActivityLogType,
+} from "@/components/ActivityLogCard";
 import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { supabase } from "@/lib/supabase";
 
-type ActivityType =
-  | "info"
-  | "warning"
-  | "error"
-  | "critical";
-
-type Activity = {
-  id: string;
-  type: ActivityType;
-  title: string;
-  details: string;
-  date: string;
-  time: string;
-};
-
 export default function ActivityCard() {
   const [activities, setActivities] =
-    useState<Activity[]>([]);
+    useState<ActivityLogItem[]>([]);
 
   useEffect(() => {
     const loadRecentActivities = async () => {
@@ -65,14 +54,14 @@ export default function ActivityCard() {
         return;
       }
 
-      const mappedActivities: Activity[] = (
+      const mappedActivities: ActivityLogItem[] = (
         data ?? []
       ).map((activity) => {
         const dateObject = new Date(
           activity.created_at,
         );
 
-        const type: ActivityType =
+        const type: ActivityLogType =
           activity.type === "warning" ||
           activity.type === "error" ||
           activity.type === "critical"
@@ -108,44 +97,6 @@ export default function ActivityCard() {
     loadRecentActivities();
   }, []);
 
-  const getActivityIcon = (
-    type: ActivityType,
-  ): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case "info":
-        return "information-circle-outline";
-
-      case "warning":
-        return "warning-outline";
-
-      case "error":
-      case "critical":
-        return "alert-circle-outline";
-
-      default:
-        return "information-circle-outline";
-    }
-  };
-
-  const getActivityColor = (
-    type: ActivityType,
-  ) => {
-    switch (type) {
-      case "info":
-        return Colors.light.primary;
-
-      case "warning":
-        return Colors.light.secondary;
-
-      case "error":
-      case "critical":
-        return Colors.light.error;
-
-      default:
-        return Colors.light.primary;
-    }
-  };
-
   return (
     <View>
       {/* Header */}
@@ -173,52 +124,12 @@ export default function ActivityCard() {
 
       {/* Activity List */}
       <View style={styles.list}>
-        {activities.map((activity) => {
-          const color = getActivityColor(
-            activity.type,
-          );
-
-          return (
-            <View
-              key={activity.id}
-              style={styles.item}
-            >
-              {/* Activity Icon */}
-              <Ionicons
-                name={getActivityIcon(
-                  activity.type,
-                )}
-                size={24}
-                color={color}
-              />
-
-              {/* Activity Content */}
-              <View style={styles.content}>
-                <AppText
-                  variant="caption"
-                  style={styles.activityTitle}
-                >
-                  {activity.title}
-                </AppText>
-
-                <AppText
-                  variant="caption"
-                  style={styles.details}
-                >
-                  {activity.details}
-                </AppText>
-
-                <AppText
-                  variant="caption"
-                  style={styles.timestamp}
-                >
-                  {activity.date} •{" "}
-                  {activity.time}
-                </AppText>
-              </View>
-            </View>
-          );
-        })}
+        {activities.map((activity) => (
+          <ActivityLogCard
+            key={activity.id}
+            item={activity}
+          />
+        ))}
       </View>
     </View>
   );
@@ -251,38 +162,6 @@ const styles = StyleSheet.create({
 
   list: {
     width: "100%",
-    gap: 5,
-  },
-
-  item: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.border,
-    borderRadius: 16,
-    padding: 12,
-  },
-
-  content: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  activityTitle: {
-    color: "#000000",
-    fontWeight: "700",
-  },
-
-  details: {
-    color: Colors.light.textSecondary,
-    marginTop: 3,
-    lineHeight: 18,
-  },
-
-  timestamp: {
-    color: Colors.light.textSecondary,
-    marginTop: 5,
-    fontSize: 11,
+    gap: ACTIVITY_LOG_GAP,
   },
 });

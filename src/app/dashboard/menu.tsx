@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,15 @@ import {
   View,
 } from "react-native";
 
+import { router } from "expo-router";
+
 import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
-import Sidebar from "@/components/layout/Sidebar";
 import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
+import { Routes } from "@/constants/routes";
 
 import {
   getCurrentUserProfile,
@@ -27,9 +30,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
-  const [sidebarVisible, setSidebarVisible] =
-    useState(false);
-
   // ============================================
   // DROPDOWN STATES
   // ============================================
@@ -479,13 +479,47 @@ export default function SettingsScreen() {
     />
   );
 
+  // ============================================
+  // LOG OUT
+  // ============================================
+
+  const handleLogout = () => {
+    const logout = () => {
+      router.replace(Routes.LOGIN);
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Are you sure you want to sign out?",
+      );
+
+      if (confirmed) {
+        logout();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to sign out?",
+      [
+        {
+          text: "No",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: logout,
+        },
+      ],
+    );
+  };
+
   return (
     <ScreenContainer2>
-      <NavBar
-        onMenuPress={() =>
-          setSidebarVisible(true)
-        }
-      />
+      <NavBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -498,15 +532,14 @@ export default function SettingsScreen() {
             variant="heading"
             style={styles.headerTitle}
           >
-            Settings
+            Menu
           </AppText>
 
           <AppText
             variant="caption"
             style={styles.headerSubtitle}
           >
-            Manage your AdlaWatt account and application
-            preferences.
+            Browse and manage your AdlaWatt application.
           </AppText>
         </View>
 
@@ -1331,6 +1364,162 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* ================= MORE PAGES ================= */}
+
+        <View
+          style={styles.sectionContainer}
+        >
+          <AppText
+            variant="caption"
+            style={styles.morePagesLabel}
+          >
+            MORE PAGES
+          </AppText>
+
+          <View
+            style={styles.morePagesCard}
+          >
+            <Pressable
+              onPress={() =>
+                router.push(
+                  Routes.COMPONENTS,
+                )
+              }
+              style={({ pressed }) => [
+                styles.morePagesRow,
+                pressed &&
+                  styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="hardware-chip-outline"
+                size={22}
+                color="#000000"
+              />
+
+              <AppText
+                variant="body"
+                style={styles.morePagesRowText}
+              >
+                Components
+              </AppText>
+
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color={Colors.light.textSecondary}
+              />
+            </Pressable>
+
+            <View
+              style={styles.morePagesDivider}
+            />
+
+            <Pressable
+              onPress={() =>
+                router.push(
+                  Routes.ACTIVITY_LOGS,
+                )
+              }
+              style={({ pressed }) => [
+                styles.morePagesRow,
+                pressed &&
+                  styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="list-outline"
+                size={22}
+                color="#000000"
+              />
+
+              <AppText
+                variant="body"
+                style={styles.morePagesRowText}
+              >
+                Activity Logs
+              </AppText>
+
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color={Colors.light.textSecondary}
+              />
+            </Pressable>
+
+            <View
+              style={styles.morePagesDivider}
+            />
+
+            <Pressable
+              onPress={() =>
+                router.push(
+                  Routes.ABOUT_US,
+                )
+              }
+              style={({ pressed }) => [
+                styles.morePagesRow,
+                pressed &&
+                  styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={22}
+                color="#000000"
+              />
+
+              <AppText
+                variant="body"
+                style={styles.morePagesRowText}
+              >
+                About Us
+              </AppText>
+
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color={Colors.light.textSecondary}
+              />
+            </Pressable>
+
+            <View
+              style={styles.morePagesDivider}
+            />
+
+            <Pressable
+              onPress={handleLogout}
+              style={({ pressed }) => [
+                styles.morePagesRow,
+                pressed &&
+                  styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="log-out-outline"
+                size={22}
+                color={Colors.light.error}
+              />
+
+              <AppText
+                variant="body"
+                style={[
+                  styles.morePagesRowText,
+                  styles.logOutText,
+                ]}
+              >
+                Log Out
+              </AppText>
+
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color={Colors.light.error}
+              />
+            </Pressable>
+          </View>
+        </View>
+
         {/* ================= APP VERSION ================= */}
 
         <View
@@ -1536,13 +1725,6 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
-
-      <Sidebar
-        visible={sidebarVisible}
-        onClose={() =>
-          setSidebarVisible(false)
-        }
-      />
     </ScreenContainer2>
   );
 }
@@ -1872,6 +2054,49 @@ const styles = StyleSheet.create({
   selectedSelectionText: {
     color: Colors.light.primary,
     fontWeight: "700",
+  },
+
+  /* ================= MORE PAGES ================= */
+
+  morePagesLabel: {
+    color: Colors.light.primary,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+
+  morePagesCard: {
+    width: "100%",
+    backgroundColor: Colors.glass.white,
+    borderWidth: settingsDimensions.borderWidth,
+    borderColor: Colors.light.secondary,
+    borderRadius: settingsDimensions.borderRadius,
+    overflow: "hidden",
+  },
+
+  morePagesRow: {
+    minHeight: 54,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  morePagesRowText: {
+    flex: 1,
+    color: "#000000",
+    fontWeight: "600",
+  },
+
+  morePagesDivider: {
+    height: 1,
+    backgroundColor: Colors.light.border,
+    marginLeft: 52,
+  },
+
+  logOutText: {
+    color: Colors.light.error,
   },
 
   /* ================= VERSION ================= */
