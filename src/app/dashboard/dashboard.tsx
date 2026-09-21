@@ -26,23 +26,13 @@ import { Colors } from "@/constants/colors";
 import { Radius } from "@/constants/theme";
 
 import {
-  getCurrentWeatherForUser,
-  type WeatherCondition,
+  type WeatherData,
+  getWeather,
 } from "@/services/weatherForecast";
 
 import {
   useMonitoring,
 } from "@/services/monitoringService";
-
-// ============================================================
-// TYPES
-// ============================================================
-
-type WeatherData = {
-  city: string;
-  temperature: number;
-  description: WeatherCondition;
-};
 
 // ============================================================
 // WEATHER AUTO-REFRESH
@@ -132,7 +122,7 @@ export default function DashboardScreen() {
         }
 
         const forecast =
-          await getCurrentWeatherForUser();
+          await getWeather();
 
         // Prevent state updates if the screen
         // has already been unmounted.
@@ -142,27 +132,23 @@ export default function DashboardScreen() {
 
         hasLoaded = true;
 
-        setWeather({
-          city:
-            forecast.location.city,
-          temperature:
-            forecast.weather.temperature,
-          description:
-            forecast.weather.condition,
-        });
+        setWeather(forecast);
       } catch (error) {
-        console.error(
-          "Failed to load weather:",
-          error,
+        // Keep the last known value on background refresh
+        // failures; only blank the card if nothing has
+        // loaded yet. Log a warning (not an error) so
+        // transient weather failures stay quiet.
+        console.warn(
+          "Weather refresh failed:",
+          error instanceof Error
+            ? error.message
+            : error,
         );
 
         if (!isMounted) {
           return;
         }
 
-        // Keep the last known value on background
-        // refresh failures; only blank the card
-        // if nothing has loaded yet.
         if (!hasLoaded) {
           setWeather(null);
         }

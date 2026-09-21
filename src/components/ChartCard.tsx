@@ -24,10 +24,6 @@ import { Colors } from "@/constants/colors";
 
 import { MonitoringData } from "@/services/monitoringService";
 
-import {
-  type WeatherCondition,
-} from "@/services/weatherForecast";
-
 // ============================================================
 // TYPES
 // ============================================================
@@ -56,7 +52,7 @@ type TemperatureStatus =
 interface WeatherData {
   city: string;
   temperature: number;
-  description: WeatherCondition;
+  description: string;
 }
 
 type NonBatteryChartType =
@@ -2234,45 +2230,101 @@ function formatSolarTimer(
 // WEATHER ICON
 // ============================================================
 
+// ============================================================
+// WEATHER ICON
+//
+// OpenWeather sends free-form descriptions (e.g. "moderate
+// rain", "few clouds"), so the mapping below matches on
+// keywords and always falls back to a valid icon.
+// ============================================================
+
 function getWeatherIcon(
-  description: WeatherCondition,
+  description: string,
 ): keyof typeof Ionicons.glyphMap {
+  const text = description.toLowerCase();
 
-  switch (description) {
-
-    case "Clear sky":
-    case "Mainly clear":
-
-      return "sunny-outline";
-
-    case "Partly cloudy":
-
-      return "partly-sunny-outline";
-
-    case "Overcast":
-    case "Fog":
-
-      return "cloud-outline";
-
-    case "Light drizzle":
-    case "Moderate drizzle":
-    case "Dense intensity drizzle":
-    case "Slight rain":
-    case "Moderate rain":
-    case "Heavy intensity rain":
-    case "Slight rain showers":
-    case "Moderate rain showers":
-    case "Violent rain showers":
-
-      return "rainy-outline";
-
-    case "Slight or moderate thunderstorm":
-    case "Thunderstorm with slight hail":
-    case "Thunderstorm with heavy hail":
-
-      return "thunderstorm-outline";
-
+  if (/thunder|storm/.test(text)) {
+    return "thunderstorm-outline";
   }
+
+  if (/snow|sleet|ice|freezing/.test(text)) {
+    return "snow-outline";
+  }
+
+  if (/rain|drizzle|shower/.test(text)) {
+    return "rainy-outline";
+  }
+
+  if (/clear|sunny/.test(text)) {
+    return "sunny-outline";
+  }
+
+  if (/cloud|overcast/.test(text)) {
+    return "cloud-outline";
+  }
+
+  if (/fog|mist|haze|smoke|dust/.test(text)) {
+    return "cloud-outline";
+  }
+
+  return "partly-sunny-outline";
+}
+
+// ============================================================
+// WEATHER SEVERITY
+//
+// Collapses any OpenWeather description into one of a small
+// set of severity buckets used to pick a badge color.
+// ============================================================
+
+type WeatherSeverity =
+  | "clear"
+  | "cloudy"
+  | "fog"
+  | "light"
+  | "moderate"
+  | "severe";
+
+function getWeatherSeverity(
+  description: string,
+): WeatherSeverity {
+  const text = description.toLowerCase();
+
+  if (
+    /thunder|heavy|violent|torrential|extreme|hail/.test(
+      text,
+    )
+  ) {
+    return "severe";
+  }
+
+  if (
+    /moderate/.test(text)
+  ) {
+    return "moderate";
+  }
+
+  if (
+    /drizzle|light|slight|patchy|shower/.test(
+      text,
+    )
+  ) {
+    return "light";
+  }
+
+  if (
+    /fog|mist|haze|smoke|dust|sand|ash/.test(
+      text,
+    )
+  ) {
+    return "fog";
+  }
+
+  if (/cloud|overcast/.test(text)) {
+    return "cloudy";
+  }
+
+  return "clear";
 }
 
 // ============================================================
@@ -2280,49 +2332,38 @@ function getWeatherIcon(
 // ============================================================
 
 function getWeatherBadgeStyle(
-  description: WeatherCondition,
+  description: string,
 ) {
-
-  switch (description) {
-
-    case "Clear sky":
-    case "Mainly clear":
-
+  switch (getWeatherSeverity(description)) {
+    case "clear":
       return styles.clearWeatherBadge;
 
-    case "Partly cloudy":
-
-      return styles.partlyCloudyWeatherBadge;
-
-    case "Overcast":
+    case "cloudy":
+      // Few / scattered / broken clouds feel "partly".
+      if (
+        /partly|few|scattered|broken/.test(
+          description.toLowerCase(),
+        )
+      ) {
+        return styles.partlyCloudyWeatherBadge;
+      }
 
       return styles.overcastWeatherBadge;
 
-    case "Fog":
-
+    case "fog":
       return styles.fogWeatherBadge;
 
-    case "Light drizzle":
-    case "Moderate drizzle":
-    case "Dense intensity drizzle":
-    case "Slight rain":
-    case "Slight rain showers":
-
+    case "light":
       return styles.yellowWeatherBadge;
 
-    case "Moderate rain":
-    case "Moderate rain showers":
-    case "Slight or moderate thunderstorm":
-
+    case "moderate":
       return styles.orangeWeatherBadge;
 
-    case "Heavy intensity rain":
-    case "Violent rain showers":
-    case "Thunderstorm with slight hail":
-    case "Thunderstorm with heavy hail":
-
+    case "severe":
       return styles.redWeatherBadge;
 
+    default:
+      return styles.clearWeatherBadge;
   }
 }
 
@@ -2331,49 +2372,38 @@ function getWeatherBadgeStyle(
 // ============================================================
 
 function getWeatherBadgeTextStyle(
-  description: WeatherCondition,
+  description: string,
 ) {
-
-  switch (description) {
-
-    case "Clear sky":
-    case "Mainly clear":
-
+  switch (getWeatherSeverity(description)) {
+    case "clear":
       return styles.clearWeatherBadgeText;
 
-    case "Partly cloudy":
-
-      return styles.partlyCloudyWeatherBadgeText;
-
-    case "Overcast":
+    case "cloudy":
+      // Few / scattered / broken clouds feel "partly".
+      if (
+        /partly|few|scattered|broken/.test(
+          description.toLowerCase(),
+        )
+      ) {
+        return styles.partlyCloudyWeatherBadgeText;
+      }
 
       return styles.overcastWeatherBadgeText;
 
-    case "Fog":
-
+    case "fog":
       return styles.fogWeatherBadgeText;
 
-    case "Light drizzle":
-    case "Moderate drizzle":
-    case "Dense intensity drizzle":
-    case "Slight rain":
-    case "Slight rain showers":
-
+    case "light":
       return styles.yellowWeatherBadgeText;
 
-    case "Moderate rain":
-    case "Moderate rain showers":
-    case "Slight or moderate thunderstorm":
-
+    case "moderate":
       return styles.orangeWeatherBadgeText;
 
-    case "Heavy intensity rain":
-    case "Violent rain showers":
-    case "Thunderstorm with slight hail":
-    case "Thunderstorm with heavy hail":
-
+    case "severe":
       return styles.redWeatherBadgeText;
 
+    default:
+      return styles.clearWeatherBadgeText;
   }
 }
 
