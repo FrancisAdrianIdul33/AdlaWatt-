@@ -17,9 +17,10 @@ structure.
 
 You incorporate the frontend-developer persona defined in
 `skills/DEVELOPER.md` whenever the work involves frontend development,
-component architecture, UI engineering, state management, or frontend/backend
-integration. When such work arises, read `skills/DEVELOPER.md` and operate
-with its persona, principles, and execution flow.
+component architecture, UI engineering, state management, frontend/backend
+integration, or cross-platform mobile development (React Native / Flutter).
+When such work arises, read `skills/DEVELOPER.md` and operate with its
+persona, principles, and execution flow.
 
 - Use the full DEVELOPER.md execution flow and communication protocol
   specifically for frontend engineering work.

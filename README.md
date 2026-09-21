@@ -4,8 +4,8 @@ An IoT-based transportable off-grid solar energy harvesting system with a mobile
 
 AdlaWatt is designed to provide households with an alternative backup power source by harvesting solar energy, storing it in a battery, and supplying electricity through a built-in AC outlet. The mobile application allows users to monitor battery status, solar energy, power consumption, temperature, system status, energy history, and appliance recommendations.
 
-> **Project Status:** In Development  
-> The current mobile application uses static/mock data while the IoT hardware, Supabase database, and backend services are being integrated.
+> **Project Status:** In Development
+> The mobile application is integrated with Supabase — authentication, database, and real-time streaming — for live monitoring, notifications, activity logs, appliances, and analytics report export. Some modules remain in progress: analytics chart rendering, the battery-aware recommendation engine, and the end-to-end ESP32 hardware feed.
 
 ---
 
@@ -20,16 +20,19 @@ AdlaWatt is designed to provide households with an alternative backup power sour
 - [Software Architecture](#software-architecture)
 - [Project Structure](#project-structure)
 - [Application Screens](#application-screens)
-- [System Workflow](#system-workflow)
 - [Data and Backend](#data-and-backend)
+- [Data Flow](#data-flow)
 - [Installation](#installation)
 - [Development](#development)
 - [Build and Deployment](#build-and-deployment)
 - [Current Development Status](#current-development-status)
 - [Limitations](#limitations)
-- [SDG Alignment](#sdg-alignment)
+- [System Specifications](#system-specifications)
+- [SDG Alignment](#sustainable-development-goals)
 - [Research Evaluation](#research-evaluation)
+- [Development Approach](#development-approach)
 - [Future Improvements](#future-improvements)
+- [Research Purpose](#research-purpose)
 - [Contributors](#contributors)
 - [License](#license)
 
@@ -41,9 +44,9 @@ AdlaWatt is an IoT-based off-grid solar energy harvesting system developed as a 
 
 The system collects solar energy through a solar panel and stores the generated energy in a 12V battery housed inside a transportable lockable enclosure. A built-in AC outlet allows compatible household appliances to use the stored energy.
 
-The system also monitors energy generation, energy consumption, battery status, battery temperature, and solar panel temperature. The collected data is intended to be transmitted through an ESP32 to a cloud database and displayed through the AdlaWatt mobile application.
+The system monitors energy generation, energy consumption, battery status, battery temperature, solar panel temperature, and interior temperature. Sensor data is transmitted through an ESP32 to a cloud database and streamed in real time to the AdlaWatt mobile application.
 
-One of the main features of AdlaWatt is its appliance recommendation system. Users can identify appliances they plan to use, and the application can recommend suitable appliances based on the available battery level.
+One of the main features of AdlaWatt is its appliance recommendation system. Users can identify appliances they plan to use, and the application recommends suitable appliances based on their power requirements and the available battery level.
 
 AdlaWatt is intended as a backup power source during electricity interruptions and is not designed to replace the electrical grid.
 
@@ -53,68 +56,94 @@ AdlaWatt is intended as a backup power source during electricity interruptions a
 
 ### Real-Time Monitoring
 
-The mobile application provides monitoring information for:
+The application displays live monitoring information received in real time from Supabase (the ESP32 writes to the `monitoring` table; the app subscribes to `postgres_changes` updates). The dashboard shows:
 
-- Battery percentage
+- Battery percentage and battery status (Charging / Discharging / Idle)
 - Battery voltage
-- Incoming solar energy
-- Solar input
-- Energy consumption
+- Battery energy in watt-hours and estimated time remaining
 - Current appliance load
-- Battery temperature
-- Solar panel temperature
-- System status
-- Energy history
+- Depth of discharge (DoD) status (Safe / Unsafe)
+- Incoming solar energy and solar status (Low / Moderate / High)
+- Solar voltage, solar current, solar timer, and total energy
+- Battery temperature, solar panel temperature, and interior temperature (each with Nominal / Elevated / High / Critical status)
+- Device status (Online / Offline)
+- Live weather (temperature, description, location) from OpenWeatherMap
+
+A battery gauge with smooth animated transitions and a live weather card are rendered on the dashboard.
 
 ### Appliance Recommendation
 
-The application allows users to view or select household appliances and receive recommendations based on the available battery level.
+The application allows users to view or select household appliances and receive recommendations based on the available battery state.
 
-The purpose of this feature is to help users determine which appliances are suitable to operate using the available backup power.
+Recommendations are currently derived from appliance power ratings using a fixed wattage threshold (appliances above the threshold are marked *Not Advisable*). A battery-aware recommendation engine that factors in remaining battery capacity, runtime, and depth of discharge is planned as a future enhancement.
 
 ### Dashboard
 
 The dashboard provides a summary of the current AdlaWatt system condition, including:
 
-- Battery status
+- Battery status and battery gauge
 - Solar input
 - Current load
 - Device status
-- Battery temperature
+- Battery, solar panel, and interior temperatures
+- Depth of discharge status
 - Appliance recommendations
 - Recent activity logs
+- Quick navigation buttons with smooth scrolling
+
+### Weather
+
+The dashboard includes a live weather card that displays the current temperature, condition description, and location using the OpenWeatherMap API. Location is resolved through device permissions (`expo-location`) with balanced accuracy, and weather refreshes automatically.
 
 ### Notifications
 
-The application provides notifications for important system conditions and alerts.
+The application generates and displays system notifications in real time:
 
-Potential notifications include:
+- Battery alerts (charging, discharging, low level, fully charged, runtime, voltage)
+- Temperature alerts (battery, solar panel, and interior — Nominal to Critical)
+- Solar alerts (input detected, increased, unavailable, low input during charging)
+- Load alerts (current load detected, no load, high load, consumption increased)
+- Depth of discharge alerts (safe, unsafe, returned to safe)
+- Device status alerts (online, offline, status changed)
+- Data health alerts (stale monitoring, missing records, invalid time remaining)
 
-- Low battery
-- High battery temperature
-- System status changes
-- Important monitoring alerts
-- Other system-generated events
+Notifications are stored in the Supabase `notifications` table, include `normal` or `alert` types, use cooldowns to avoid alert spam, and can be marked as read. An unread-count badge is shown on the navigation bar.
 
 ### Activity Logs
 
-The application provides an activity log for viewing recorded system activities and events.
-
-The dashboard also provides a preview of recent activity logs with an option to view all recorded activities.
+The application provides an activity log for viewing recorded system activities and events. Logs are paginated and typed (info, warning, error, critical). The dashboard also provides a preview of recent activity logs with an option to view all recorded activities.
 
 ### Appliance Management
 
-Users can access the appliance section to view available appliances and their relevant power requirements.
+Users can view household appliances and their power requirements, select appliances for use, and manage custom appliances:
 
-This information can be used by the recommendation feature when determining suitable appliances for the current battery condition.
+- Add, edit, and delete custom appliances
+- Advisable / Not Advisable toggle per appliance
+- Filters by advisability, power rating (All / Highest / Moderate / Low), and area (All Areas / Indoor / Outdoor / Custom Appliances)
 
 ### Component Monitoring
 
-The Components section is intended to provide information about the IoT and power components used by the AdlaWatt system.
+The Components screen provides live status information for the IoT and power components used by the AdlaWatt system, retrieved from Supabase with real-time updates.
 
-### Settings
+### Analytics & Reports
 
-The Settings section is intended to provide application preferences and configuration options.
+The Analytics screen loads historical data from the `monitoring_history` and `appliance_usage_history` tables for a selected date range and frequency (daily, weekly, monthly, yearly). It generates:
+
+- **PDF reports** (jsPDF + jspdf-autotable) with brand header, embedded AdlaWatt logo, summary statistics, energy summary, monitoring history, appliance usage history, and chart data tables
+- **CSV exports** for raw data
+
+Reports can be downloaded on web and shared through the native share sheet. Chart visuals are temporarily placeholder pending the implementation of the analytics chart module.
+
+### Settings (Menu)
+
+The Menu screen provides account management and user preferences:
+
+- Edit username and email
+- Change password (with current-password verification)
+- Dark mode toggle, color-blind mode, font size, font weight, font family, language, vibration, and email-notification preferences
+- Logout with confirmation
+
+> Preference values are currently kept in application state and are not yet persisted across app restarts.
 
 ### About Us
 
@@ -122,14 +151,13 @@ The About Us section provides information about the AdlaWatt project and its dev
 
 ### Authentication
 
-The application includes:
+The application uses Supabase authentication with:
 
-- Login
-- Registration
-- Username/email authentication input
-- Password authentication
-- Remember Me option
-- Terms and Conditions
+- Registration (username, email, password) with validation and Terms and Conditions
+- Login by username or email
+- Persistent login sessions (AsyncStorage on native, localStorage on web)
+- User profile loading and account updates (username, email, password)
+- Email change handling with confirmation
 - Logout functionality
 
 ---
@@ -152,52 +180,48 @@ The physical system consists of:
 
 ### 2. IoT Monitoring System
 
-The IoT system collects and processes information from the physical power system using an ESP32 and connected sensors.
+The IoT system collects and processes information from the physical power system using an ESP32 and connected sensors. Sensor readings are transmitted to the cloud database over Wi-Fi.
 
 ### 3. Software System
 
 The software system consists of:
 
 - Cross-platform mobile application for household users
-- Web-based admin dashboard for researchers
-- Cloud database and real-time data services
+- Web-based admin dashboard for researchers (planned)
+- Supabase cloud database with real-time data streaming
+- REST/HTTP communication between the IoT system and cloud services
 
-The capstone identifies the household user and admin as the primary actors. Household users monitor the system through the mobile application, while administrators can monitor data, view historical information, and configure alert thresholds. 
+The capstone identifies the household user and admin as the primary actors. Household users monitor the system through the mobile application, while administrators can monitor data, view historical information, and configure alert thresholds.
 
 ---
 
 ## Mobile Application
 
-The AdlaWatt mobile application is designed as a cross-platform application for household users.
+The AdlaWatt mobile application is designed as a cross-platform application for household users. It is built with Expo (React Native) and Supabase for authentication, data storage, and real-time updates.
 
 ### Main Navigation
-
-The application currently includes the following navigation items:
 
 | Screen | Purpose |
 |---|---|
 | Dashboard | Displays system overview and real-time monitoring |
 | Appliances | Displays household appliances and recommendations |
-| Components | Displays IoT and system component information |
+| Analytics | Displays historical data and report export |
+| Components | Displays IoT and system component status |
 | Notifications | Displays system notifications and alerts |
 | Activity Logs | Displays system activity history |
+| Menu | Account management and user preferences |
 | About Us | Displays information about AdlaWatt |
-| Settings | Provides application configuration |
-| Log Out | Logs the current user out of the application |
-| Exit | Closes the current application flow |
 
 ### Navigation Components
 
 The application uses:
 
-- Fixed navigation bar
-- Notification icon
-- Sidebar navigation
-- Sidebar overlay
-- Navigation routing
-- Screen-specific containers
-
-The sidebar slides from the left side of the screen and provides navigation to the application's primary sections.
+- Custom bottom tab bar (Dashboard, Appliances, Analytics, Menu)
+- Top navigation bar with a notification icon and unread-count badge
+- Device status indicator in the navigation bar
+- Quick-navigation buttons with smooth animated scrolling on the dashboard
+- Route-based navigation through Expo Router
+- Screen-specific containers and layout components
 
 ---
 
@@ -205,27 +229,41 @@ The sidebar slides from the left side of the screen and provides navigation to t
 
 ### Mobile Application
 
-- **React Native** — Cross-platform mobile application framework
-- **Expo** — React Native development platform
-- **Expo Router** — Application routing and navigation
-- **TypeScript** — Static typing and application development
-- **React** — Component-based user interface
-- **React Native StyleSheet** — Component styling
-- **Expo Linear Gradient** — Gradient navigation interface
-- **@expo/vector-icons / Ionicons** — Application icons
-- **EAS Build** — Android application builds
-- **Git** — Version control
-- **GitHub** — Source code repository
+| Technology | Purpose |
+|---|---|
+| Expo SDK 55 (expo-dev-client) | Development platform |
+| React Native 0.83 | Cross-platform mobile framework |
+| React 19.2 | Component-based user interface |
+| Expo Router | File-based routing and typed navigation |
+| TypeScript (strict) | Static typing and application development |
+| Supabase (`@supabase/supabase-js`) | Authentication, database, real-time streaming |
+| React Native StyleSheet | Component styling |
+| `react-native-svg` | SVG gauges and chart rendering |
+| `react-native-reanimated` + `react-native-worklets` | Animations |
+| `expo-linear-gradient` | Gradient navigation interface |
+| `expo-glass-effect` | Glass-style surfaces |
+| `expo-image` | Optimized image rendering |
+| `@expo/vector-icons` / Ionicons | Application icons |
+| `@react-native-async-storage/async-storage` | Session and storage persistence |
+| `expo-location` | Location access for weather |
+| `expo-sqlite` | Local database (reserved for offline support) |
+| `@react-native-community/datetimepicker` | Date and time pickers |
+| `eslint-config-expo` (ESLint 9 flat config) | Linting |
 
 ### Backend and Cloud
 
-Planned technologies:
+| Technology | Purpose |
+|---|---|
+| Supabase | Cloud database (PostgreSQL), authentication, and real-time streaming |
+| Supabase Realtime | `postgres_changes` live updates for monitoring, notification, and components |
+| OpenWeatherMap API | Live weather data |
+| REST/HTTP | Communication between the IoT system and cloud services |
+| ESP32 Wi-Fi | Wireless transmission of sensor data |
 
-- **Supabase** — Cloud database and real-time data streaming
-- **REST/HTTP communication** — Communication between the IoT system and cloud services
-- **ESP32 Wi-Fi** — Wireless transmission of sensor data
+### Analytics and Reporting
 
-The capstone architecture specifies the ESP32 transmitting sensor information through Wi-Fi to Supabase, where data can be stored and streamed in real time to the mobile application. 
+- **jsPDF + jspdf-autotable** — PDF report generation
+- **CSV export** — raw data download and sharing
 
 ### Development Tools
 
@@ -265,13 +303,13 @@ The AdlaWatt physical prototype consists of power and IoT components.
 | LCD2004 | Displays local real-time system information |
 | 5V Fan | Provides cooling when required |
 
-The capstone identifies the INA219 for the solar-panel side and INA226 for the load/appliance side, with the ESP32 collecting the sensor information and transmitting it to the cloud system. 
+The app additionally tracks solar panel temperature and interior temperature alongside battery temperature. The capstone identifies the INA219 for the solar-panel side and INA226 for the load/appliance side, with the ESP32 collecting the sensor information and transmitting it to the cloud system.
 
 ---
 
 ## Software Architecture
 
-The planned system architecture is:
+The power system flow:
 
 ```text
 Solar Panel
@@ -296,9 +334,9 @@ Built-in AC Outlet
      │
      ▼
 Household Appliance
-````
+```
 
-IoT monitoring:
+Sensor and data flow:
 
 ```text
 INA219 ─────────────┐
@@ -311,72 +349,75 @@ Voltage Sensor ─────┤
                     ▼
                   ESP32
                     │
-                  Wi-Fi
+                  Wi-Fi / HTTP
                     │
                     ▼
                Supabase
+        (PostgreSQL + Realtime)
                     │
-                    ▼
-          AdlaWatt Mobile App
+     ┌──────────────┼──────────────┐
+     ▼              ▼              ▼
+ Mobile App    Admin Dashboard  ESP32 Status
+ (Realtime)     (planned)       (monitoring)
 ```
 
-The documented system architecture follows this flow, with sensor information collected by the ESP32, transmitted to Supabase, and retrieved by the mobile application for real-time monitoring.
+Sensor information is collected by the ESP32, transmitted to Supabase over HTTP, and streamed to the mobile application through Supabase Realtime channels filtered by the authenticated user.
 
 ---
 
 ## Project Structure
 
-The current mobile application follows a component-based Expo Router structure.
+The application follows a component-based Expo Router structure with the source under `src/` and the `@/` path alias pointing to `src/`.
 
 ```text
 AdlaWatt/
-├── app/
-│   ├── auth/
-│   │   ├── login.tsx
-│   │   └── register.tsx
+├── src/
+│   ├── app/
+│   │   ├── auth/
+│   │   │   ├── login.tsx
+│   │   │   └── register.tsx
+│   │   ├── dashboard/
+│   │   │   ├── dashboard.tsx
+│   │   │   ├── appliances.tsx
+│   │   │   ├── analytics.tsx
+│   │   │   ├── components.tsx
+│   │   │   ├── notifications.tsx
+│   │   │   ├── activity-logs.tsx
+│   │   │   ├── menu.tsx
+│   │   │   └── about-us.tsx
+│   │   ├── index.tsx
+│   │   └── splash.tsx
 │   │
-│   ├── appliances.tsx
-│   ├── components.tsx
-│   ├── notifications.tsx
-│   ├── activity-logs.tsx
-│   ├── about-us.tsx
-│   ├── settings.tsx
-│   ├── index.tsx
-│   └── splash.tsx
+│   ├── components/
+│   │   ├── forms/
+│   │   ├── layout/
+│   │   └── ui/
+│   │
+│   ├── constants/
+│   │   ├── colors.ts
+│   │   ├── routes.ts
+│   │   └── theme.ts
+│   │
+│   ├── context/
+│   ├── hooks/
+│   ├── lib/
+│   │   └── supabase.ts
+│   ├── services/
+│   │   ├── auth.ts
+│   │   ├── monitoringService.ts
+│   │   ├── notificationService.ts
+│   │   ├── analyticsService.ts
+│   │   ├── weatherForecast.ts
+│   │   └── recommendation.ts
+│   └── global.css
 │
 ├── assets/
-│   └── images/
-│       └── adlawatt-logo.png
-│
-├── components/
-│   ├── forms/
-│   │   ├── AppCheckbox.tsx
-│   │   ├── AppInput.tsx
-│   │   ├── Copyright.tsx
-│   │   ├── PasswordInput.tsx
-│   │   └── TermsModal.tsx
-│   │
-│   ├── layout/
-│   │   ├── AuthHeader.tsx
-│   │   ├── Navbar.tsx
-│   │   ├── ScreenContainer.tsx
-│   │   ├── ScreenContainer2.tsx
-│   │   └── Sidebar.tsx
-│   │
-│   └── ui/
-│       ├── AppButton.tsx
-│       ├── AppInput.tsx
-│       ├── AppLogo.tsx
-│       └── AppText.tsx
-│
-├── constants/
-│   ├── colors.ts
-│   ├── routes.ts
-│   └── theme.ts
-│
+├── android/
+├── .env.local
+├── app.json
+├── eas.json
 ├── package.json
-├── tsconfig.json
-└── README.md
+└── tsconfig.json
 ```
 
 > The structure may change as additional screens, services, database integration, and reusable components are implemented.
@@ -393,90 +434,133 @@ Displays the AdlaWatt logo when the application starts before navigating to auth
 
 Allows users to sign in using:
 
-* Username/email
-* Password
-* Remember Me
+- Username or email
+- Password
+- Invalid credential warnings
 
 ### Register
 
-Allows users to create an account and review the application's Terms and Conditions.
+Allows users to create an account using Supabase authentication with:
+
+- Username, email, and password validation
+- Terms and Conditions agreement
+- Account details (username) stored in auth metadata with the `users` profile created by the database trigger
 
 ### Dashboard
 
-The dashboard provides the primary system overview.
+The dashboard provides the primary system overview with:
 
-Current dashboard sections include:
-
-* Dashboard title
-* Appliance Recommendation
-* Real-Time Monitoring
-* Battery status
-* Solar input
-* Current load
-* Device status
-* Battery temperature
-* Recent activity logs
-* View All Activity Logs
+- Battery gauge and status with smooth animations
+- Real-time monitoring cards (battery, voltage, watt-hours, load, solar, temperatures, depth of discharge)
+- Live weather card
+- Appliance recommendations
+- Recent activity logs
+- Quick-navigation buttons with animated scrolling
+- View All Activity Logs link
 
 ### Appliances
 
-The Appliances screen is intended to manage and display compatible household appliances and their power requirements.
+The Appliances screen manages household appliances and power requirements:
+
+- Live appliance list from Supabase
+- Advisable / Not Advisable status
+- Filters by advisability, power rating, and area
+- Add, edit, and delete custom appliances
+- Appliance selection for recommendations
+
+### Analytics
+
+The Analytics screen provides historical analysis and report export:
+
+- Date range and frequency selection (daily, weekly, monthly, yearly)
+- Data from monitoring history and appliance usage history
+- CSV export and PDF report generation (with embedded logo and summary tables)
+- Chart visuals currently rendered as a placeholder
 
 ### Components
 
-The Components screen is intended to display information about AdlaWatt's physical and IoT components.
+The Components screen:
+
+- Displays IoT and power component status (active/inactive, connected/not connected) with images
+- Shows ESP32 device status
+- Updates in real time through Supabase channels
 
 ### Notifications
 
-The Notifications screen displays system-generated alerts and notifications.
+The Notifications screen:
+
+- Displays generated notifications (normal / alert types)
+- Filters by type and time period
+- Paginated list with unread state
+- Mark-as-read support with unread-count badge in the navigation bar
 
 ### Activity Logs
 
-The Activity Logs screen provides a complete view of recorded system activities.
+The Activity Logs screen:
+
+- Provides a complete, paginated view of recorded system activities
+- Categorizes logs by type (info, warning, error, critical) with normalized icons
+
+### Menu
+
+The Menu screen provides:
+
+- Account management (username, email, password change)
+- Preferences (dark mode, color-blind mode, font size/weight/family, language, vibration, email notifications)
+- Logout with confirmation
 
 ### About Us
 
 Provides information about the AdlaWatt project and its developers.
 
-### Settings
-
-Provides application configuration and user preferences.
-
 ---
 
 ## Data and Backend
 
-### Current Development State
+### Current Integration State
 
-The application currently uses static data for interface development.
+The application is connected to Supabase for authentication, storage, and real-time streaming. Data is scoped to the authenticated user through `user_id` filtering and Supabase Realtime channels.
 
-The mobile application is being developed independently of the final database and IoT connection so that the user interface and navigation can be completed before backend integration.
+Static/mock dashboard values have been replaced by live Supabase queries and real-time subscriptions.
 
-Current examples of static dashboard values include:
+### Supabase Tables
+
+| Table | Purpose |
+|---|---|
+| `users` | User profiles (created by a database trigger on sign-up) |
+| `monitoring` | Current live sensor readings (single row per user) |
+| `monitoring_history` | Historical monitoring records for analytics |
+| `appliance_usage_history` | Historical appliance usage for analytics |
+| `appliances` | Household appliance catalog and selection state |
+| `notifications` | Generated notifications with read state |
+| `activity_logs` | Recorded system activities and events |
+| `components` | IoT/power component list and live status |
+
+### Real-Time Features
+
+- **Monitoring**: `postgres_changes` subscription on the `monitoring` table (all events) for the current user
+- **Device status**: `UPDATE` subscription dedicated to the device online/offline state
+- **Notifications**: automatic alert generation driven by real-time monitoring updates, staleness checks, and auth state changes
+- **Components**: live `componentsChannel` and `monitoringChannel` subscriptions
+
+### Environment Variables
+
+The app reads its configuration from local environment files (`.env.local`, gitignored). Required variables:
 
 ```text
-Battery: 50%
-Solar Input: 46W
-Load Now: 170W
-Device: Online
-Battery Temperature: 20.0°C
+EXPO_PUBLIC_SUPABASE_URL=<supabase project url>
+EXPO_PUBLIC_SUPABASE_KEY=<supabase anon/publishable key>
+EXPO_PUBLIC_OWM_KEY=<openweathermap api key>
 ```
 
-These values are placeholders for development and do not represent live hardware measurements.
+### Placeholder Modules
 
-### Planned Backend
+The following modules remain placeholders and are not yet end-to-end:
 
-The planned backend will use Supabase for:
-
-* User data
-* System monitoring data
-* Appliance records
-* Activity logs
-* Notifications
-* Historical energy data
-* Real-time data streaming
-
-The ESP32 is expected to transmit sensor data through Wi-Fi to Supabase using HTTP requests.
+- **Analytics chart visuals** — data pipeline and CSV/PDF export are implemented; chart rendering is disabled
+- **Recommendation service** (`src/services/recommendation.ts`) — currently a stub; advisability logic lives inline using a fixed wattage threshold
+- **Notification safety thresholds** — load/voltage alert rules are inactive until the production thresholds are configured
+- **Forgot password** — the route constant exists but the screen is not yet implemented
 
 ---
 
@@ -485,28 +569,29 @@ The ESP32 is expected to transmit sensor data through Wi-Fi to Supabase using HT
 The intended data flow is:
 
 ```text
-Physical Sensors
+Physical Sensors (ESP32)
        │
        ▼
-     ESP32
-       │
-       ▼
-     Wi-Fi
+   Wi-Fi / HTTP
        │
        ▼
    Supabase
+(PostgreSQL + Realtime)
        │
-       ├──────────────► Admin Dashboard
+       ├──────────────► Admin Dashboard (planned)
        │
-       ▼
+       ▼ (Realtime postgres_changes)
 AdlaWatt Mobile App
        │
        ├── Dashboard
        ├── Notifications
        ├── Activity Logs
        ├── Appliances
-       └── Components
+       ├── Components
+       └── Analytics
 ```
+
+Users authenticate through Supabase; all queries and real-time channels are scoped to the authenticated user.
 
 ---
 
@@ -516,12 +601,13 @@ AdlaWatt Mobile App
 
 Install the following before running the project:
 
-* Node.js
-* npm
-* Git
-* Expo CLI / Expo development environment
-* Android Studio for Android development and emulation
-* Visual Studio Code or another code editor
+- Node.js
+- npm
+- Git
+- Expo CLI / EAS CLI
+- Android Studio for Android development and emulation
+- Visual Studio Code or another code editor
+- A Supabase project and an OpenWeatherMap API key
 
 ### Clone the Repository
 
@@ -529,6 +615,18 @@ Install the following before running the project:
 git clone <repository-url>
 cd AdlaWatt
 ```
+
+### Environment Setup
+
+Create a `.env.local` file in the project root and add the required values:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
+EXPO_PUBLIC_SUPABASE_KEY=<your-supabase-anon-key>
+EXPO_PUBLIC_OWM_KEY=<your-openweathermap-key>
+```
+
+The file is already ignored by Git.
 
 ### Install Dependencies
 
@@ -538,19 +636,26 @@ npm install
 
 ### Start the Development Server
 
+The project uses a development build (native modules):
+
 ```bash
-npx expo start
+npm start
+```
+
+For LAN or tunnel connections:
+
+```bash
+npm run start:lan
+npm run start:tunnel
 ```
 
 ### Android Development
 
-To open the application on an Android emulator:
+To build and open the application on an Android emulator or device:
 
 ```bash
-npx expo start --android
+npm run android
 ```
-
-Alternatively, scan the Expo QR code using a compatible Expo development environment.
 
 ---
 
@@ -559,7 +664,27 @@ Alternatively, scan the Expo QR code using a compatible Expo development environ
 ### Start Development Server
 
 ```bash
-npx expo start
+npm start
+```
+
+### Web Development
+
+```bash
+npm run web
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+### TypeScript Checking
+
+Run the project's TypeScript compiler:
+
+```bash
+npx tsc --noEmit
 ```
 
 ### Clear Expo Cache
@@ -570,12 +695,12 @@ If the application behaves unexpectedly:
 npx expo start -c
 ```
 
-### TypeScript Checking
+### USB Debugging
 
-Run the project's TypeScript compiler:
+When using a physical Android device over USB:
 
 ```bash
-npx tsc --noEmit
+npm run reverse
 ```
 
 ### Git
@@ -603,7 +728,13 @@ git push
 
 ## Build and Deployment
 
-The Android application is intended to be built using Expo Application Services (EAS).
+The Android application is built using Expo Application Services (EAS) with three build profiles.
+
+| Profile | Distribution | Build Type |
+|---|---|---|
+| `development` | Internal | Development client (APK) |
+| `preview` | Internal | APK |
+| `production` | Store-ready | APK (auto-incrementing version) |
 
 ### Install EAS CLI
 
@@ -623,15 +754,19 @@ eas login
 eas build:configure
 ```
 
-### Android Build
+### Development Build
 
-For an Android APK development/testing build:
+```bash
+eas build --platform android --profile development
+```
+
+### Preview Build
 
 ```bash
 eas build --platform android --profile preview
 ```
 
-For an Android production build:
+### Production Build
 
 ```bash
 eas build --platform android --profile production
@@ -645,49 +780,47 @@ The final build configuration may change as the project approaches deployment.
 
 ### Completed
 
-* [x] Expo React Native project setup
-* [x] TypeScript configuration
-* [x] Splash screen
-* [x] Login screen
-* [x] Registration screen
-* [x] Terms and Conditions modal
-* [x] Copyright component
-* [x] Reusable UI components
-* [x] Authentication layout
-* [x] Fixed navigation bar
-* [x] Notification navigation
-* [x] Custom sidebar
-* [x] Sidebar overlay
-* [x] Sidebar navigation
-* [x] Dashboard layout
-* [x] Dashboard static monitoring data
-* [x] Appliance recommendation section
-* [x] Activity log preview
-* [x] Activity Log routing
-* [x] Notifications screen
-* [x] Application color system
-* [x] Gradient navigation bar
-* [x] Light cream application background
-* [x] Green and orange brand colors
-* [x] EAS Android build configuration
+- [x] Expo SDK 55 / React Native project setup
+- [x] TypeScript (strict) configuration with `@/` path alias
+- [x] Expo Router navigation with typed routes
+- [x] Splash screen
+- [x] Login screen (username or email)
+- [x] Registration screen with validation and Terms and Conditions
+- [x] Supabase authentication (sign-up, sign-in, profile, account update)
+- [x] Persistent login sessions (AsyncStorage)
+- [x] Custom bottom tab bar
+- [x] Gradient navigation bar with notification icon
+- [x] Unread notification count badge
+- [x] Dashboard layout with quick-navigation scrolling
+- [x] Real-time monitoring cards (battery, solar, temperature, load, device status)
+- [x] Battery gauge with smooth animations
+- [x] Depth of discharge (safe/unsafe) status
+- [x] Live weather card (OpenWeatherMap + location)
+- [x] Appliance management (add, edit, delete custom appliances)
+- [x] Advisable / Not Advisable appliance toggle and filters
+- [x] Component monitoring with real-time status
+- [x] Notification service (auto-generated alerts and cooldowns)
+- [x] Notifications screen with filters and pagination
+- [x] Activity logs with pagination
+- [x] Analytics data pipeline (monitoring + appliance history)
+- [x] CSV and PDF report export
+- [x] Light/dark/glass color tokens and theme hooks
+- [x] EAS build configuration (development, preview, production)
+- [x] ESLint flat config (eslint-config-expo)
 
 ### In Progress
 
-* [ ] Appliance screen functionality
-* [ ] Component monitoring screen
-* [ ] Notifications functionality
-* [ ] Activity log functionality
-* [ ] Settings functionality
-* [ ] About Us screen
-* [ ] Dynamic authentication
-* [ ] Database integration
-* [ ] Supabase integration
-* [ ] ESP32 integration
-* [ ] Real-time sensor data
-* [ ] Real-time notifications
-* [ ] Appliance recommendation logic
-* [ ] Historical energy data
-* [ ] Admin dashboard
+- [ ] Analytics chart rendering (visuals currently placeholder)
+- [ ] Battery-aware appliance recommendation logic
+- [ ] Notification safety threshold configuration
+- [ ] Forgot password screen
+- [ ] Authentication-aware splash flow
+- [ ] Menu preferences persistence
+- [ ] Full dark-mode adoption across all screens
+- [ ] End-to-end ESP32 → Supabase hardware feed
+- [ ] Admin dashboard
+- [ ] Historical energy charts
+- [ ] Offline data handling
 
 ---
 
@@ -715,13 +848,28 @@ The system is intended for compatible household appliances within the supported 
 
 Real-time mobile monitoring requires network connectivity between the IoT system, cloud services, and mobile application.
 
-### Development Data
+### ESP32 / Hardware Integration
 
-The current mobile application uses static/mock data while the hardware and backend systems are being integrated.
+The ESP32 hardware feed is being integrated. The application consumes data through Supabase, but the end-to-end hardware → cloud → app loop is not yet fully verified.
 
-### Backend Integration
+### Placeholder Modules
 
-The Supabase database and IoT communication layer are planned components and are not yet fully integrated into the current application.
+- Analytics chart visuals are temporarily disabled (data and exports are implemented)
+- The recommendation engine uses a fixed wattage threshold instead of battery-aware logic
+- Notification safety rules for load and voltage are inactive until production thresholds are configured
+- The forgot password screen is not yet implemented
+
+### Settings Persistence
+
+Menu preferences (dark mode, font settings, toggles) are maintained in application state only and reset when the app restarts.
+
+### Dark Mode Coverage
+
+Dark/light design tokens and the dark-mode toggle exist, but screen-level dark styling is applied inconsistently across some screens.
+
+### Development Leftovers
+
+The repository contains a leftover development screen (`test-con`) and a few unused dependencies (e.g., `openmeteo`, `@react-navigation/*`) that are candidates for cleanup.
 
 ---
 
@@ -737,12 +885,14 @@ The capstone documentation identifies the following major system characteristics
 | Inverter               | 1000W                                             |
 | Solar Monitoring       | INA219                                            |
 | Load Monitoring        | INA226                                            |
-| Temperature Monitoring | DS18B20                                           |
+| Temperature Monitoring | DS18B20 (battery, solar panel, interior)          |
 | Main Controller        | ESP32                                             |
 | Local Display          | LCD2004                                           |
-| Cloud Platform         | Supabase                                          |
+| Cloud Platform         | Supabase (database, auth, real-time)              |
+| Weather Data           | OpenWeatherMap API                                |
 | Mobile Platform        | Android / Cross-platform mobile application       |
-| Mobile Monitoring      | Real-time system information                      |
+| Mobile Monitoring      | Real-time system information via Supabase Realtime |
+| Report Export          | PDF (jsPDF) and CSV                               |
 | Evaluation             | System Usability Scale (SUS)                      |
 
 ---
@@ -773,10 +923,10 @@ The AdlaWatt study uses the **System Usability Scale (SUS)** to evaluate the usa
 
 The evaluation focuses on users' assessment of:
 
-* Real-time monitoring
-* Appliance recommendation
-* Overall user experience
-* Mobile application usability
+- Real-time monitoring
+- Appliance recommendation
+- Overall user experience
+- Mobile application usability
 
 The SUS consists of 10 evaluation items and is interpreted using a Likert scale.
 
@@ -786,7 +936,7 @@ The SUS calculation follows:
 SUS Score = (Sum of Score Contributions) × 2.5
 ```
 
-The capstone identifies SUS as the evaluation tool for assessing the usability of the developed mobile application. 
+The capstone identifies SUS as the evaluation tool for assessing the usability of the developed mobile application.
 
 ---
 
@@ -806,7 +956,7 @@ The development process includes:
 8. System Testing
 9. Acceptance Testing
 
-The research documentation identifies experimental research as the study design and uses the V-Model development approach for system development and testing. 
+The research documentation identifies experimental research as the study design and uses the V-Model development approach for system development and testing.
 
 ---
 
@@ -814,26 +964,21 @@ The research documentation identifies experimental research as the study design 
 
 Future development may include:
 
-* Full Supabase database integration
-* ESP32 integration
-* Real-time sensor data
-* Real-time battery monitoring
-* Real-time solar monitoring
-* Real-time load monitoring
-* Battery temperature alerts
-* Solar panel temperature alerts
-* Automatic notification generation
-* Dynamic appliance recommendations
-* Appliance power consumption calculations
-* Historical energy charts
-* User account management
-* Admin dashboard
-* Remote monitoring
-* Improved authentication
-* Offline data handling
-* Improved accessibility
-* Application performance optimization
-* Production deployment
+- Analytics chart rendering and historical energy charts
+- Battery-aware appliance recommendation engine
+- End-to-end ESP32 → Supabase integration and real-time sensor data
+- Automatic notification generation refinement and safety threshold configuration
+- Forgot password and password reset flow
+- Menu preferences persistence
+- Full dark-mode support across all screens
+- Offline data handling using the local database (`expo-sqlite`)
+- Admin dashboard for researchers
+- Remote monitoring
+- Improved authentication flows
+- Optimized appliance power consumption calculations
+- Improved accessibility
+- Application performance optimization
+- Production deployment
 
 ---
 
@@ -841,7 +986,7 @@ Future development may include:
 
 AdlaWatt was developed to address the need for a practical and affordable backup power solution during electricity interruptions.
 
-The research identifies a gap in existing systems that commonly provide energy monitoring but do not combine portable off-grid solar harvesting, real-time battery monitoring, temperature monitoring, appliance recommendations, and mobile application monitoring in one system. 
+The research identifies a gap in existing systems that commonly provide energy monitoring but do not combine portable off-grid solar harvesting, real-time battery monitoring, temperature monitoring, appliance recommendations, and mobile application monitoring in one system.
 
 The project therefore combines these features into a single system intended to help households monitor and manage available backup energy more safely and efficiently.
 
@@ -865,15 +1010,3 @@ This project is an academic capstone project.
 The project currently has **no separate open-source license specified**. Unless a license is added by the project authors, the source code and associated materials should not be assumed to be available for unrestricted commercial use, redistribution, or modification.
 
 Copyright © 2026 AdlaWatt Research and Development Team.
-
-```
-
-### A few important choices I made
-
-- I used **React Native + Expo + TypeScript** as the current mobile stack rather than copying the older `React.js + Capacitor.js` stack from the defense reviewer, because your **actual application we are developing now uses Expo, React Native, TypeScript, and Expo Router**. The implementation plan also confirms the React Native/Expo direction. :contentReference[oaicite:5]{index=5}
-- I included **Supabase as planned/backend technology**, not as something already fully working, because the current app is still using static data.
-- I included the actual hardware architecture from the capstone, including **ESP32, INA219, INA226, DS18B20, voltage sensor, relay, LCD2004, battery, inverter, and solar panel**. :contentReference[oaicite:6]{index=6}
-- I did **not invent a specific open-source license**. Since you haven't established MIT, Apache, GPL, etc., the README explicitly says the project currently has no separate license.
-
-This should be much more appropriate as the project's **actual GitHub `README.md`** rather than a generic description, while still documenting the research basis of AdlaWatt.
-```
