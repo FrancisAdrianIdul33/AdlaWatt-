@@ -58,12 +58,51 @@ type SelectedAppliance = {
 
 type StatusFilter =
   | "Advisable"
+  | "Caution"
   | "notAdvisable";
 
 type ApplianceStatus =
   | "advisable"
   | "care"
   | "notAdvisable";
+
+const STATUS_FOR_FILTER: Record<
+  StatusFilter,
+  ApplianceStatus
+> = {
+  Advisable: "advisable",
+  Caution: "care",
+  notAdvisable: "notAdvisable",
+};
+
+const TOGGLE_META: {
+  filter: StatusFilter;
+  label: string;
+  color: string;
+  accessibilityLabel: string;
+}[] = [
+  {
+    filter: "Advisable",
+    label: "Advisable",
+    color: Colors.light.primary,
+    accessibilityLabel:
+      "Show advisable appliances",
+  },
+  {
+    filter: "Caution",
+    label: "Caution",
+    color: Colors.light.warning,
+    accessibilityLabel:
+      "Show appliances to use with care",
+  },
+  {
+    filter: "notAdvisable",
+    label: "Not Advisable",
+    color: Colors.light.error,
+    accessibilityLabel:
+      "Show not advisable appliances",
+  },
+];
 
 const statusMeta = (
   status: ApplianceStatus,
@@ -297,9 +336,10 @@ export default function AppliancesScreen() {
         getApplianceStatus(appliance);
 
       const matchesStatus =
-        statusFilter === "Advisable"
-          ? status !== "notAdvisable"
-          : status === "notAdvisable";
+        status ===
+        STATUS_FOR_FILTER[
+          statusFilter
+        ];
 
       return (
         matchesPower &&
@@ -429,58 +469,56 @@ export default function AppliancesScreen() {
 
         {/* Status Filter */}
         <View style={styles.statusToggle}>
-          <Pressable
-            onPress={() =>
-              setStatusFilter("Advisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show advisable appliances"
-            style={({ pressed }) => [
-              styles.statusButton,
-              statusFilter === "Advisable" && {
-                backgroundColor:
-                  Colors.light.primary,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.statusText,
-                statusFilter === "Advisable" &&
-                  styles.activeStatusText,
-              ]}
-            >
-              Advisable
-            </AppText>
-          </Pressable>
+          {TOGGLE_META.map(
+            ({
+              filter,
+              label,
+              color,
+              accessibilityLabel,
+            }) => {
+              const active =
+                statusFilter === filter;
 
-          <Pressable
-            onPress={() =>
-              setStatusFilter("notAdvisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show not advisable appliances"
-            style={({ pressed }) => [
-              styles.statusButton,
-              statusFilter === "notAdvisable" && {
-                backgroundColor: "#EF4444",
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.statusText,
-                statusFilter === "notAdvisable" &&
-                  styles.activeStatusText,
-              ]}
-            >
-              Not Advisable
-            </AppText>
-          </Pressable>
+              return (
+                <Pressable
+                  key={filter}
+                  onPress={() =>
+                    setStatusFilter(
+                      filter,
+                    )
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    accessibilityLabel
+                  }
+                  style={({ pressed }) => [
+                    styles.statusButton,
+                    active && {
+                      backgroundColor:
+                        color,
+                    },
+                    pressed &&
+                    styles.pressed,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusText,
+                      active &&
+                      (filter === "Caution"
+                        ? styles
+                            .activeStatusTextCaution
+                        : styles
+                            .activeStatusText),
+                    ]}
+                  >
+                    {label}
+                  </AppText>
+                </Pressable>
+              );
+            },
+          )}
         </View>
 
         {/* Appliances */}
@@ -490,9 +528,13 @@ export default function AppliancesScreen() {
               title={
                 selectedAppliances.length === 0
                   ? "No Appliances"
-                  : statusFilter === "Advisable"
+                  : statusFilter ===
+                      "Advisable"
                     ? "No Advisable Appliances"
-                    : "No Not Advisable Appliances"
+                    : statusFilter ===
+                        "Caution"
+                      ? "No Appliances to Use With Care"
+                      : "No Not Advisable Appliances"
               }
               description={
                 selectedAppliances.length === 0
@@ -502,35 +544,17 @@ export default function AppliancesScreen() {
               icon={
                 selectedAppliances.length === 0
                   ? "cube-outline"
-                  : statusFilter === "Advisable"
+                  : statusFilter ===
+                      "Advisable"
                     ? "checkmark-circle-outline"
-                    : "warning-outline"
+                    : statusFilter ===
+                        "Caution"
+                      ? "warning-outline"
+                      : "alert-circle-outline"
               }
             />
           ) : (
             filteredAppliances.map((appliance) => {
-              const color =
-                appliance.area === "Living Area"
-                  ? Colors.light.primary
-                  : appliance.area === "Bedroom"
-                    ? "#9B59B6"
-                    : appliance.area ===
-                        "Kitchen & Dining Area"
-                      ? Colors.light.secondary
-                      : appliance.area ===
-                          "Work & Study Area"
-                        ? "#4A90E2"
-                        : appliance.area ===
-                            "Bathroom & Laundry Area"
-                          ? "#16A085"
-                          : appliance.area ===
-                              "Porch & Yard"
-                            ? "#E67E22"
-                            : appliance.area ===
-                                "Custom Appliances"
-                              ? Colors.light.primary
-                              : Colors.light.border;
-
               const status =
                 getApplianceStatus(appliance);
 
@@ -542,7 +566,6 @@ export default function AppliancesScreen() {
                   key={appliance.id}
                   name={appliance.name}
                   wattage={appliance.watts}
-                  color={color}
                   status={
                     statusMapped.label
                   }
@@ -769,5 +792,9 @@ const styles = StyleSheet.create({
 
   activeStatusText: {
     color: "#FFFFFF",
+  },
+
+  activeStatusTextCaution: {
+    color: Colors.light.text,
   },
 });

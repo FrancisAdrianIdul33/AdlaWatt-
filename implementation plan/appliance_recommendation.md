@@ -9,13 +9,13 @@ It consumes two things:
 - A **live battery reading** (SoC, terminal voltage, remaining energy, depth-of-discharge guard).
 - A **wattage string** per appliance (e.g. `"35-75W"`, `"50W"`, `"15-20"`).
 
-It produces a **verdict** (`recommended`, `care`, `notRecommended`), a projected **runtime range**, the per-hour **budget share** of usable energy, a charge-scaled **peak wattage cap**, a **projected voltage** after the estimated draw drop, and a human-readable **reason**. The UI exposes **two toggle groups** but renders **three visual badge states** so the user is never overloaded:
+It produces a **verdict** (`recommended`, `care`, `notRecommended`), a projected **runtime range**, the per-hour **budget share** of usable energy, a charge-scaled **peak wattage cap**, a **projected voltage** after the estimated draw drop, and a human-readable **reason**. The UI exposes **three toggle segments** that mirror the verdicts so the user is never overloaded:
 
-| Badge             | Verdict behind it   | Group shown under |
-|-------------------|---------------------|-------------------|
-| **OK to use**     | `recommended`       | Advisable         |
-| **Use with care** | `care`              | Advisable         |
-| **Not advisable** | `notRecommended`    | Not Advisable     |
+| Badge             | Verdict behind it   | Toggle segment |
+|-------------------|---------------------|----------------|
+| **OK to use**     | `recommended`       | Advisable      |
+| **Use with care** | `care`              | Caution        |
+| **Not advisable** | `notRecommended`    | Not Advisable  |
 
 The engine performs the full analysis pipeline:
 
@@ -279,7 +279,7 @@ The `drainRatio`, `projectedVoltage`, and `wattCap` fields are new budget-model 
 
 ## Badge Mapping (UI-facing)
 
-The engine deliberately collapses three verdicts into two **grouping** labels so the toggle stays clean, while the UI renders each verdict with its own **visual state**:
+The engine deliberately collapses three verdicts into two **badge label** values (`verdictToBadge`), while the UI renders each verdict with its own **visual state** and a three-segment toggle:
 
 ```
 verdict === "notRecommended"  →  "Not advisable"   (red)
@@ -293,7 +293,7 @@ otherwise                     →  "OK to use"       (green)
 | **Use with care** | care        | yellow  | Draws a moderate budget share, or battery near cutoff |
 | **Not advisable** | notRecommended | red   | Blocked, unsafe, over the cap, or oversized budget   |
 
-"Use with care" appliances remain usable, so they stay grouped under **Advisable** in the two-segment toggle alongside "OK to use".
+"Use with care" appliances remain usable, but they get their own segment so the user can see at a glance which loads are drawing a moderate budget share or running near the cutoff.
 
 ---
 
@@ -347,7 +347,7 @@ The recommendation engine feeds two screens:
 Shared rules:
 
 - Wire the engine `verdict` into one of **three visual states**: `recommended` → green "OK to use"; `care` → yellow "Use with care"; `notRecommended` → red "Not advisable". The badge color and icon follow the card's own state, even when cards mix inside the same carousel or grid.
-- Keep the toggle at **two segments**: "Advisable" groups `recommended` + `care`; "Not Advisable" shows `notRecommended` only.
+- Keep the toggle at **three segments** that mirror the verdicts: "Advisable" shows `recommended`, "Caution" shows `care` (yellow active state), "Not Advisable" shows `notRecommended`. The active segment uses its verdict color; the Caution segment uses dark text on the yellow fill for legibility.
 - **No live monitoring row yet** → fall back to the legacy wattage-only heuristic: `maxWatts < 300` means advisable. Once a monitoring row exists, the engine verdict takes over.
 - Pass the live battery into the engine as:
   - `soc` ← `monitoring.battery_level`
@@ -370,7 +370,7 @@ Shared rules:
 - Do not stack `drainRatio` thresholds with a separate min-runtime floor — they are the same signal inverted and would double-count.
 - Do not apply the full 1000 W inverter cap regardless of charge; `wattCap` must scale with SoC (`soc / 100 × 1000`).
 - Do not ignore the projected voltage drop for high-draw appliances; a large peak can push past `UNSAFE_VOLTAGE` even on a healthy SoC.
-- Do not render `care` without its distinct yellow state; the UI shows three visual states even though the toggle grouping stays two.
+- Do not render `care` without its distinct yellow state; the UI shows three visual states and the toggle mirrors the three verdicts.
 - Do not run heavy per-appliance Supabase queries in the engine — it must stay a pure, synchronous, network-free module.
 
 ---

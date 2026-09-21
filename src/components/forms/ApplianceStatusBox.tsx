@@ -20,7 +20,6 @@ type StatusTone =
 type ApplianceStatusBoxProps = {
   name: string;
   wattage: string;
-  color: string;
   status: string;
   statusTone?: StatusTone;
   imageSource?: ImageSourcePropType;
@@ -31,7 +30,6 @@ const defaultImage = require("@/assets/images/adlawatt-icon.png");
 export default function ApplianceStatusBox({
   name,
   wattage,
-  color,
   status,
   statusTone,
   imageSource = defaultImage,
@@ -61,14 +59,14 @@ export default function ApplianceStatusBox({
     <View
       style={[
         applianceCardStyles.box,
-        { borderColor: color },
+        { borderColor: statusColor },
       ]}
     >
       {/* Appliance Image */}
       <View
         style={[
           applianceCardStyles.imageContainer,
-          { borderColor: color },
+          { borderColor: statusColor },
         ]}
       >
         <Image

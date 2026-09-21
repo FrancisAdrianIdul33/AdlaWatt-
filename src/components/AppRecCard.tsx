@@ -78,6 +78,56 @@ const badgeMeta = (status: Status) => {
   };
 };
 
+const EMPTY_STATE_META: Record<
+  Status,
+  { title: string; description: string }
+> = {
+  advisable: {
+    title: "No Advisable Appliances",
+    description:
+      "No selected appliances are currently advisable to use.",
+  },
+  care: {
+    title: "No Appliances to Use With Care",
+    description:
+      "No selected appliances currently need caution.",
+  },
+  notAdvisable: {
+    title: "No Not Advisable Appliances",
+    description:
+      "No selected appliances are currently not advisable to use.",
+  },
+};
+
+const TOGGLE_META: {
+  mode: Status;
+  label: string;
+  color: string;
+  accessibilityLabel: string;
+}[] = [
+  {
+    mode: "advisable",
+    label: "Advisable",
+    color: Colors.light.primary,
+    accessibilityLabel:
+      "Show advisable appliances",
+  },
+  {
+    mode: "care",
+    label: "Caution",
+    color: Colors.light.warning,
+    accessibilityLabel:
+      "Show appliances to use with care",
+  },
+  {
+    mode: "notAdvisable",
+    label: "Not Advisable",
+    color: Colors.light.error,
+    accessibilityLabel:
+      "Show not advisable appliances",
+  },
+];
+
 const defaultImage = require(
   "@/assets/images/adlawatt-icon.png",
 );
@@ -188,11 +238,7 @@ export default function AppRecCard({
     () =>
       decoratedAppliances.filter(
         (item) =>
-          mode === "advisable"
-            ? item.status !==
-              "notAdvisable"
-            : item.status ===
-              "notAdvisable",
+          item.status === mode,
       ),
     [decoratedAppliances, mode],
   );
@@ -220,9 +266,6 @@ export default function AppRecCard({
         ],
     );
   }, [filteredAppliances, index]);
-
-  const isAdvisable =
-    mode === "advisable";
 
   // ============================================
   // LOAD USER APPLIANCES
@@ -596,14 +639,12 @@ export default function AppRecCard({
             <EmptyState
               icon="hardware-chip-outline"
               title={
-                isAdvisable
-                  ? "No Advisable Appliances"
-                  : "No Not Advisable Appliances"
+                EMPTY_STATE_META[mode]
+                  .title
               }
               description={
-                isAdvisable
-                  ? "No selected appliances are currently advisable to use."
-                  : "No selected appliances are currently not advisable to use."
+                EMPTY_STATE_META[mode]
+                  .description
               }
             />
           </View>
@@ -611,61 +652,57 @@ export default function AppRecCard({
 
         {/* Status Toggle */}
         <View style={styles.toggle}>
-          <Pressable
-            onPress={() =>
-              setMode("advisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show advisable appliances"
-            style={({ pressed }) => [
-              styles.toggleButton,
-              mode === "advisable" && {
-                backgroundColor:
-                  Colors.light.primary,
-              },
-              pressed &&
-              styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.toggleText,
-                mode === "advisable" &&
-                styles.activeToggleText,
-              ]}
-            >
-              Advisable
-            </AppText>
-          </Pressable>
+          {TOGGLE_META.map(
+            ({
+              mode: segmentMode,
+              label,
+              color,
+              accessibilityLabel,
+            }) => {
+              const active =
+                mode === segmentMode;
 
-          <Pressable
-            onPress={() =>
-              setMode("notAdvisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show not advisable appliances"
-            style={({ pressed }) => [
-              styles.toggleButton,
-              mode === "notAdvisable" && {
-                backgroundColor:
-                  "#EF4444",
-              },
-              pressed &&
-              styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.toggleText,
-                mode === "notAdvisable" &&
-                styles.activeToggleText,
-              ]}
-            >
-              Not Advisable
-            </AppText>
-          </Pressable>
+              return (
+                <Pressable
+                  key={segmentMode}
+                  onPress={() =>
+                    setMode(
+                      segmentMode,
+                    )
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    accessibilityLabel
+                  }
+                  style={({ pressed }) => [
+                    styles.toggleButton,
+                    active && {
+                      backgroundColor:
+                        color,
+                    },
+                    pressed &&
+                    styles.pressed,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.toggleText,
+                      active &&
+                      (segmentMode ===
+                        "care"
+                        ? styles
+                            .activeToggleTextCaution
+                        : styles
+                            .activeToggleText),
+                    ]}
+                  >
+                    {label}
+                  </AppText>
+                </Pressable>
+              );
+            },
+          )}
         </View>
       </View>
 
@@ -788,6 +825,10 @@ const styles = StyleSheet.create({
 
   activeToggleText: {
     color: "#FFFFFF",
+  },
+
+  activeToggleTextCaution: {
+    color: Colors.light.text,
   },
 
   // ============================================
