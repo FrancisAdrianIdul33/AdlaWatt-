@@ -471,7 +471,22 @@ export default function DashboardScreen() {
             Appliance Recommendation
           </AppText>
 
-          <AppRecCard />
+          <AppRecCard
+            battery={
+              monitoring
+                ? {
+                    soc:
+                      monitoring.battery_level,
+                    voltage:
+                      monitoring.voltage,
+                    remainingWh:
+                      monitoring.watt_hours,
+                    dod:
+                      monitoring.dod_status,
+                  }
+                : undefined
+            }
+          />
         </View>
 
         {/* ==================================================

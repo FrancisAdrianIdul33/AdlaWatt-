@@ -5,7 +5,7 @@ An IoT-based transportable off-grid solar energy harvesting system with a mobile
 AdlaWatt is designed to provide households with an alternative backup power source by harvesting solar energy, storing it in a battery, and supplying electricity through a built-in AC outlet. The mobile application allows users to monitor battery status, solar energy, power consumption, temperature, system status, energy history, and appliance recommendations.
 
 > **Project Status:** In Development
-> The mobile application is integrated with Supabase — authentication, database, and real-time streaming — for live monitoring, notifications, activity logs, appliances, and analytics report export. Some modules remain in progress: analytics chart rendering, the battery-aware recommendation engine, and the end-to-end ESP32 hardware feed.
+> The mobile application is integrated with Supabase — authentication, database, and real-time streaming — for live monitoring, notifications, activity logs, appliances, and analytics report export. Some modules remain in progress: analytics chart rendering and the end-to-end ESP32 hardware feed.
 
 ---
 
@@ -75,7 +75,12 @@ A battery gauge with smooth animated transitions and a live weather card are ren
 
 The application allows users to view or select household appliances and receive recommendations based on the available battery state.
 
-Recommendations are currently derived from appliance power ratings using a fixed wattage threshold (appliances above the threshold are marked *Not Advisable*). A battery-aware recommendation engine that factors in remaining battery capacity, runtime, and depth of discharge is planned as a future enhancement.
+A battery-aware recommendation engine (`src/services/recommendation.ts`) classifies the battery tier (Safe / Caution / Unsafe) using remaining energy, the 144 Wh reserve floor, voltage, and depth of discharge, then estimates per-appliance runtime from the usable energy and the appliance power range. Appliances are shown with one of two badges:
+
+- **OK to use** — recommended or still usable with care
+- **Not advisable** — not recommended (blocked battery, less than 10 minutes of runtime, or invalid wattage)
+
+The engine keeps the full analysis (runtime range, tier, verdict, reasons) available for richer views, while the dashboard and Appliances screens expose the simplified two-badge display. When no live monitoring reading is available yet, the screens fall back to the previous wattage-threshold rule.
 
 ### Dashboard
 
@@ -558,7 +563,6 @@ EXPO_PUBLIC_OWM_KEY=<openweathermap api key>
 The following modules remain placeholders and are not yet end-to-end:
 
 - **Analytics chart visuals** — data pipeline and CSV/PDF export are implemented; chart rendering is disabled
-- **Recommendation service** (`src/services/recommendation.ts`) — currently a stub; advisability logic lives inline using a fixed wattage threshold
 - **Notification safety thresholds** — load/voltage alert rules are inactive until the production thresholds are configured
 - **Forgot password** — the route constant exists but the screen is not yet implemented
 
@@ -798,6 +802,7 @@ The final build configuration may change as the project approaches deployment.
 - [x] Live weather card (OpenWeatherMap + location)
 - [x] Appliance management (add, edit, delete custom appliances)
 - [x] Advisable / Not Advisable appliance toggle and filters
+- [x] Battery-aware appliance recommendation engine
 - [x] Component monitoring with real-time status
 - [x] Notification service (auto-generated alerts and cooldowns)
 - [x] Notifications screen with filters and pagination
@@ -811,7 +816,6 @@ The final build configuration may change as the project approaches deployment.
 ### In Progress
 
 - [ ] Analytics chart rendering (visuals currently placeholder)
-- [ ] Battery-aware appliance recommendation logic
 - [ ] Notification safety threshold configuration
 - [ ] Forgot password screen
 - [ ] Authentication-aware splash flow
@@ -855,7 +859,7 @@ The ESP32 hardware feed is being integrated. The application consumes data throu
 ### Placeholder Modules
 
 - Analytics chart visuals are temporarily disabled (data and exports are implemented)
-- The recommendation engine uses a fixed wattage threshold instead of battery-aware logic
+- Appliance recommendations are battery-aware only while live monitoring data is present; without it, the app falls back to a wattage threshold
 - Notification safety rules for load and voltage are inactive until production thresholds are configured
 - The forgot password screen is not yet implemented
 
@@ -965,7 +969,7 @@ The research documentation identifies experimental research as the study design 
 Future development may include:
 
 - Analytics chart rendering and historical energy charts
-- Battery-aware appliance recommendation engine
+- Detailed runtime / load-stack recommendation views on top of the recommendation engine
 - End-to-end ESP32 → Supabase integration and real-time sensor data
 - Automatic notification generation refinement and safety threshold configuration
 - Forgot password and password reset flow

@@ -27,6 +27,11 @@ import { Colors } from "@/constants/colors";
 import { Radius } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
+import {
+  type BatteryStateInput,
+  recommendAppliance,
+} from "@/services/recommendation";
+
 type Status =
   | "advisable"
   | "notAdvisable";
@@ -51,7 +56,11 @@ const tips = [
 
 
 
-export default function AppRecCard() {
+export default function AppRecCard({
+  battery,
+}: {
+  battery?: BatteryStateInput;
+}) {
   const [mode, setMode] =
     useState<Status>("advisable");
 
@@ -72,15 +81,70 @@ export default function AppRecCard() {
     useRef(new Animated.Value(1)).current;
 
   // ============================================
+  // DECORATE APPLIANCES WITH RECOMMENDATION STATUS
+  //
+  // When a live battery reading exists the engine
+  // verdict decides the badge. Without one the legacy
+  // wattage-only heuristic keeps the prior behavior.
+  // ============================================
+
+  const decoratedAppliances =
+    useMemo(() => {
+      if (!battery) {
+        return appliances.map((item) => {
+          const values =
+            String(item.watts)
+              .match(/\d+/g)
+              ?.map(Number) ?? [];
+
+          const maxWatts = Math.max(
+            ...values,
+            0,
+          );
+
+          return {
+            ...item,
+            status:
+              maxWatts > 300
+                ? "notAdvisable"
+                : "advisable",
+          };
+        });
+      }
+
+      return appliances.map((item) => {
+        const recommendation =
+          recommendAppliance(
+            battery,
+            {
+              id: item.id,
+              name: item.name,
+              wattage: item.watts,
+            },
+          );
+
+        return {
+          ...item,
+          status:
+            recommendation.verdict ===
+            "notRecommended"
+              ? "notAdvisable"
+              : "advisable",
+        };
+      });
+    }, [appliances, battery]);
+
+  // ============================================
   // FILTER APPLIANCES BY STATUS
   // ============================================
 
   const filteredAppliances = useMemo(
     () =>
-      appliances.filter(
-        (item) => item.status === mode,
+      decoratedAppliances.filter(
+        (item) =>
+          item.status === mode,
       ),
-    [appliances, mode],
+    [decoratedAppliances, mode],
   );
 
   // ============================================
@@ -159,27 +223,12 @@ export default function AppRecCard() {
     );
 
     const mapped: Appliance[] =
-      selectedRows.map((item) => {
-        const values =
-          String(item.wattage)
-            .match(/\d+/g)
-            ?.map(Number) ?? [];
-
-        const maxWatts = Math.max(
-          ...values,
-          0,
-        );
-
-        return {
-          id: item.app_id,
-          name: item.appliance_name,
-          watts: item.wattage,
-          status:
-            maxWatts > 300
-              ? "notAdvisable"
-              : "advisable",
-        };
-      });
+      selectedRows.map((item) => ({
+        id: item.app_id,
+        name: item.appliance_name,
+        watts: item.wattage,
+        status: "advisable",
+      }));
 
     setAppliances(mapped);
   };

@@ -25,6 +25,13 @@ import {
   Radius,
 } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import {
+  type BatteryStateInput,
+  recommendAppliance,
+} from "@/services/recommendation";
+import {
+  useMonitoring,
+} from "@/services/monitoringService";
 
 type PowerLevel =
   | "All"
@@ -72,6 +79,10 @@ const areaMap: Record<
 export default function AppliancesScreen() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("Advisable");
+
+  const {
+    monitoring,
+  } = useMonitoring();
 
   const [
     selectedAppliances,
@@ -157,6 +168,59 @@ export default function AppliancesScreen() {
     setAreaModalVisible(false);
   };
 
+  // ==========================================================
+  // RECOMMENDATION STATUS
+  //
+  // Live battery readings drive the engine verdict. When no
+  // monitoring row exists yet, the legacy wattage heuristic
+  // keeps the prior behavior until data arrives.
+  // ==========================================================
+
+  const isApplianceAdvisable = (
+    appliance: SelectedAppliance,
+  ): boolean => {
+
+    if (
+      !monitoring
+    ) {
+
+      const watts =
+        appliance.watts
+          .match(/\d+/g)
+          ?.map(Number) ?? [];
+
+      const maxWatts = Math.max(
+        ...watts,
+        0,
+      );
+
+      return maxWatts < 300;
+    }
+
+    const battery: BatteryStateInput = {
+      soc: monitoring.battery_level,
+      voltage: monitoring.voltage,
+      remainingWh:
+        monitoring.watt_hours,
+      dod: monitoring.dod_status,
+    };
+
+    const recommendation =
+      recommendAppliance(
+        battery,
+        {
+          id: appliance.id,
+          name: appliance.name,
+          wattage: appliance.watts,
+        },
+      );
+
+    return (
+      recommendation.verdict !==
+      "notRecommended"
+    );
+  };
+
   const filteredAppliances =
     selectedAppliances.filter((appliance) => {
       const watts =
@@ -180,9 +244,9 @@ export default function AppliancesScreen() {
         appliance.area === areaMap[areaFilter];
 
       const status =
-        maxWatts >= 300
-          ? "notAdvisable"
-          : "Advisable";
+        isApplianceAdvisable(appliance)
+          ? "Advisable"
+          : "notAdvisable";
 
       const matchesStatus =
         status === statusFilter;
@@ -417,20 +481,10 @@ export default function AppliancesScreen() {
                               ? Colors.light.primary
                               : Colors.light.border;
 
-              const watts =
-                appliance.watts
-                  .match(/\d+/g)
-                  ?.map(Number) ?? [];
-
-              const maxWatts = Math.max(
-                ...watts,
-                0,
-              );
-
               const status =
-                maxWatts >= 300
-                  ? "Not advised"
-                  : "OK to use";
+                isApplianceAdvisable(appliance)
+                  ? "OK to use"
+                  : "Not advised";
 
               return (
                 <ApplianceStatusBox
