@@ -45,7 +45,6 @@ export default function BatteryLevelChart({
 }: {
   points: BatteryLevelPoint[];
   pointWidth?: number;
-  onReachStart?: () => void;
 }) {
   const isEmpty = points.length < 2;
 

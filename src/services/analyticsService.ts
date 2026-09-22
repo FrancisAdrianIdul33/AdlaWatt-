@@ -1750,34 +1750,6 @@ export function groupMonitoringHistory(
    MONITORING CHART DATA PROCESSING
    ============================================================ */
 
-export function getBatteryChartData(
-  groupedMonitoring: MonitoringBucket[],
-  chartFrequency: ChartFrequency,
-): ChartPoint[] {
-  return groupedMonitoring.map(
-    (bucket) => ({
-      value: clamp(
-        average(
-          bucket.rows.map(
-            (row) =>
-              toNumber(
-                row.battery_level,
-              ),
-          ),
-        ),
-        0,
-        100,
-      ),
-
-      label:
-        formatDateLabel(
-          bucket.date,
-          chartFrequency,
-        ),
-    }),
-  );
-}
-
 export interface BatteryRangePoint {
   value: number;
   min: number;

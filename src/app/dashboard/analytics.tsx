@@ -397,8 +397,8 @@ export default function AnalyticsScreen() {
 
         {/* ======================================================
             ANALYTICS CHARTS
-            Static placeholder cards for now; chart rendering is
-            temporarily disabled.
+            Battery chart is live; the remaining cards are
+            placeholders until their charts are built.
         ====================================================== */}
         <AnalyticsChartCard
           title="Battery Level Over Time"
