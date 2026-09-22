@@ -4,6 +4,9 @@ import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
 import AnalyticsChartCard from "@/components/AnalyticsChartCard";
+import BatteryLevelChart, {
+  BatteryLevelPoint,
+} from "@/components/charts/BatteryLevelChart";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -12,6 +15,7 @@ import { Colors } from "@/constants/colors";
 import {
   AnalyticsRange,
   ApplianceUsageHistoryRow,
+  ChartFrequency,
   MonitoringHistoryRow,
   REPORT_FREQUENCIES,
   ReportFrequency,
@@ -21,13 +25,16 @@ import {
   downloadPdfOnWeb,
   generateAdlaWattCsv,
   generateAdlaWattPdf,
+  getBatteryChartRangeData,
   getDefaultRange,
+  groupMonitoringHistory,
   loadAnalyticsData,
   prepareReportData,
 } from "@/services/analyticsService";
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import {
@@ -72,6 +79,30 @@ export default function AnalyticsScreen() {
   ] = useState<AnalyticsRange>(
     getDefaultRange(),
   );
+
+  const [
+    batteryFrequency,
+    setBatteryFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const batteryPoints =
+    useMemo<BatteryLevelPoint[]>(() => {
+      const buckets =
+        groupMonitoringHistory(
+          monitoringHistory,
+          batteryFrequency,
+        );
+
+      return getBatteryChartRangeData(
+        buckets,
+        batteryFrequency,
+      );
+    }, [
+      monitoringHistory,
+      batteryFrequency,
+    ]);
 
   const loadAnalytics =
     useCallback(
@@ -373,10 +404,14 @@ export default function AnalyticsScreen() {
           title="Battery Level Over Time"
           subtitle="Average battery level per period, with the 20% safety floor marked."
           icon="battery-half-outline"
-          frequency="Daily"
-          onFrequencyChange={() => {}}
+          frequency={batteryFrequency}
+          onFrequencyChange={
+            setBatteryFrequency
+          }
         >
-          <View />
+          <BatteryLevelChart
+            points={batteryPoints}
+          />
         </AnalyticsChartCard>
 
         <AnalyticsChartCard

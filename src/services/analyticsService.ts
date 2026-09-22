@@ -3,15 +3,15 @@ import {
   Platform,
 } from "react-native";
 
-const adlawattLogo =
-  require("@/assets/images/adlawatt-logo.png");
-
 import { supabase } from "@/lib/supabase";
 
 import { CAUTION_SOC } from "@/services/recommendation";
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+
+const adlawattLogo =
+  require("@/assets/images/adlawatt-logo.png");
 
 /* ==========================================================
    TYPES
@@ -1778,6 +1778,53 @@ export function getBatteryChartData(
   );
 }
 
+export interface BatteryRangePoint {
+  value: number;
+  min: number;
+  max: number;
+  label?: string;
+}
+
+export function getBatteryChartRangeData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): BatteryRangePoint[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      const levels =
+        bucket.rows.map(
+          (row) =>
+            toNumber(
+              row.battery_level,
+            ),
+        );
+
+      return {
+        value: clamp(
+          average(levels),
+          0,
+          100,
+        ),
+        min: clamp(
+          minimum(levels),
+          0,
+          100,
+        ),
+        max: clamp(
+          maximum(levels),
+          0,
+          100,
+        ),
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
+  );
+}
+
 export function getSolarChartData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,
@@ -2570,16 +2617,6 @@ const PDF_BODY_FILL: [
   255,
   255,
   255,
-];
-
-const PDF_ALT_FILL: [
-  number,
-  number,
-  number,
-] = [
-  248,
-  245,
-  234,
 ];
 
 const PDF_TEXT: [

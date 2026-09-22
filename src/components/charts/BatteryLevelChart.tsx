@@ -1,307 +1,152 @@
-import React, {
-  useEffect,
+import {
   useMemo,
 } from "react";
 import {
+  StyleSheet,
   View,
 } from "react-native";
 import {
-  Canvas,
-  DashPathEffect,
-  Line,
-  LinearGradient,
-  Path,
-  vec,
-} from "@shopify/react-native-skia";
+  LineChart,
+} from "react-native-gifted-charts";
 import {
-  useDerivedValue,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
-import {
-  ChartPoint,
-} from "@/services/analyticsService";
-import {
-  AxisLabels,
-  useChartWidth,
-  ChartEmpty,
-} from "@/components/charts/ChartBits";
-import {
-  areaPath,
   CHART_COLORS,
-  chartPlot,
   CHART_HEIGHT,
-  decimate,
-  smoothPath,
-} from "@/components/charts/chartMath";
+  clampPercent,
+} from "@/services/chartMath";
 
 /* ============================================================
-   BATTERY LEVEL OVER TIME (AREA + DASHED 20% FLOOR)
+   CONSTANTS
+   ============================================================ */
+
+const DEFAULT_POINT_WIDTH = 60;
+
+/* ============================================================
+   TYPES
+   ============================================================ */
+
+export interface BatteryLevelPoint {
+  value: number;
+  min?: number;
+  max?: number;
+  label?: string;
+}
+
+/* ============================================================
+   BATTERY LEVEL OVER TIME
+   Curved area chart (react-native-gifted-charts, SVG-based so it
+   works on native and web with no extra engine loading). Y-axis is
+   fixed 0-100 with a dashed red 20% safety floor. Axes always render,
+   even without enough history.
    ============================================================ */
 
 export default function BatteryLevelChart({
   points,
+  pointWidth = DEFAULT_POINT_WIDTH,
 }: {
-  points: ChartPoint[];
+  points: BatteryLevelPoint[];
+  pointWidth?: number;
+  onReachStart?: () => void;
 }) {
-  const { width, onLayout } =
-    useChartWidth();
+  const isEmpty = points.length < 2;
 
-  const progress =
-    useSharedValue(0);
+  const data = useMemo(
+    () => {
+      if (!isEmpty) {
+        return points.map((point) => ({
+          value: clampPercent(point.value),
+          label: point.label ?? "",
+        }));
+      }
 
-  useEffect(() => {
-    progress.value = 0;
-
-    progress.value = withTiming(
-      1,
-      {
-        duration: 450,
-      },
-    );
-  }, [points, width, progress]);
-
-  const end = useDerivedValue(
-    () => progress.value,
+      return [
+        { value: 0, label: "" },
+        { value: 0, label: "" },
+      ];
+    },
+    [points, isEmpty],
   );
-
-  const geometry = useMemo(() => {
-    if (
-      width <= 0 ||
-      points.length < 2
-    ) {
-      return null;
-    }
-
-    const plotWidth =
-      width -
-      chartPlot.left -
-      chartPlot.right;
-
-    const plotHeight =
-      CHART_HEIGHT -
-      chartPlot.top -
-      chartPlot.bottom;
-
-    const sampled =
-      decimate(points);
-
-    const mapPoint = (
-      index: number,
-      value: number,
-    ) => {
-      const clamped = Math.max(
-        0,
-        Math.min(100, value),
-      );
-
-      const x =
-        sampled.length === 1
-          ? chartPlot.left +
-            plotWidth / 2
-          : chartPlot.left +
-            (index /
-              (sampled.length - 1)) *
-              plotWidth;
-
-      const y =
-        chartPlot.top +
-        (1 - clamped / 100) *
-          plotHeight;
-
-      return { x, y };
-    };
-
-    const linePoints =
-      sampled.map(
-        (point, index) =>
-          mapPoint(
-            index,
-            point.value,
-          ),
-      );
-
-    const baselineY =
-      chartPlot.top +
-      plotHeight;
-
-    const fill = areaPath(
-      linePoints,
-      linePoints[0].x,
-      linePoints[
-        linePoints.length - 1
-      ].x,
-      baselineY,
-    );
-
-    const stroke =
-      smoothPath(
-        linePoints,
-      );
-
-    const dashedY = mapPoint(
-      0,
-      20,
-    ).y;
-
-    const yFor = (value: number) =>
-      chartPlot.top +
-      (1 - value / 100) *
-        plotHeight;
-
-    return {
-      linePoints,
-      fill,
-      stroke,
-      dashedY,
-      yFor,
-      sampled,
-      plotWidth,
-      plotHeight,
-    };
-  }, [points, width]);
-
-  if (points.length < 2) {
-    return (
-      <ChartEmpty message="Not enough battery history for this range." />
-    );
-  }
-
-  if (!geometry) {
-    return (
-      <View
-        onLayout={onLayout}
-        style={{
-          width: "100%",
-          height: CHART_HEIGHT,
-        }}
-      />
-    );
-  }
-
-  const {
-    fill,
-    stroke,
-    dashedY,
-    yFor,
-    plotWidth,
-    plotHeight,
-    sampled,
-  } = geometry;
 
   return (
     <View
-      style={{
-        width: "100%",
-      }}
+      style={
+        styles.container
+      }
     >
-      <View
-        onLayout={onLayout}
-        style={{
-          width: "100%",
-          height: CHART_HEIGHT,
+      <LineChart
+        data={data}
+        height={CHART_HEIGHT}
+        width={Math.max(
+          280,
+          data.length * pointWidth,
+        )}
+        curved
+        areaChart
+        color={CHART_COLORS.green}
+        thickness={2.5}
+        startFillColor={
+          CHART_COLORS.green
+        }
+        endFillColor={
+          CHART_COLORS.green
+        }
+        startOpacity={0.32}
+        endOpacity={0.02}
+        maxValue={100}
+        noOfSections={5}
+        yAxisOffset={0}
+        formatYLabel={(label) =>
+          `${label}%`
+        }
+        hideDataPoints
+        spacing={pointWidth}
+        initialSpacing={8}
+        endSpacing={8}
+        rulesType="solid"
+        rulesColor={
+          CHART_COLORS.grid
+        }
+        rulesThickness={1}
+        showVerticalLines={false}
+        yAxisColor={
+          CHART_COLORS.grid
+        }
+        xAxisColor={
+          CHART_COLORS.grid
+        }
+        yAxisTextStyle={{
+          fontSize: 10,
+          color:
+            CHART_COLORS.axisLabel,
         }}
-      >
-        {width > 0 && (
-          <Canvas
-            style={{
-              width,
-              height: CHART_HEIGHT,
-            }}
-          >
-            {[0, 25, 50, 75, 100].map(
-              (tick) => (
-                <Line
-                  key={tick}
-                  p1={vec(
-                    chartPlot.left,
-                    yFor(tick),
-                  )}
-                  p2={vec(
-                    chartPlot.left +
-                      plotWidth,
-                    yFor(tick),
-                  )}
-                  color={
-                    CHART_COLORS.grid
-                  }
-                  strokeWidth={1}
-                />
-              ),
-            )}
-
-            {/* 20% safety floor */}
-            <Line
-              p1={vec(
-                chartPlot.left,
-                dashedY,
-              )}
-              p2={vec(
-                chartPlot.left +
-                  plotWidth,
-                dashedY,
-              )}
-              color={
-                CHART_COLORS.red
-              }
-              style="stroke"
-              strokeWidth={1.5}
-            >
-              <DashPathEffect
-                intervals={[4, 4]}
-              />
-            </Line>
-
-            {/* Gradient area fill */}
-            <Path
-              path={fill}
-              style="fill"
-              opacity={0.32}
-            >
-              <LinearGradient
-                start={vec(
-                  0,
-                  chartPlot.top,
-                )}
-                end={vec(
-                  0,
-                  chartPlot.top +
-                    plotHeight,
-                )}
-                colors={[
-                  CHART_COLORS.green,
-                  CHART_COLORS.red,
-                ]}
-                positions={[0, 1]}
-              />
-            </Path>
-
-            {/* Animated draw-in line */}
-            <Path
-              path={stroke}
-              style="stroke"
-              color={
-                CHART_COLORS.green
-              }
-              strokeWidth={2.5}
-              strokeJoin="round"
-              strokeCap="round"
-              start={0}
-              end={end}
-            />
-          </Canvas>
-        )}
-      </View>
-
-      <AxisLabels
-        width={width}
-        left={chartPlot.left}
-        right={chartPlot.right}
-        labels={sampled.map(
-          (point) =>
-            point.label ?? "",
-        )}
+        xAxisLabelTextStyle={{
+          fontSize: 10,
+          color:
+            CHART_COLORS.axisLabel,
+        }}
+        showReferenceLine1
+        referenceLine1Position={20}
+        referenceLine1Config={{
+          color: CHART_COLORS.red,
+          thickness: 1.5,
+          type: "dashed",
+          dashWidth: 4,
+          dashGap: 4,
+        }}
+        showScrollIndicator={false}
+        scrollToEnd
+        scrollAnimation={false}
       />
     </View>
   );
 }
+
+/* ============================================================
+   STYLES
+   ============================================================ */
+
+const styles =
+  StyleSheet.create({
+    container: {
+      width: "100%",
+    },
+  });

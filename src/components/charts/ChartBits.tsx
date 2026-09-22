@@ -177,7 +177,7 @@ export function ChartEmpty({
 
 /* ============================================================
    LAZY LOADING PLACEHOLDER
-   Rendered inside a card while its Skia chart chunk loads.
+   Rendered inside a card while its chart data loads.
    ============================================================ */
 
 export function ChartAreaFallback({
