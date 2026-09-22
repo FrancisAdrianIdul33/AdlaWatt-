@@ -1,14 +1,22 @@
 import React, {
+  Suspense,
+  useEffect,
   useMemo,
   useState,
 } from "react";
-import {
-  StyleSheet,
-  View,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import AnalyticsChartCard from "@/components/AnalyticsChartCard";
-import AppText from "@/components/ui/AppText";
+import {
+  ChartAreaFallback,
+  ChartEmpty,
+} from "@/components/charts/ChartBits";
+import {
+  BatteryLevelChart,
+  SolarLoadChart,
+  EnergyBalanceChart,
+  TemperatureHealthChart,
+  VoltageDoDChart,
+  warmUpCanvasKit,
+} from "@/components/charts/lazyCharts";
 import {
   ChartFrequency,
   groupMonitoringHistory,
@@ -21,12 +29,6 @@ import {
   getVoltageChartData,
   MonitoringHistoryRow,
 } from "@/services/analyticsService";
-import BatteryLevelChart from "@/components/charts/BatteryLevelChart";
-import SolarLoadChart from "@/components/charts/SolarLoadChart";
-import EnergyBalanceChart from "@/components/charts/EnergyBalanceChart";
-import TemperatureHealthChart from "@/components/charts/TemperatureHealthChart";
-import VoltageDoDChart from "@/components/charts/VoltageDoDChart";
-import { ChartEmpty } from "@/components/charts/ChartBits";
 
 /* ============================================================
    PROPS
@@ -51,6 +53,46 @@ function useChartFrequency(): [
 }
 
 /* ============================================================
+   CARD BODY
+   Card shells always render; only the interior changes:
+     - data fetching  -> loading placeholder
+     - no data        -> empty message
+     - data ready     -> lazy-loaded Skia chart
+   ============================================================ */
+
+function ChartCardBody({
+  loading,
+  hasData,
+  children,
+}: {
+  loading: boolean;
+  hasData: boolean;
+  children: React.ReactNode;
+}) {
+  if (loading) {
+    return (
+      <ChartAreaFallback label="Loading analytics..." />
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <ChartEmpty message="No historical data is available for the selected date range." />
+    );
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <ChartAreaFallback label="Loading chart..." />
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
+
+/* ============================================================
    ANALYTICS CHARTS
    ============================================================ */
 
@@ -58,6 +100,10 @@ export default function AnalyticsCharts({
   monitoringHistory,
   loading,
 }: AnalyticsChartsProps) {
+  useEffect(() => {
+    warmUpCanvasKit();
+  }, []);
+
   const [
     batteryFrequency,
     setBatteryFrequency,
@@ -216,56 +262,8 @@ export default function AnalyticsCharts({
     [voltageBuckets],
   );
 
-  /* ------------------------------------------------
-     LOADING
-  ------------------------------------------------ */
-
-  if (loading) {
-    return (
-      <View
-        style={
-          styles.loadingContainer
-        }
-      >
-        <Ionicons
-          name="sync-outline"
-          size={18}
-          color="#00A86B"
-        />
-
-        <AppText
-          variant="caption"
-          style={
-            styles.loadingText
-          }
-        >
-          Loading analytics...
-        </AppText>
-      </View>
-    );
-  }
-
-  /* ------------------------------------------------
-     EMPTY
-  ------------------------------------------------ */
-
-  if (monitoringHistory.length === 0) {
-    return (
-      <AnalyticsChartCard
-        title="No Data"
-        subtitle="No historical monitoring data is available for the selected date range."
-        icon="bar-chart-outline"
-        frequency="Daily"
-        onFrequencyChange={() => {}}
-      >
-        <ChartEmpty message="Adjust the report date range to see analytics charts." />
-      </AnalyticsChartCard>
-    );
-  }
-
-  /* ------------------------------------------------
-     CHARTS
-  ------------------------------------------------ */
+  const hasData =
+    monitoringHistory.length > 0;
 
   return (
     <>
@@ -278,9 +276,14 @@ export default function AnalyticsCharts({
           setBatteryFrequency
         }
       >
-        <BatteryLevelChart
-          points={batteryPoints}
-        />
+        <ChartCardBody
+          loading={loading}
+          hasData={hasData}
+        >
+          <BatteryLevelChart
+            points={batteryPoints}
+          />
+        </ChartCardBody>
       </AnalyticsChartCard>
 
       <AnalyticsChartCard
@@ -292,10 +295,15 @@ export default function AnalyticsCharts({
           setSolarFrequency
         }
       >
-        <SolarLoadChart
-          solar={solarPoints}
-          load={loadPoints}
-        />
+        <ChartCardBody
+          loading={loading}
+          hasData={hasData}
+        >
+          <SolarLoadChart
+            solar={solarPoints}
+            load={loadPoints}
+          />
+        </ChartCardBody>
       </AnalyticsChartCard>
 
       <AnalyticsChartCard
@@ -307,10 +315,15 @@ export default function AnalyticsCharts({
           setEnergyFrequency
         }
       >
-        <EnergyBalanceChart
-          input={energyInputPoints}
-          output={energyOutputPoints}
-        />
+        <ChartCardBody
+          loading={loading}
+          hasData={hasData}
+        >
+          <EnergyBalanceChart
+            input={energyInputPoints}
+            output={energyOutputPoints}
+          />
+        </ChartCardBody>
       </AnalyticsChartCard>
 
       <AnalyticsChartCard
@@ -322,9 +335,14 @@ export default function AnalyticsCharts({
           setTemperatureFrequency
         }
       >
-        <TemperatureHealthChart
-          cells={temperatureCells}
-        />
+        <ChartCardBody
+          loading={loading}
+          hasData={hasData}
+        >
+          <TemperatureHealthChart
+            cells={temperatureCells}
+          />
+        </ChartCardBody>
       </AnalyticsChartCard>
 
       <AnalyticsChartCard
@@ -336,33 +354,16 @@ export default function AnalyticsCharts({
           setVoltageFrequency
         }
       >
-        <VoltageDoDChart
-          voltage={voltagePoints}
-          levels={batteryLevels}
-        />
+        <ChartCardBody
+          loading={loading}
+          hasData={hasData}
+        >
+          <VoltageDoDChart
+            voltage={voltagePoints}
+            levels={batteryLevels}
+          />
+        </ChartCardBody>
       </AnalyticsChartCard>
     </>
   );
 }
-
-/* ============================================================
-   STYLES
-   ============================================================ */
-
-const styles =
-  StyleSheet.create({
-    loadingContainer: {
-      width: "100%",
-      minHeight: 42,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 7,
-      marginBottom: 10,
-    },
-
-    loadingText: {
-      color:
-        "#454545",
-    },
-  });

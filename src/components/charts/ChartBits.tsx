@@ -3,6 +3,7 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
   LayoutChangeEvent,
   StyleSheet,
   View,
@@ -175,6 +176,40 @@ export function ChartEmpty({
 }
 
 /* ============================================================
+   LAZY LOADING PLACEHOLDER
+   Rendered inside a card while its Skia chart chunk loads.
+   ============================================================ */
+
+export function ChartAreaFallback({
+  label = "Loading chart...",
+}: {
+  label?: string;
+}) {
+  return (
+    <View
+      style={
+        styles.emptyContainer
+      }
+    >
+      <ActivityIndicator
+        size="small"
+        color={Colors.light.primary}
+      />
+
+      <AppText
+        variant="caption"
+        style={[
+          styles.emptyText,
+          styles.fallbackLabel,
+        ]}
+      >
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+/* ============================================================
    STYLES
    ============================================================ */
 
@@ -232,6 +267,10 @@ const styles =
         Colors.light.textSecondary,
       textAlign: "center",
       paddingHorizontal: 12,
+    },
+
+    fallbackLabel: {
+      marginTop: 8,
     },
   });
 
