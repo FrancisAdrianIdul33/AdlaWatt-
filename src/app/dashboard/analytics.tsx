@@ -3,6 +3,11 @@ import Copyright from "@/components/forms/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
+import AnalyticsChartCard from "@/components/AnalyticsChartCard";
+import { ChartEmpty } from "@/components/charts/ChartBits";
+import type {
+  AnalyticsChartsProps,
+} from "@/components/AnalyticsCharts";
 import {
   DropdownModal,
   RadioOptionRow,
@@ -25,9 +30,13 @@ import {
   prepareReportData,
 } from "@/services/analyticsService";
 import React, {
+  Component,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useState,
+  type ReactNode,
 } from "react";
 import {
   Alert,
@@ -37,6 +46,115 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+
+/* ============================================================
+   SKIA CHARTS (LAZY)
+   On web the CanvasKit engine must be loaded before any module
+   that imports @shopify/react-native-skia is evaluated, otherwise
+   Skia.web.js captures an undefined CanvasKit at module load.
+
+   The charts subtree only mounts in the browser (see
+   SkiaChartsSection). During SSR/static rendering the Suspense
+   fallback is rendered instead, so the Skia module is never
+   evaluated server-side and hydration always matches.
+   ============================================================ */
+
+const loadChartsModule = () =>
+  import("@/components/AnalyticsCharts");
+
+const loadChartsModuleWeb = () =>
+  import("@shopify/react-native-skia/lib/module/web")
+    .then((module) =>
+      module.LoadSkiaWeb({
+        locateFile: (file: string) =>
+          `/${file}`,
+      }),
+    )
+    .then(loadChartsModule);
+
+type ChartsModule = {
+  default: React.ComponentType<AnalyticsChartsProps>;
+};
+
+const SkiaAnalyticsCharts = lazy((): Promise<ChartsModule> => {
+  if (Platform.OS !== "web") {
+    return loadChartsModule();
+  }
+
+  return loadChartsModuleWeb();
+});
+
+class ChartsErrorBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <AnalyticsChartCard
+          title="Charts Unavailable"
+          subtitle="The chart rendering engine failed to load."
+          icon="alert-circle-outline"
+          frequency="Daily"
+          onFrequencyChange={() => {}}
+        >
+          <ChartEmpty message="Refresh the page to try loading the charts again." />
+        </AnalyticsChartCard>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function ChartsLoadingFallback() {
+  return (
+    <AnalyticsChartCard
+      title="Preparing Charts"
+      subtitle="Loading the chart rendering engine..."
+      icon="hourglass-outline"
+      frequency="Daily"
+      onFrequencyChange={() => {}}
+    >
+      <ChartEmpty message="CanvasKit is starting up. This usually takes a few seconds." />
+    </AnalyticsChartCard>
+  );
+}
+
+function SkiaChartsSection({
+  monitoringHistory,
+  loading,
+}: {
+  monitoringHistory: MonitoringHistoryRow[];
+  loading: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <ChartsLoadingFallback />;
+  }
+
+  return (
+    <ChartsErrorBoundary>
+      <Suspense fallback={<ChartsLoadingFallback />}>
+        <SkiaAnalyticsCharts
+          monitoringHistory={monitoringHistory}
+          loading={loading}
+        />
+      </Suspense>
+    </ChartsErrorBoundary>
+  );
+}
 
 /* ============================================================
    SCREEN
@@ -101,10 +219,7 @@ export default function AnalyticsScreen() {
 
         setLoading(false);
       },
-      [
-        range.start,
-        range.end,
-      ],
+      [range],
     );
 
   useEffect(() => {
@@ -376,9 +491,19 @@ export default function AnalyticsScreen() {
         </View>
 
         {/* ======================================================
+            ANALYTICS CHARTS
+            Skia charts rebuild from the single history fetch.
+            The chart container is lazy-loaded after the web
+            CanvasKit engine is ready (see SKIA CHARTS above).
+        ====================================================== */}
+        <SkiaChartsSection
+          monitoringHistory={monitoringHistory}
+          loading={loading}
+        />
+
+        {/* ======================================================
             ANALYTICS PANEL
-            Placeholder + report export. Chart visuals are
-            temporarily disabled.
+            Report export + date-range controls.
         ====================================================== */}
         <AnalyticsCards
           reportFrequency={
@@ -397,7 +522,6 @@ export default function AnalyticsScreen() {
           generateReport={
             generateReport
           }
-          loading={loading}
         />
 
         {/* Copyright */}

@@ -150,7 +150,7 @@ export default function LoginScreen() {
 
         <View style={styles.registerContainer}>
           <AppText variant="caption">
-            Don't have an account?
+            {"Don't have an account?"}
           </AppText>
 
           <AppText

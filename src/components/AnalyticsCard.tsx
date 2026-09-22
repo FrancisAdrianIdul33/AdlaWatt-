@@ -109,7 +109,6 @@ export interface AnalyticsCardsProps {
   generateReport: (
     reportType: ReportType,
   ) => Promise<void>;
-  loading: boolean;
 }
 
 /* ============================================================
@@ -123,54 +122,9 @@ export default function AnalyticsCards({
   onFromDateChange,
   onToDateChange,
   generateReport,
-  loading,
 }: AnalyticsCardsProps) {
   return (
     <>
-      {/* ======================================================
-          PLACEHOLDER
-          Chart visuals are temporarily removed. The database
-          connection still loads the history used by reports.
-      ====================================================== */}
-
-      <View
-        style={
-          styles.placeholderCard
-        }
-      >
-        <Ionicons
-          name="bar-chart-outline"
-          size={34}
-          color="#FACC15"
-        />
-
-        <View
-          style={
-            styles.placeholderContent
-          }
-        >
-          <AppText
-            variant="body"
-            style={
-              styles.placeholderTitle
-            }
-          >
-            Analytics Coming Soon
-          </AppText>
-
-          <AppText
-            variant="caption"
-            style={
-              styles.placeholderMessage
-            }
-          >
-            Graphs and charts are temporarily disabled while
-            the app is being optimized. Historical data is
-            still being loaded so report exports keep working.
-          </AppText>
-        </View>
-      </View>
-
       {/* ======================================================
           GENERATE REPORT
           Follows the ChartCard grouped-card layout: a solid
@@ -350,35 +304,6 @@ export default function AnalyticsCards({
           </View>
         </View>
       </View>
-
-      {/* ======================================================
-          LOADING STATE
-      ====================================================== */}
-
-      {loading && (
-        <View
-          style={
-            styles.loadingContainer
-          }
-        >
-          <Ionicons
-            name="sync-outline"
-            size={18}
-            color={
-              Colors.light.primary
-            }
-          />
-
-          <AppText
-            variant="caption"
-            style={
-              styles.loadingText
-            }
-          >
-            Loading analytics...
-          </AppText>
-        </View>
-      )}
     </>
   );
 }
@@ -399,43 +324,6 @@ export const analyticsDimensions = {
 
 const styles =
   StyleSheet.create({
-    /* ========================================================
-       PLACEHOLDER
-    ======================================================== */
-
-    placeholderCard: {
-      width: "100%",
-      flexDirection: "row",
-      alignItems: "flex-start",
-      backgroundColor:
-        Colors.glass.white,
-      borderWidth: 3,
-      borderColor:
-        Colors.light.primary,
-      borderRadius: 15,
-      padding: 16,
-      marginBottom:
-        analyticsDimensions.sectionSpacing,
-      gap: 12,
-    },
-
-    placeholderContent: {
-      flex: 1,
-    },
-
-    placeholderTitle: {
-      color: "#000000",
-      fontWeight: "700",
-      fontSize: 17,
-    },
-
-    placeholderMessage: {
-      color:
-        Colors.light.textSecondary,
-      marginTop: 4,
-      lineHeight: 19,
-    },
-
     buttonPressed: {
       opacity: 0.72,
     },
@@ -569,24 +457,5 @@ const styles =
     exportPrimaryText: {
       color: "#FFFFFF",
       fontWeight: "700",
-    },
-
-    /* ========================================================
-       LOADING
-    ======================================================== */
-
-    loadingContainer: {
-      width: "100%",
-      minHeight: 42,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 7,
-      marginBottom: 10,
-    },
-
-    loadingText: {
-      color:
-        Colors.light.textSecondary,
     },
   });
