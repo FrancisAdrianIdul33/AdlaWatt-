@@ -84,7 +84,7 @@ export default function TermsModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={Colors.light.text}
+                color="#FFFFFF"
               />
             </Pressable>
           </View>
@@ -261,7 +261,7 @@ Users should review the Terms periodically. Where appropriate, significant chang
               <View style={styles.timerContainer}>
                 <ActivityIndicator
                   size="small"
-                  color={Colors.light.primary}
+                  color="#FFFFFF"
                 />
 
                 <AppText
@@ -284,9 +284,12 @@ Users should review the Terms periodically. Where appropriate, significant chang
             <Pressable
               onPress={handleAgree}
               disabled={!canAgree}
-              style={[
+              style={({ pressed }) => [
                 styles.agreeButton,
                 !canAgree && styles.agreeButtonDisabled,
+                pressed &&
+                  canAgree &&
+                  styles.agreeButtonPressed,
               ]}
             >
               <AppText
@@ -340,7 +343,7 @@ const styles = StyleSheet.create({
 
   modal: {
     height: "92%",
-    backgroundColor: Colors.light.surface,
+    backgroundColor: Colors.light.background,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     overflow: "hidden",
@@ -352,14 +355,15 @@ header: {
   justifyContent: "space-between",
   paddingHorizontal: Spacing.lg,
   paddingVertical: Spacing.md,
-  backgroundColor: Colors.light.secondary,
+  backgroundColor: Colors.light.primary,
   borderBottomWidth: 1,
-  borderBottomColor: Colors.light.border,
+  borderBottomColor: Colors.light.primary,
 },
 
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
+    color: "#FFFFFF",
   },
 
   closeButton: {
@@ -371,11 +375,13 @@ header: {
 
   content: {
     flex: 1,
+    backgroundColor: Colors.light.background,
   },
 
   contentContainer: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
+    backgroundColor: Colors.light.background,
   },
 
   updated: {
@@ -400,8 +406,8 @@ header: {
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
+    borderTopColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary,
   },
 
   timerContainer: {
@@ -414,12 +420,12 @@ header: {
   },
 
   timerText: {
-    color: Colors.light.textSecondary,
+    color: "#FFFFFF",
     textAlign: "center",
   },
 
   readyText: {
-    color: Colors.light.primary,
+    color: "#FFFFFF",
     textAlign: "center",
     marginBottom: Spacing.sm,
   },
@@ -427,21 +433,25 @@ header: {
   agreeButton: {
     minHeight: 48,
     borderRadius: Radius.md,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: "#99DCC4",
     alignItems: "center",
     justifyContent: "center",
   },
 
   agreeButtonDisabled: {
-    backgroundColor: Colors.light.border,
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
   },
 
   agreeButtonText: {
-    color: Colors.light.onPrimary,
+    color: "#000000",
     fontWeight: "700",
   },
 
+  agreeButtonPressed: {
+    backgroundColor: Colors.glass.whiteStrong,
+  },
+
   agreeButtonTextDisabled: {
-    color: Colors.light.textSecondary,
+    color: "rgba(255, 255, 255, 0.75)",
   },
 });

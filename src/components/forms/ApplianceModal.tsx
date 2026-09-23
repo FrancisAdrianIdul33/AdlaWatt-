@@ -756,7 +756,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={Colors.light.text}
+                color="#FFFFFF"
               />
             </Pressable>
           </View>
@@ -1115,7 +1115,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="checkmark-circle-outline"
                 size={17}
-                color={Colors.light.primary}
+                color="#FFFFFF"
               />
 
               <AppText
@@ -1135,7 +1135,7 @@ export default function ApplianceModal({
                 onPress={handleReset}
                 style={({ pressed }) => [
                   styles.resetButton,
-                  pressed && styles.pressed,
+                  pressed && styles.buttonPressed,
                 ]}
               >
                 <AppText
@@ -1150,7 +1150,7 @@ export default function ApplianceModal({
                 onPress={handleSave}
                 style={({ pressed }) => [
                   styles.actionButton,
-                  pressed && styles.pressed,
+                  pressed && styles.buttonPressed,
                 ]}
               >
                 <AppText
@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
 
   modal: {
     height: "92%",
-    backgroundColor: Colors.light.surface,
+    backgroundColor: Colors.light.background,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     overflow: "hidden",
@@ -1211,15 +1211,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: Colors.light.primary,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+    borderBottomColor: Colors.light.primary,
   },
 
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: "#000000",
+    color: "#FFFFFF",
   },
 
   closeButton: {
@@ -1231,15 +1231,17 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
+    backgroundColor: Colors.light.background,
   },
 
   contentContainer: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
+    backgroundColor: Colors.light.background,
   },
 
   advisory: {
-    backgroundColor: "rgba(0, 168, 107, 0.08)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: Radius.md,
@@ -1346,8 +1348,8 @@ const styles = StyleSheet.create({
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
+    borderTopColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary,
   },
 
   selectedInfo: {
@@ -1360,7 +1362,7 @@ const styles = StyleSheet.create({
   },
 
   selectedText: {
-    color: Colors.light.textSecondary,
+    color: "#FFFFFF",
     fontSize: 14,
   },
 
@@ -1374,14 +1376,12 @@ const styles = StyleSheet.create({
     minHeight: 46,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.light.border,
     borderRadius: Radius.md,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: "#99DCC4",
   },
 
   resetText: {
-    color: Colors.light.text,
+    color: "#000000",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1392,17 +1392,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: "#99DCC4",
   },
 
   actionText: {
-    color: "#FFFFFF",
+    color: "#000000",
     fontWeight: "700",
     fontSize: 14,
   },
 
   pressed: {
     opacity: 0.7,
+  },
+
+  buttonPressed: {
+    backgroundColor: Colors.glass.whiteStrong,
+    opacity: 1,
   },
 
   customActions: {
