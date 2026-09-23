@@ -2,9 +2,9 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import AppInput from "@/components/forms/AppInput";
-import Copyright from "@/components/forms/Copyright";
-import PasswordInput from "@/components/forms/PasswordInput";
+import AppInput from "@/components/ui/AppInput";
+import Copyright from "@/components/ui/Copyright";
+import PasswordInput from "@/components/ui/PasswordInput";
 import AuthHeader from "@/components/layout/AuthHeader";
 import ScreenContainer from "@/components/layout/ScreenContainer";
 import AppButton from "@/components/ui/AppButton";

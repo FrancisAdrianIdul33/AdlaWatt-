@@ -18,7 +18,7 @@ import {
 import ActivityCard from "@/components/ActivityCard";
 import AppRecCard from "@/components/AppRecCard";
 import ChartCard from "@/components/ChartCard";
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";

@@ -1,5 +1,5 @@
 import AnalyticsCards from "@/components/AnalyticsCard";
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
@@ -397,8 +397,6 @@ export default function AnalyticsScreen() {
 
         {/* ======================================================
             ANALYTICS CHARTS
-            Battery chart is live; the remaining cards are
-            placeholders until their charts are built.
         ====================================================== */}
         <AnalyticsChartCard
           title="Battery Level Over Time"
@@ -412,46 +410,6 @@ export default function AnalyticsScreen() {
           <BatteryLevelChart
             points={batteryPoints}
           />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="Solar Input vs Load"
-          subtitle="Solar generation versus consumption per period. Green fills show surplus, red shows deficit."
-          icon="sunny-outline"
-          frequency="Daily"
-          onFrequencyChange={() => {}}
-        >
-          <View />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="Energy In vs Out"
-          subtitle="Total energy stored versus energy drawn per period, with the net balance."
-          icon="swap-vertical-outline"
-          frequency="Daily"
-          onFrequencyChange={() => {}}
-        >
-          <View />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="Battery Temperature Health"
-          subtitle="Day-by-day battery temperature status. Tap a day for details."
-          icon="thermometer-outline"
-          frequency="Daily"
-          onFrequencyChange={() => {}}
-        >
-          <View />
-        </AnalyticsChartCard>
-
-        <AnalyticsChartCard
-          title="DoD & Voltage Distribution"
-          subtitle="Voltage readings across the safe band (10.65V – 12.6V), colored by depth-of-discharge status."
-          icon="pulse-outline"
-          frequency="Daily"
-          onFrequencyChange={() => {}}
-        >
-          <View />
         </AnalyticsChartCard>
 
         {/* ======================================================

@@ -2,7 +2,7 @@ import { Colors } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import AppInput from "./AppInput";
+import AppInput from "@/components/ui/AppInput";
 
 interface PasswordInputProps {
   label?: string;

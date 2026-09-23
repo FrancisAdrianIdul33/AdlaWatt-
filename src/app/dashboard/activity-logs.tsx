@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import Pagination from "@/components/ui/Pagination";

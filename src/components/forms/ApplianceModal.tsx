@@ -18,6 +18,7 @@ import ApplianceBox from "@/components/forms/ApplianceBox";
 import {
   applianceCardGrid,
 } from "@/components/forms/applianceCard";
+import CustomApplianceModal from "@/components/forms/CustomApplianceModal";
 import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
 
@@ -101,6 +102,9 @@ export default function ApplianceModal({
   const [customVisible, setCustomVisible] =
     useState(false);
 
+  const [addModalVisible, setAddModalVisible] =
+    useState(false);
+
   const [customName, setCustomName] =
     useState("");
 
@@ -172,6 +176,7 @@ export default function ApplianceModal({
     setSelected([]);
     setSearchText("");
     setCustomVisible(false);
+    setAddModalVisible(false);
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
@@ -231,6 +236,7 @@ export default function ApplianceModal({
     setCustomWatts("");
     setCustomError("");
     setCustomVisible(false);
+    setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
   };
@@ -299,6 +305,25 @@ export default function ApplianceModal({
     setCustomError("");
     setEditingCustom(null);
     setCustomVisible(false);
+  };
+
+  // ============================================================
+  // ADD MODAL (ADD-ONLY, DropdownModal shell like CalendarModal)
+  // ============================================================
+
+  const handleAddOpen = () => {
+    setEditingCustom(null);
+    setCustomName("");
+    setCustomWatts("");
+    setCustomError("");
+    setAddModalVisible(true);
+  };
+
+  const handleAddCancel = () => {
+    setCustomName("");
+    setCustomWatts("");
+    setCustomError("");
+    setAddModalVisible(false);
   };
 
   // ============================================================
@@ -439,7 +464,7 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
-    setCustomVisible(false);
+    setAddModalVisible(false);
 
     setSuccessMessage(
       `${name} successfully added!`,
@@ -789,18 +814,7 @@ export default function ApplianceModal({
             {/* Custom Appliance */}
             <View style={styles.customSection}>
               <Pressable
-                onPress={() => {
-                  if (customVisible) {
-                    handleCustomCancel();
-                    return;
-                  }
-
-                  setEditingCustom(null);
-                  setCustomName("");
-                  setCustomWatts("");
-                  setCustomError("");
-                  setCustomVisible(true);
-                }}
+                onPress={handleAddOpen}
                 style={({ pressed }) => [
                   styles.customButton,
                   pressed && styles.pressed,
@@ -821,8 +835,8 @@ export default function ApplianceModal({
               </Pressable>
             </View>
 
-            {/* Custom Form */}
-            {customVisible && (
+            {/* Custom Form (Edit-only, inline) */}
+            {customVisible && editingCustom && (
               <View
                 style={styles.customForm}
                 onLayout={(event) => {
@@ -897,11 +911,7 @@ export default function ApplianceModal({
                   </Pressable>
 
                   <Pressable
-                    onPress={
-                      editingCustom
-                        ? handleCustomUpdate
-                        : handleCustomAdd
-                    }
+                    onPress={handleCustomUpdate}
                     disabled={
                       !customName.trim() ||
                       !customWatts.trim()
@@ -916,7 +926,7 @@ export default function ApplianceModal({
                       variant="caption"
                       style={styles.addText}
                     >
-                      {editingCustom ? "Save" : "Add"}
+                      Save
                     </AppText>
                   </Pressable>
                 </View>
@@ -1153,6 +1163,28 @@ export default function ApplianceModal({
             </View>
           </View>
         </View>
+
+        <CustomApplianceModal
+          visible={addModalVisible}
+          name={customName}
+          watts={customWatts}
+          error={customError}
+          onNameChange={(text) => {
+            setCustomName(text);
+            setCustomError("");
+          }}
+          onWattsChange={(text) => {
+            const value = text.replace(
+              /[^\d-]/g,
+              "",
+            );
+
+            setCustomWatts(value);
+            setCustomError("");
+          }}
+          onCancel={handleAddCancel}
+          onAdd={handleCustomAdd}
+        />
       </View>
     </Modal>
   );
