@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 
 import React, {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -25,8 +26,17 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Radius } from "@/constants/theme";
 
+import weatherJson from "@/data/weather.json";
+
 import {
+  type ForecastResult,
+  getForecast,
+} from "@/services/forecast";
+
+import {
+  type Coordinates,
   type WeatherData,
+  getCurrentCoordinates,
   getWeather,
 } from "@/services/weatherForecast";
 
@@ -39,9 +49,10 @@ import {
 // ============================================================
 
 // The weather is re-fetched on this interval so the displayed
-// temperature never stays frozen for too long.
+// temperature never stays frozen for too long. All values
+// come from weather.json.
 const WEATHER_REFRESH_INTERVAL_MS =
-  10 * 60 * 1000; // every 10 minutes
+  weatherJson.timing.autoRefreshMs;
 
 // ============================================================
 // QUICK-NAV SCROLL
@@ -93,10 +104,10 @@ export default function DashboardScreen() {
   // WEATHER STATE
   //
   // Source:
-  // Open-Meteo API / weatherForecast.ts
-  //
-  // This has its own loading state so weather loading
-  // does not affect the Supabase monitoring cards.
+  // OpenWeatherMap API / weatherForecast.ts (current) and
+  // forecast.ts (upcoming 5 days). Forecast has its own
+  // loading and error states so it never affects the
+  // Supabase monitoring cards or the current-weather card.
   // ==========================================================
 
   const [weather, setWeather] =
@@ -105,75 +116,153 @@ export default function DashboardScreen() {
   const [weatherLoading, setWeatherLoading] =
     useState(true);
 
+  const [forecast, setForecast] =
+    useState<ForecastResult | null>(null);
+
+  const [forecastLoading, setForecastLoading] =
+    useState(true);
+
+  const [forecastError, setForecastError] =
+    useState("");
+
+  const hasLoadedForecast = useRef(false);
+
+  const hasLoadedWeather = useRef(false);
+
+  const screenMounted = useRef(true);
+
   // ==========================================================
   // LOAD CURRENT WEATHER
   // ==========================================================
 
-  useEffect(() => {
-    let isMounted = true;
-    let hasLoaded = false;
+  const loadWeather = useCallback(async () => {
+    try {
+      // Only show the loading state on the first fetch;
+      // background refreshes keep the last known value.
+      if (
+        screenMounted.current &&
+        !hasLoadedWeather.current
+      ) {
+        setWeatherLoading(true);
+      }
 
-    const loadWeather = async () => {
+      const current = await getWeather();
+
+      if (!screenMounted.current) {
+        return;
+      }
+
+      hasLoadedWeather.current = true;
+
+      setWeather(current);
+    } catch (error) {
+      // Keep the last known value on background refresh
+      // failures; only blank the card if nothing has
+      // loaded yet. Log a warning (not an error) so
+      // transient weather failures stay quiet.
+      console.warn(
+        "Weather refresh failed:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+
+      if (
+        screenMounted.current &&
+        !hasLoadedWeather.current
+      ) {
+        setWeather(null);
+      }
+    } finally {
+      if (screenMounted.current) {
+        setWeatherLoading(false);
+      }
+    }
+  }, []);
+
+  // ==========================================================
+  // LOAD 5-DAY FORECAST
+  // ==========================================================
+
+  const loadForecast = useCallback(
+    async (coordinates?: Coordinates) => {
       try {
-        // Only show the loading state on the first fetch;
-        // background refreshes keep the last known value.
-        if (!hasLoaded) {
-          setWeatherLoading(true);
+        if (
+          screenMounted.current &&
+          !hasLoadedForecast.current
+        ) {
+          setForecastLoading(true);
         }
 
-        const forecast =
-          await getWeather();
+        const fix =
+          coordinates ?? (await getCurrentCoordinates());
 
-        // Prevent state updates if the screen
-        // has already been unmounted.
-        if (!isMounted) {
-          return;
-        }
-
-        hasLoaded = true;
-
-        setWeather(forecast);
-      } catch (error) {
-        // Keep the last known value on background refresh
-        // failures; only blank the card if nothing has
-        // loaded yet. Log a warning (not an error) so
-        // transient weather failures stay quiet.
-        console.warn(
-          "Weather refresh failed:",
-          error instanceof Error
-            ? error.message
-            : error,
+        const result = await getForecast(
+          fix.lat,
+          fix.lon
         );
 
-        if (!isMounted) {
+        if (!screenMounted.current) {
           return;
         }
 
-        if (!hasLoaded) {
-          setWeather(null);
+        hasLoadedForecast.current = true;
+
+        setForecast(result);
+
+        setForecastError("");
+      } catch (error) {
+        console.warn(
+          "Forecast refresh failed:",
+          error instanceof Error
+            ? error.message
+            : error
+        );
+
+        if (!screenMounted.current) {
+          return;
+        }
+
+        // Keep the last known strip on background failures;
+        // only surface the error when nothing loaded yet.
+        if (!hasLoadedForecast.current) {
+          setForecastError(
+            error instanceof Error
+              ? error.message
+              : "Could not load the forecast."
+          );
         }
       } finally {
-        if (isMounted) {
-          setWeatherLoading(false);
+        if (screenMounted.current) {
+          setForecastLoading(false);
         }
       }
-    };
+    },
+    []
+  );
+
+  useEffect(() => {
+    screenMounted.current = true;
 
     // Initial fetch.
     loadWeather();
 
+    loadForecast();
+
     // Keep the temperature from staying frozen by
     // re-fetching on a fixed interval.
-    const refreshInterval = setInterval(
-      loadWeather,
-      WEATHER_REFRESH_INTERVAL_MS,
-    );
+    const refreshInterval = setInterval(() => {
+      loadWeather();
+
+      loadForecast();
+    }, WEATHER_REFRESH_INTERVAL_MS);
 
     return () => {
-      isMounted = false;
+      screenMounted.current = false;
+
       clearInterval(refreshInterval);
     };
-  }, []);
+  }, [loadForecast, loadWeather]);
 
   // ==========================================================
   // SMOOTH SCROLL-TO-SECTION
@@ -451,6 +540,9 @@ export default function DashboardScreen() {
                 monitoring={monitoring}
                 weather={weather}
                 loading={weatherLoading}
+                forecast={forecast}
+                forecastLoading={forecastLoading}
+                forecastError={forecastError}
               />
             </View>
           </View>

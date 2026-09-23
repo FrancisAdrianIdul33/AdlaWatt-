@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "api": {
+    "currentUrl": "https://api.openweathermap.org/data/2.5/weather",
+    "forecastUrl": "https://api.openweathermap.org/data/2.5/forecast",
+    "units": "metric",
+    "timeoutMs": 8000
+  },
+  "timing": {
+    "autoRefreshMs": 600000
+  },
+  "thresholds": {
+    "hotC": 30,
+    "coldC": 20,
+    "cloudLowPct": 25,
+    "cloudHighPct": 60,
+    "clearShareForHigh": 0.5
+  },
+  "conditions": {
+    "fallback": {
+      "icon": "partly-sunny-outline",
+      "severity": "clear"
+    },
+    "rules": [
+      {
+        "match": ["thunder", "storm"],
+        "icon": "thunderstorm-outline",
+        "severity": "severe"
+      },
+      {
+        "match": ["snow", "sleet", "ice", "freezing"],
+        "icon": "snow-outline",
+        "severity": "severe"
+      },
+      {
+        "match": ["heavy", "violent", "torrential", "extreme", "hail"],
+        "icon": "rainy-outline",
+        "severity": "severe"
+      },
+      {
+        "match": ["moderate"],
+        "icon": "rainy-outline",
+        "severity": "moderate"
+      },
+      {
+        "match": ["drizzle", "light", "slight", "patchy", "shower", "rain"],
+        "icon": "rainy-outline",
+        "severity": "light"
+      },
+      {
+        "match": ["fog", "mist", "haze", "smoke", "dust", "sand", "ash"],
+        "icon": "cloud-outline",
+        "severity": "fog"
+      },
+      {
+        "match": ["partly", "few", "scattered", "broken"],
+        "icon": "partly-sunny-outline",
+        "severity": "cloudy"
+      },
+      {
+        "match": ["cloud", "overcast"],
+        "icon": "cloud-outline",
+        "severity": "cloudy"
+      },
+      {
+        "match": ["clear", "sunny"],
+        "icon": "sunny-outline",
+        "severity": "clear"
+      }
+    ]
+  },
+  "severityRanks": {
+    "clear": 0,
+    "cloudy": 1,
+    "fog": 2,
+    "light": 3,
+    "moderate": 4,
+    "severe": 5
+  },
+  "forecast": {
+    "days": 5,
+    "peakRule": "max-severity",
+    "tieBreak": "nearest-midday",
+    "fallbackDescription": "Clear sky",
+    "dateFormat": {
+      "weekday": "short",
+      "month": "short",
+      "day": "numeric"
+    },
+    "bestSunSummary": {
+      "good": "Best sun: {day} — good day to charge fully.",
+      "poor": "Low sun all week — conserve battery."
+    }
+  },
+  "messages": {
+    "errors": {
+      "missing_key": "Weather API key is missing. Set EXPO_PUBLIC_OWM_KEY in the .env file.",
+      "permission_denied": "Location permission was denied. Enable location access to get the current weather.",
+      "services_disabled": "Location services are disabled on this device. Turn them on to get the current weather.",
+      "invalid_coordinates": "The device returned invalid GPS coordinates.",
+      "location_unavailable": "Could not determine your location. Try again with GPS enabled.",
+      "api": "OpenWeather API returned HTTP {status}.",
+      "invalid_json": "OpenWeather returned a response that is not valid JSON.",
+      "invalid_response": "OpenWeather returned an unexpected response structure.",
+      "missing_temperature": "OpenWeather response is missing a valid temperature.",
+      "missing_description": "OpenWeather response is missing a weather description.",
+      "timeout": "Weather request timed out after {seconds} seconds.",
+      "network": "Could not reach OpenWeather. {detail}"
+    }
+  },
+  "formats": {
+    "tempDecimals": 1,
+    "coordFallback": "{lat}, {lon}",
+    "coordDecimals": 2,
+    "time": "h:mm AM"
+  }
+}
