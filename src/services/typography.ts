@@ -134,20 +134,18 @@ export function getFontWeightStyle(
   family: FontFamilyOption,
   weight: FontWeightOption,
   baseWeight:
+    | "300"
     | "400"
     | "600"
     | "700"
     | "normal"
     | "bold" = "400",
-): "300" | "400" | "700" | "normal" | "bold" {
+): "300" | "400" | "600" | "700" | "normal" | "bold" {
   if (
     family === "Inter" ||
     family === "Roboto"
   ) {
-    return baseWeight as
-      | "400"
-      | "normal"
-      | "bold";
+    return baseWeight;
   }
 
   if (weight === "Thin") {
@@ -159,7 +157,9 @@ export function getFontWeightStyle(
   }
 
   return baseWeight as
+    | "300"
     | "400"
+    | "600"
     | "normal"
     | "bold";
 }
