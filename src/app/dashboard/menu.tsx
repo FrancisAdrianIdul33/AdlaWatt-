@@ -780,7 +780,7 @@ export default function SettingsScreen() {
         <DropdownModal
           visible={accountExpanded}
           title="Account Profile"
-          onClose={handleCancelUpdate}
+          onClose={handleCloseAccountModal}
         >
           <ScrollView
             style={[
