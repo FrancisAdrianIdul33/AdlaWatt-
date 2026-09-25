@@ -28,6 +28,7 @@ import {
   Spacing,
   Typography,
 } from "@/constants/theme";
+import { useTypography } from "@/hooks/useTypography";
 
 import { supabase } from "@/lib/supabase";
 
@@ -125,6 +126,15 @@ export default function ApplianceModal({
 
   const scrollRef = useRef<ScrollView>(null);
   const customFormY = useRef(0);
+
+  const { scaledSize, family, weightFor } =
+    useTypography();
+
+  const inputFontStyle = {
+    fontSize: scaledSize(14),
+    fontFamily: family,
+    fontWeight: weightFor("400"),
+  };
 
   // ============================================================
   // LOAD APPLIANCES
@@ -862,7 +872,8 @@ export default function ApplianceModal({
                   placeholderTextColor={
                     Colors.light.textSecondary
                   }
-                  style={styles.input}
+                  allowFontScaling={false}
+                  style={[styles.input, inputFontStyle]}
                 />
 
                 <TextInput
@@ -880,7 +891,8 @@ export default function ApplianceModal({
                   placeholderTextColor={
                     Colors.light.textSecondary
                   }
-                  style={styles.input}
+                  allowFontScaling={false}
+                  style={[styles.input, inputFontStyle]}
                   keyboardType="numeric"
                 />
 

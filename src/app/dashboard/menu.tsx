@@ -36,6 +36,7 @@ import {
 import { supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
+import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
   getFontFamilyName,
@@ -161,6 +162,18 @@ export default function SettingsScreen() {
     prefs: savedTypography,
     setPreferences: commitTypography,
   } = useSettings();
+
+  const {
+    scaledSize: scaledInputSize,
+    family: inputFontFamily,
+    weightFor: inputFontWeightFor,
+  } = useTypography();
+
+  const inputFontStyle = {
+    fontSize: scaledInputSize(15),
+    fontFamily: inputFontFamily,
+    fontWeight: inputFontWeightFor("400"),
+  };
 
   const [isSavingPreferences, setIsSavingPreferences] =
     useState(false);
@@ -941,7 +954,11 @@ export default function SettingsScreen() {
                         setEditUsername(text);
                         setWarning("");
                       }}
-                      style={styles.input}
+                      allowFontScaling={false}
+                      style={[
+                        styles.input,
+                        inputFontStyle,
+                      ]}
                       placeholder="Enter username"
                       placeholderTextColor={
                         Colors.light.textSecondary
@@ -966,7 +983,11 @@ export default function SettingsScreen() {
                         setEditEmail(text);
                         setWarning("");
                       }}
-                      style={styles.input}
+                      allowFontScaling={false}
+                      style={[
+                        styles.input,
+                        inputFontStyle,
+                      ]}
                       placeholder="Enter email"
                       placeholderTextColor={
                         Colors.light.textSecondary
@@ -997,9 +1018,11 @@ export default function SettingsScreen() {
                           setNewPassword(text);
                           setWarning("");
                         }}
-                        style={
-                          styles.passwordInput
-                        }
+                        allowFontScaling={false}
+                        style={[
+                          styles.passwordInput,
+                          inputFontStyle,
+                        ]}
                         placeholder="Leave blank to keep current"
                         placeholderTextColor={
                           Colors.light.textSecondary
@@ -1057,9 +1080,11 @@ export default function SettingsScreen() {
                           );
                           setWarning("");
                         }}
-                        style={
-                          styles.passwordInput
-                        }
+                        allowFontScaling={false}
+                        style={[
+                          styles.passwordInput,
+                          inputFontStyle,
+                        ]}
                         placeholder="Confirm new password"
                         placeholderTextColor={
                           Colors.light.textSecondary
@@ -1795,9 +1820,11 @@ export default function SettingsScreen() {
                     setCurrentPassword(text);
                     setConfirmationWarning("");
                   }}
-                  style={
-                    styles.passwordInput
-                  }
+                  allowFontScaling={false}
+                  style={[
+                    styles.passwordInput,
+                    inputFontStyle,
+                  ]}
                   placeholder="Enter current password"
                   placeholderTextColor={
                     Colors.light.textSecondary

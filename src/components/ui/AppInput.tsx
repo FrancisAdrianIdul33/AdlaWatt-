@@ -8,6 +8,7 @@ import {
 
 import { Colors } from "@/constants/colors";
 import AppText from "@/components/ui/AppText";
+import { useTypography } from "@/hooks/useTypography";
 
 interface AppInputProps extends TextInputProps {
   label?: string;
@@ -20,6 +21,9 @@ export default function AppInput({
   style,
   ...props
 }: AppInputProps) {
+  const { scaledSize, family, weightFor } =
+    useTypography();
+
   return (
     <View style={styles.container}>
       {label && (
@@ -30,9 +34,15 @@ export default function AppInput({
 
       <TextInput
         {...props}
+        allowFontScaling={false}
         placeholderTextColor={Colors.light.textSecondary}
         style={[
           styles.input,
+          {
+            fontSize: scaledSize(16),
+            fontFamily: family,
+            fontWeight: weightFor("400"),
+          },
           error ? styles.inputError : null,
           style,
         ]}
