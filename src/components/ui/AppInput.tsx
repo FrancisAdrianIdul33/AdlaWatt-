@@ -7,7 +7,7 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
-import AppText from "../ui/AppText";
+import AppText from "@/components/ui/AppText";
 
 interface AppInputProps extends TextInputProps {
   label?: string;

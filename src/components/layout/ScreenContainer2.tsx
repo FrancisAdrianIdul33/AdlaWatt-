@@ -8,6 +8,7 @@ import {
 
 import NavBarBottom from "@/components/layout/NavBarBottom";
 import { Colors } from "@/constants/colors";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 interface ScreenContainer2Props {
   children: ReactNode;
@@ -19,15 +20,17 @@ export default function ScreenContainer2({
   style,
 }: ScreenContainer2Props) {
   return (
-    <View style={styles.container}>
-      <View style={[styles.content, style]}>
-        {children}
-      </View>
+    <SettingsProvider>
+      <View style={styles.container}>
+        <View style={[styles.content, style]}>
+          {children}
+        </View>
 
-      {/* Bottom nav sits in normal flow so it never overlaps
-          the scrollable content above it. */}
-      <NavBarBottom />
-    </View>
+        {/* Bottom nav sits in normal flow so it never overlaps
+            the scrollable content above it. */}
+        <NavBarBottom />
+      </View>
+    </SettingsProvider>
   );
 }
 

@@ -12,11 +12,16 @@ import {
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 
+type StatusTone =
+  | "ok"
+  | "care"
+  | "not";
+
 type ApplianceStatusBoxProps = {
   name: string;
   wattage: string;
-  color: string;
-  status: "OK to use" | "Not advised";
+  status: string;
+  statusTone?: StatusTone;
   imageSource?: ImageSourcePropType;
 };
 
@@ -25,24 +30,43 @@ const defaultImage = require("@/assets/images/adlawatt-icon.png");
 export default function ApplianceStatusBox({
   name,
   wattage,
-  color,
   status,
+  statusTone,
   imageSource = defaultImage,
 }: ApplianceStatusBoxProps) {
-  const isOkay = status === "OK to use";
+  const tone: StatusTone =
+    statusTone ?? (
+      status === "OK to use"
+        ? "ok"
+        : "not"
+    );
+
+  const statusColor =
+    tone === "care"
+      ? Colors.light.warning
+      : tone === "not"
+        ? Colors.light.error
+        : Colors.light.primary;
+
+  const iconName =
+    tone === "ok"
+      ? "checkmark"
+      : tone === "care"
+        ? "warning"
+        : "close";
 
   return (
     <View
       style={[
         applianceCardStyles.box,
-        { borderColor: color },
+        { borderColor: statusColor },
       ]}
     >
       {/* Appliance Image */}
       <View
         style={[
           applianceCardStyles.imageContainer,
-          { borderColor: color },
+          { borderColor: statusColor },
         ]}
       >
         <Image
@@ -74,14 +98,13 @@ export default function ApplianceStatusBox({
         style={[
           applianceCardStyles.status,
           {
-            backgroundColor: isOkay
-              ? Colors.light.primary
-              : "#EF4444",
+            backgroundColor:
+              statusColor,
           },
         ]}
       >
         <Ionicons
-          name={isOkay ? "checkmark" : "close"}
+          name={iconName}
           size={13}
           color="#FFFFFF"
         />

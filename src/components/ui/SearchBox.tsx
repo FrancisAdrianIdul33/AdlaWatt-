@@ -8,7 +8,7 @@ import {
     View,
 } from "react-native";
 
-interface AppSearchBoxProps extends TextInputProps {}
+type AppSearchBoxProps = TextInputProps;
 
 export default function AppSearchBox({
   style,

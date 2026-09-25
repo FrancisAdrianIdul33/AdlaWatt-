@@ -7,9 +7,9 @@ import {
   View,
 } from "react-native";
 
-import AppCheckbox from "@/components/forms/AppCheckbox";
-import AppInput from "@/components/forms/AppInput";
-import PasswordInput from "@/components/forms/PasswordInput";
+import AppCheckbox from "@/components/ui/AppCheckbox";
+import AppInput from "@/components/ui/AppInput";
+import PasswordInput from "@/components/ui/PasswordInput";
 import TermsModal from "@/components/forms/TermsModal";
 import AuthHeader from "@/components/layout/AuthHeader";
 import ScreenContainer from "@/components/layout/ScreenContainer";
@@ -19,7 +19,7 @@ import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
 import { Routes } from "@/constants/routes";
 import { Radius, Spacing } from "@/constants/theme";
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 
 import { registerUser } from "@/services/auth";
 

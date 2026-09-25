@@ -27,8 +27,14 @@ import { Colors } from "@/constants/colors";
 import { Radius } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
 
+import {
+  type BatteryStateInput,
+  recommendAppliance,
+} from "@/services/recommendation";
+
 type Status =
   | "advisable"
+  | "care"
   | "notAdvisable";
 
 type Appliance = {
@@ -37,6 +43,90 @@ type Appliance = {
   watts: string;
   status: Status;
 };
+
+type DecoratedAppliance = Appliance & {
+  color: string;
+};
+
+const badgeMeta = (status: Status) => {
+  if (
+    status === "care"
+  ) {
+
+    return {
+      color: Colors.light.warning,
+      icon: "warning-outline" as const,
+      label: "Use with care",
+    };
+  }
+
+  if (
+    status === "notAdvisable"
+  ) {
+
+    return {
+      color: Colors.light.error,
+      icon: "alert-circle-outline" as const,
+      label: "Not advisable",
+    };
+  }
+
+  return {
+    color: Colors.light.primary,
+    icon: "checkmark-circle-outline" as const,
+    label: "OK to use",
+  };
+};
+
+const EMPTY_STATE_META: Record<
+  Status,
+  { title: string; description: string }
+> = {
+  advisable: {
+    title: "No Advisable Appliances",
+    description:
+      "No selected appliances are currently advisable to use.",
+  },
+  care: {
+    title: "No Appliances to Use With Care",
+    description:
+      "No selected appliances currently need caution.",
+  },
+  notAdvisable: {
+    title: "No Not Advisable Appliances",
+    description:
+      "No selected appliances are currently not advisable to use.",
+  },
+};
+
+const TOGGLE_META: {
+  mode: Status;
+  label: string;
+  color: string;
+  accessibilityLabel: string;
+}[] = [
+  {
+    mode: "advisable",
+    label: "Advisable",
+    color: Colors.light.primary,
+    accessibilityLabel:
+      "Show advisable appliances",
+  },
+  {
+    mode: "care",
+    label: "Caution",
+    color: Colors.light.warning,
+    accessibilityLabel:
+      "Show appliances to use with care",
+  },
+  {
+    mode: "notAdvisable",
+    label: "Not Advisable",
+    color: Colors.light.error,
+    accessibilityLabel:
+      "Show not advisable appliances",
+  },
+];
 
 const defaultImage = require(
   "@/assets/images/adlawatt-icon.png",
@@ -51,7 +141,11 @@ const tips = [
 
 
 
-export default function AppRecCard() {
+export default function AppRecCard({
+  battery,
+}: {
+  battery?: BatteryStateInput;
+}) {
   const [mode, setMode] =
     useState<Status>("advisable");
 
@@ -72,15 +166,81 @@ export default function AppRecCard() {
     useRef(new Animated.Value(1)).current;
 
   // ============================================
+  // DECORATE APPLIANCES WITH RECOMMENDATION STATUS
+  //
+  // When a live battery reading exists the engine
+  // verdict decides the badge. Without one the legacy
+  // wattage-only heuristic keeps the prior behavior.
+  // ============================================
+
+  const decoratedAppliances =
+    useMemo((): DecoratedAppliance[] => {
+      if (!battery) {
+        return appliances.map((item) => {
+          const values =
+            String(item.watts)
+              .match(/\d+/g)
+              ?.map(Number) ?? [];
+
+          const maxWatts = Math.max(
+            ...values,
+            0,
+          );
+
+          const status =
+            maxWatts > 300
+              ? "notAdvisable"
+              : "advisable";
+
+          return {
+            ...item,
+            status,
+            color:
+              badgeMeta(status).color,
+          };
+        });
+      }
+
+      return appliances.map((item) => {
+        const recommendation =
+          recommendAppliance(
+            battery,
+            {
+              id: item.id,
+              name: item.name,
+              wattage: item.watts,
+            },
+          );
+
+        const status =
+          recommendation.verdict ===
+          "notRecommended"
+            ? "notAdvisable"
+            : recommendation.verdict ===
+                "care"
+              ? "care"
+              : "advisable";
+
+        return {
+          ...item,
+          status,
+          color:
+            badgeMeta(status).color,
+        };
+      });
+    }, [appliances, battery]);
+
+  // ============================================
   // FILTER APPLIANCES BY STATUS
   // ============================================
 
   const filteredAppliances = useMemo(
     () =>
-      appliances.filter(
-        (item) => item.status === mode,
+      decoratedAppliances.filter(
+        (item) =>
+          item.status === mode,
       ),
-    [appliances, mode],
+    [decoratedAppliances, mode],
   );
 
   // ============================================
@@ -106,13 +266,6 @@ export default function AppRecCard() {
         ],
     );
   }, [filteredAppliances, index]);
-
-  const isAdvisable =
-    mode === "advisable";
-
-  const statusColor = isAdvisable
-    ? Colors.light.primary
-    : "#EF4444";
 
   // ============================================
   // LOAD USER APPLIANCES
@@ -159,27 +312,12 @@ export default function AppRecCard() {
     );
 
     const mapped: Appliance[] =
-      selectedRows.map((item) => {
-        const values =
-          String(item.wattage)
-            .match(/\d+/g)
-            ?.map(Number) ?? [];
-
-        const maxWatts = Math.max(
-          ...values,
-          0,
-        );
-
-        return {
-          id: item.app_id,
-          name: item.appliance_name,
-          watts: item.wattage,
-          status:
-            maxWatts > 300
-              ? "notAdvisable"
-              : "advisable",
-        };
-      });
+      selectedRows.map((item) => ({
+        id: item.app_id,
+        name: item.appliance_name,
+        watts: item.wattage,
+        status: "advisable",
+      }));
 
     setAppliances(mapped);
   };
@@ -368,14 +506,20 @@ export default function AppRecCard() {
           <>
             <View style={styles.applianceRow}>
               {currentAppliances.map(
-                (appliance) => (
+                (appliance) => {
+                  const meta =
+                    badgeMeta(
+                      appliance.status,
+                    );
+
+                  return (
                   <View
                     key={appliance.id}
                     style={[
                       applianceCardStyles.box,
                       {
                         borderColor:
-                          statusColor,
+                          meta.color,
                       },
                     ]}
                   >
@@ -385,7 +529,7 @@ export default function AppRecCard() {
                         applianceCardStyles.imageContainer,
                         {
                           borderColor:
-                            statusColor,
+                            meta.color,
                         },
                       ]}
                     >
@@ -426,16 +570,12 @@ export default function AppRecCard() {
                         applianceCardStyles.status,
                         {
                           backgroundColor:
-                            statusColor,
+                            meta.color,
                         },
                       ]}
                     >
                       <Ionicons
-                        name={
-                          isAdvisable
-                            ? "checkmark-circle-outline"
-                            : "alert-circle-outline"
-                        }
+                        name={meta.icon}
                         size={13}
                         color="#FFFFFF"
                       />
@@ -447,13 +587,12 @@ export default function AppRecCard() {
                         }
                         numberOfLines={1}
                       >
-                        {isAdvisable
-                          ? "OK to use"
-                          : "Not advisable"}
+                        {meta.label}
                       </AppText>
                     </View>
                   </View>
-                ),
+                  );
+                },
               )}
             </View>
 
@@ -481,7 +620,8 @@ export default function AppRecCard() {
                       {
                         backgroundColor:
                           itemIndex === activeIndicator
-                            ? statusColor
+                            ? currentAppliances[0]
+                                .color
                             : Colors.light.border,
                       },
                     ]}
@@ -499,14 +639,12 @@ export default function AppRecCard() {
             <EmptyState
               icon="hardware-chip-outline"
               title={
-                isAdvisable
-                  ? "No Advisable Appliances"
-                  : "No Not Advisable Appliances"
+                EMPTY_STATE_META[mode]
+                  .title
               }
               description={
-                isAdvisable
-                  ? "No selected appliances are currently advisable to use."
-                  : "No selected appliances are currently not advisable to use."
+                EMPTY_STATE_META[mode]
+                  .description
               }
             />
           </View>
@@ -514,61 +652,57 @@ export default function AppRecCard() {
 
         {/* Status Toggle */}
         <View style={styles.toggle}>
-          <Pressable
-            onPress={() =>
-              setMode("advisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show advisable appliances"
-            style={({ pressed }) => [
-              styles.toggleButton,
-              mode === "advisable" && {
-                backgroundColor:
-                  Colors.light.primary,
-              },
-              pressed &&
-              styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.toggleText,
-                mode === "advisable" &&
-                styles.activeToggleText,
-              ]}
-            >
-              Advisable
-            </AppText>
-          </Pressable>
+          {TOGGLE_META.map(
+            ({
+              mode: segmentMode,
+              label,
+              color,
+              accessibilityLabel,
+            }) => {
+              const active =
+                mode === segmentMode;
 
-          <Pressable
-            onPress={() =>
-              setMode("notAdvisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show not advisable appliances"
-            style={({ pressed }) => [
-              styles.toggleButton,
-              mode === "notAdvisable" && {
-                backgroundColor:
-                  "#EF4444",
-              },
-              pressed &&
-              styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.toggleText,
-                mode === "notAdvisable" &&
-                styles.activeToggleText,
-              ]}
-            >
-              Not Advisable
-            </AppText>
-          </Pressable>
+              return (
+                <Pressable
+                  key={segmentMode}
+                  onPress={() =>
+                    setMode(
+                      segmentMode,
+                    )
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    accessibilityLabel
+                  }
+                  style={({ pressed }) => [
+                    styles.toggleButton,
+                    active && {
+                      backgroundColor:
+                        color,
+                    },
+                    pressed &&
+                    styles.pressed,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.toggleText,
+                      active &&
+                      (segmentMode ===
+                        "care"
+                        ? styles
+                            .activeToggleTextCaution
+                        : styles
+                            .activeToggleText),
+                    ]}
+                  >
+                    {label}
+                  </AppText>
+                </Pressable>
+              );
+            },
+          )}
         </View>
       </View>
 
@@ -691,6 +825,10 @@ const styles = StyleSheet.create({
 
   activeToggleText: {
     color: "#FFFFFF",
+  },
+
+  activeToggleTextCaution: {
+    color: Colors.light.text,
   },
 
   // ============================================

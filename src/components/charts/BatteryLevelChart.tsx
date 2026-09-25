@@ -1,0 +1,151 @@
+import {
+  useMemo,
+} from "react";
+import {
+  StyleSheet,
+  View,
+} from "react-native";
+import {
+  LineChart,
+} from "react-native-gifted-charts";
+import {
+  CHART_COLORS,
+  CHART_HEIGHT,
+  clampPercent,
+} from "@/services/chartMath";
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+const DEFAULT_POINT_WIDTH = 60;
+
+/* ============================================================
+   TYPES
+   ============================================================ */
+
+export interface BatteryLevelPoint {
+  value: number;
+  min?: number;
+  max?: number;
+  label?: string;
+}
+
+/* ============================================================
+   BATTERY LEVEL OVER TIME
+   Curved area chart (react-native-gifted-charts, SVG-based so it
+   works on native and web with no extra engine loading). Y-axis is
+   fixed 0-100 with a dashed red 20% safety floor. Axes always render,
+   even without enough history.
+   ============================================================ */
+
+export default function BatteryLevelChart({
+  points,
+  pointWidth = DEFAULT_POINT_WIDTH,
+}: {
+  points: BatteryLevelPoint[];
+  pointWidth?: number;
+}) {
+  const isEmpty = points.length < 2;
+
+  const data = useMemo(
+    () => {
+      if (!isEmpty) {
+        return points.map((point) => ({
+          value: clampPercent(point.value),
+          label: point.label ?? "",
+        }));
+      }
+
+      return [
+        { value: 0, label: "" },
+        { value: 0, label: "" },
+      ];
+    },
+    [points, isEmpty],
+  );
+
+  return (
+    <View
+      style={
+        styles.container
+      }
+    >
+      <LineChart
+        data={data}
+        height={CHART_HEIGHT}
+        width={Math.max(
+          280,
+          data.length * pointWidth,
+        )}
+        curved
+        areaChart
+        color={CHART_COLORS.green}
+        thickness={2.5}
+        startFillColor={
+          CHART_COLORS.green
+        }
+        endFillColor={
+          CHART_COLORS.green
+        }
+        startOpacity={0.32}
+        endOpacity={0.02}
+        maxValue={100}
+        noOfSections={5}
+        yAxisOffset={0}
+        formatYLabel={(label) =>
+          `${label}%`
+        }
+        hideDataPoints
+        spacing={pointWidth}
+        initialSpacing={8}
+        endSpacing={8}
+        rulesType="solid"
+        rulesColor={
+          CHART_COLORS.grid
+        }
+        rulesThickness={1}
+        showVerticalLines={false}
+        yAxisColor={
+          CHART_COLORS.grid
+        }
+        xAxisColor={
+          CHART_COLORS.grid
+        }
+        yAxisTextStyle={{
+          fontSize: 10,
+          color:
+            CHART_COLORS.axisLabel,
+        }}
+        xAxisLabelTextStyle={{
+          fontSize: 10,
+          color:
+            CHART_COLORS.axisLabel,
+        }}
+        showReferenceLine1
+        referenceLine1Position={20}
+        referenceLine1Config={{
+          color: CHART_COLORS.red,
+          thickness: 1.5,
+          type: "dashed",
+          dashWidth: 4,
+          dashGap: 4,
+        }}
+        showScrollIndicator={false}
+        scrollToEnd
+        scrollAnimation={false}
+      />
+    </View>
+  );
+}
+
+/* ============================================================
+   STYLES
+   ============================================================ */
+
+const styles =
+  StyleSheet.create({
+    container: {
+      width: "100%",
+    },
+  });

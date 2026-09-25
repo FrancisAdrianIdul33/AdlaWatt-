@@ -18,6 +18,7 @@ import ApplianceBox from "@/components/forms/ApplianceBox";
 import {
   applianceCardGrid,
 } from "@/components/forms/applianceCard";
+import CustomApplianceModal from "@/components/forms/CustomApplianceModal";
 import AppText from "@/components/ui/AppText";
 import SearchBox from "@/components/ui/SearchBox";
 
@@ -101,6 +102,9 @@ export default function ApplianceModal({
   const [customVisible, setCustomVisible] =
     useState(false);
 
+  const [addModalVisible, setAddModalVisible] =
+    useState(false);
+
   const [customName, setCustomName] =
     useState("");
 
@@ -172,6 +176,7 @@ export default function ApplianceModal({
     setSelected([]);
     setSearchText("");
     setCustomVisible(false);
+    setAddModalVisible(false);
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
@@ -231,6 +236,7 @@ export default function ApplianceModal({
     setCustomWatts("");
     setCustomError("");
     setCustomVisible(false);
+    setAddModalVisible(false);
     setEditingCustom(null);
     setIsReset(true);
   };
@@ -299,6 +305,25 @@ export default function ApplianceModal({
     setCustomError("");
     setEditingCustom(null);
     setCustomVisible(false);
+  };
+
+  // ============================================================
+  // ADD MODAL (ADD-ONLY, DropdownModal shell like CalendarModal)
+  // ============================================================
+
+  const handleAddOpen = () => {
+    setEditingCustom(null);
+    setCustomName("");
+    setCustomWatts("");
+    setCustomError("");
+    setAddModalVisible(true);
+  };
+
+  const handleAddCancel = () => {
+    setCustomName("");
+    setCustomWatts("");
+    setCustomError("");
+    setAddModalVisible(false);
   };
 
   // ============================================================
@@ -439,7 +464,7 @@ export default function ApplianceModal({
     setCustomName("");
     setCustomWatts("");
     setCustomError("");
-    setCustomVisible(false);
+    setAddModalVisible(false);
 
     setSuccessMessage(
       `${name} successfully added!`,
@@ -731,7 +756,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="close"
                 size={24}
-                color={Colors.light.text}
+                color="#FFFFFF"
               />
             </Pressable>
           </View>
@@ -789,18 +814,7 @@ export default function ApplianceModal({
             {/* Custom Appliance */}
             <View style={styles.customSection}>
               <Pressable
-                onPress={() => {
-                  if (customVisible) {
-                    handleCustomCancel();
-                    return;
-                  }
-
-                  setEditingCustom(null);
-                  setCustomName("");
-                  setCustomWatts("");
-                  setCustomError("");
-                  setCustomVisible(true);
-                }}
+                onPress={handleAddOpen}
                 style={({ pressed }) => [
                   styles.customButton,
                   pressed && styles.pressed,
@@ -821,8 +835,8 @@ export default function ApplianceModal({
               </Pressable>
             </View>
 
-            {/* Custom Form */}
-            {customVisible && (
+            {/* Custom Form (Edit-only, inline) */}
+            {customVisible && editingCustom && (
               <View
                 style={styles.customForm}
                 onLayout={(event) => {
@@ -897,11 +911,7 @@ export default function ApplianceModal({
                   </Pressable>
 
                   <Pressable
-                    onPress={
-                      editingCustom
-                        ? handleCustomUpdate
-                        : handleCustomAdd
-                    }
+                    onPress={handleCustomUpdate}
                     disabled={
                       !customName.trim() ||
                       !customWatts.trim()
@@ -916,7 +926,7 @@ export default function ApplianceModal({
                       variant="caption"
                       style={styles.addText}
                     >
-                      {editingCustom ? "Save" : "Add"}
+                      Save
                     </AppText>
                   </Pressable>
                 </View>
@@ -1105,7 +1115,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="checkmark-circle-outline"
                 size={17}
-                color={Colors.light.primary}
+                color="#FFFFFF"
               />
 
               <AppText
@@ -1125,7 +1135,7 @@ export default function ApplianceModal({
                 onPress={handleReset}
                 style={({ pressed }) => [
                   styles.resetButton,
-                  pressed && styles.pressed,
+                  pressed && styles.buttonPressed,
                 ]}
               >
                 <AppText
@@ -1140,7 +1150,7 @@ export default function ApplianceModal({
                 onPress={handleSave}
                 style={({ pressed }) => [
                   styles.actionButton,
-                  pressed && styles.pressed,
+                  pressed && styles.buttonPressed,
                 ]}
               >
                 <AppText
@@ -1153,6 +1163,28 @@ export default function ApplianceModal({
             </View>
           </View>
         </View>
+
+        <CustomApplianceModal
+          visible={addModalVisible}
+          name={customName}
+          watts={customWatts}
+          error={customError}
+          onNameChange={(text) => {
+            setCustomName(text);
+            setCustomError("");
+          }}
+          onWattsChange={(text) => {
+            const value = text.replace(
+              /[^\d-]/g,
+              "",
+            );
+
+            setCustomWatts(value);
+            setCustomError("");
+          }}
+          onCancel={handleAddCancel}
+          onAdd={handleCustomAdd}
+        />
       </View>
     </Modal>
   );
@@ -1167,7 +1199,7 @@ const styles = StyleSheet.create({
 
   modal: {
     height: "92%",
-    backgroundColor: Colors.light.surface,
+    backgroundColor: Colors.light.background,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     overflow: "hidden",
@@ -1179,15 +1211,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.light.secondary,
+    backgroundColor: Colors.light.primary,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+    borderBottomColor: Colors.light.primary,
   },
 
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: "#000000",
+    color: "#FFFFFF",
   },
 
   closeButton: {
@@ -1199,15 +1231,17 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
+    backgroundColor: Colors.light.background,
   },
 
   contentContainer: {
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
+    backgroundColor: Colors.light.background,
   },
 
   advisory: {
-    backgroundColor: "rgba(0, 168, 107, 0.08)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: Radius.md,
@@ -1314,8 +1348,8 @@ const styles = StyleSheet.create({
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
+    borderTopColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary,
   },
 
   selectedInfo: {
@@ -1328,7 +1362,7 @@ const styles = StyleSheet.create({
   },
 
   selectedText: {
-    color: Colors.light.textSecondary,
+    color: "#FFFFFF",
     fontSize: 14,
   },
 
@@ -1342,14 +1376,12 @@ const styles = StyleSheet.create({
     minHeight: 46,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.light.border,
     borderRadius: Radius.md,
-    backgroundColor: Colors.glass.white,
+    backgroundColor: "#99DCC4",
   },
 
   resetText: {
-    color: Colors.light.text,
+    color: "#000000",
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1360,17 +1392,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: "#99DCC4",
   },
 
   actionText: {
-    color: "#FFFFFF",
+    color: "#000000",
     fontWeight: "700",
     fontSize: 14,
   },
 
   pressed: {
     opacity: 0.7,
+  },
+
+  buttonPressed: {
+    backgroundColor: Colors.glass.whiteStrong,
+    opacity: 1,
   },
 
   customActions: {

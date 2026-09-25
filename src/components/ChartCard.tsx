@@ -9,8 +9,10 @@ import React, {
 import {
   Animated,
   Easing,
+  ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import Svg, {
@@ -22,7 +24,17 @@ import AppText from "@/components/ui/AppText";
 
 import { Colors } from "@/constants/colors";
 
+import type { ForecastResult } from "@/services/forecast";
+
 import { MonitoringData } from "@/services/monitoringService";
+
+import {
+  formatBestSunSummary,
+  formatClockTime,
+  formatForecastDay,
+  resolveCondition,
+  type WeatherSeverity,
+} from "@/services/weatherConfig";
 
 // ============================================================
 // TYPES
@@ -80,6 +92,9 @@ interface ChartCardProps {
   monitoring: MonitoringData | null;
   weather?: WeatherData | null;
   loading: boolean;
+  forecast?: ForecastResult | null;
+  forecastLoading?: boolean;
+  forecastError?: string;
 }
 
 // ============================================================
@@ -225,7 +240,15 @@ export default function ChartCard({
   monitoring,
   weather,
   loading,
+  forecast = null,
+  forecastLoading = false,
+  forecastError = "",
 }: ChartCardProps) {
+
+  // Live screen width for the forecast exact-3 fit. Read
+  // unconditionally so hook order stays stable across the
+  // per-type branches below.
+  const { width: screenWidth } = useWindowDimensions();
 
   // ==========================================================
   // SUN GAUGE ANIMATION
@@ -1563,6 +1586,28 @@ export default function ChartCard({
         loading,
       );
 
+    // ========================================================
+    // EXACT-3 FIT
+    //
+    // Cell width is computed from the live screen width so
+    // exactly three boxes (Today + next two days) fill the
+    // strip on every screen: strip = screen - 52 (screen and
+    // row padding), minus two 8px gaps, divided by three.
+    // Clamped so small phones stay usable and tablets stop
+    // growing, leaving the rest to the horizontal scroll.
+    // ========================================================
+
+    const forecastCellWidth = Math.min(
+      108,
+      Math.max(
+        84,
+        (screenWidth - 52 - 16) / 3
+      )
+    );
+
+    const forecastSnapInterval =
+      forecastCellWidth + 8;
+
     return (
       <View
         style={[
@@ -1607,81 +1652,388 @@ export default function ChartCard({
         </View>
 
         {/* ==================================================
-            WEATHER INFORMATION
+            5-DAY FORECAST
+            Pinned live Today box + scrolling upcoming days.
+            Today lives here (not in a separate display above),
+            so the strip starts with the current conditions.
             ================================================== */}
 
         <View
           style={
-            styles.weatherMeasurementArea
+            styles.weatherForecastTagRow
+          }
+        >
+
+          <AppText
+            variant="caption"
+            style={
+              styles.weatherForecastTag
+            }
+          >
+            Today
+          </AppText>
+
+        </View>
+
+        <View
+          style={
+            styles.weatherForecastRow
+          }
+        >
+
+          <View
+            style={[
+              styles.weatherForecastTodayBox,
+              { width: forecastCellWidth },
+            ]}
+          >
+
+            <AppText
+              variant="caption"
+              style={
+                styles.weatherForecastWeekday
+              }
+            >
+              {
+                formatForecastDay(
+                  new Date()
+                ).weekday
+              }
+            </AppText>
+
+            <AppText
+              variant="caption"
+              style={
+                styles.weatherForecastDate
+              }
+            >
+              {
+                formatForecastDay(
+                  new Date()
+                ).date
+              }
+            </AppText>
+
+            <Ionicons
+              name={weatherData.icon}
+              size={26}
+              color="#FACC15"
+            />
+
+            <AppText
+              variant="caption"
+              style={
+                styles.weatherForecastTemp
+              }
+            >
+              {loading ? "—" : weatherData.value}
+            </AppText>
+
+            <AppText
+              variant="caption"
+              numberOfLines={1}
+              style={
+                styles.weatherForecastClass
+              }
+            >
+              {weatherData.badge ?? ""}
+            </AppText>
+
+          </View>
+
+          {forecastError ? (
+            <View
+              style={
+                styles.weatherForecastErrorRow
+              }
+            >
+
+              <Ionicons
+                name="warning-outline"
+                size={20}
+                color="#D32F2F"
+                style={{ marginRight: 8 }}
+              />
+
+              <AppText
+                variant="caption"
+                style={
+                  styles.weatherForecastErrorText
+                }
+              >
+                {forecastError}
+              </AppText>
+
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={
+                false
+              }
+              snapToInterval={forecastSnapInterval}
+              decelerationRate="fast"
+              accessibilityRole="none"
+              accessibilityLabel="Upcoming days forecast"
+              style={
+                styles.weatherForecastScroll
+              }
+              contentContainerStyle={
+                styles.weatherForecastScrollContent
+              }
+            >
+
+              {forecastLoading || !forecast
+                ? [0, 1, 2, 3].map((key) => (
+                    <View
+                      key={`skeleton-${key}`}
+                      style={[
+                        styles.weatherForecastCell,
+                        { width: forecastCellWidth },
+                      ]}
+                    >
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.weatherForecastTemp
+                        }
+                      >
+                        —
+                      </AppText>
+
+                    </View>
+                  ))
+                : forecast.upcoming.map((day) => (
+                    <View
+                      key={day.date}
+                      style={[
+                        styles.weatherForecastCell,
+                        { width: forecastCellWidth },
+                      ]}
+                    >
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.weatherForecastWeekday
+                        }
+                      >
+                        {day.weekday}
+                      </AppText>
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.weatherForecastDate
+                        }
+                      >
+                        {day.dateLabel}
+                      </AppText>
+
+                      <Ionicons
+                        name={
+                          day.peakIcon as keyof typeof Ionicons.glyphMap
+                        }
+                        size={26}
+                        color="#FACC15"
+                      />
+
+                      <AppText
+                        variant="caption"
+                        style={
+                          styles.weatherForecastTemp
+                        }
+                      >
+                        {`${day.tempMax}°`}
+
+                        <AppText
+                          style={
+                            styles.weatherForecastTempMin
+                          }
+                        >
+                          {`/${day.tempMin}°`}
+                        </AppText>
+                      </AppText>
+
+                      <View
+                        style={
+                          styles.weatherForecastPopRow
+                        }
+                      >
+
+                        <Ionicons
+                          name="water-outline"
+                          size={11}
+                          color={
+                            Colors.light.primary
+                          }
+                        />
+
+                        <AppText
+                          variant="caption"
+                          style={
+                            styles.weatherForecastPop
+                          }
+                        >
+                          {`${Math.round(
+                            day.popMax * 100
+                          )}%`}
+                        </AppText>
+
+                      </View>
+
+                      <AppText
+                        variant="caption"
+                        numberOfLines={1}
+                        style={
+                          styles.weatherForecastClass
+                        }
+                      >
+                        {day.peakDescription}
+                      </AppText>
+
+                      <View
+                        style={[
+                          styles.weatherForecastPill,
+                          day.solarOutlook ===
+                          "High"
+                            ? styles.weatherForecastPillHigh
+                            : day.solarOutlook ===
+                                "Moderate"
+                              ? styles.weatherForecastPillModerate
+                              : styles.weatherForecastPillLow,
+                        ]}
+                      >
+
+                        <AppText
+                          variant="caption"
+                          style={[
+                            styles.weatherForecastPillText,
+                            day.solarOutlook ===
+                            "High"
+                              ? styles.weatherForecastPillTextHigh
+                              : day.solarOutlook ===
+                                  "Moderate"
+                                ? styles.weatherForecastPillTextModerate
+                                : styles.weatherForecastPillTextLow,
+                          ]}
+                        >
+                          {day.solarOutlook}
+                        </AppText>
+
+                      </View>
+
+                      {day.tempFlag ? (
+                        <View
+                          style={[
+                            styles.weatherForecastFlag,
+                            day.tempFlag === "cold"
+                              ? styles.weatherForecastFlagCool
+                              : styles.weatherForecastFlagHot,
+                          ]}
+                        >
+
+                          <AppText
+                            variant="caption"
+                            style={
+                              day.tempFlag ===
+                              "cold"
+                                ? styles.weatherForecastFlagCoolText
+                                : styles.weatherForecastFlagHotText
+                            }
+                          >
+                            {day.tempFlag === "both"
+                              ? "Hot & Cool"
+                              : day.tempFlag ===
+                                  "hot"
+                                ? "Hot"
+                                : "Cool"}
+                          </AppText>
+
+                        </View>
+                      ) : null}
+
+                      {forecast.bestSunDay ===
+                      day.weekday ? (
+                        <AppText
+                          variant="caption"
+                          style={
+                            styles.weatherForecastBest
+                          }
+                        >
+                          <AppText
+                            style={
+                              styles.weatherForecastBestStar
+                            }
+                          >
+                            ★
+                          </AppText>
+                          {" Best sun"}
+                        </AppText>
+                      ) : null}
+
+                    </View>
+                  ))}
+
+            </ScrollView>
+          )}
+
+        </View>
+
+        <View
+          style={
+            styles.weatherForecastFooter
           }
         >
 
           <View
             style={
-              styles.weatherMetricCell
+              styles.weatherForecastLocationRow
             }
           >
 
-            {/* ==================================================
-                LOCATION
-                ================================================== */}
+            <Ionicons
+              name="location-outline"
+              size={14}
+              color={
+                Colors.light.textSecondary
+              }
+              style={{ marginRight: 4 }}
+            />
 
             <AppText
               variant="caption"
+              numberOfLines={1}
               style={
-                styles.weatherLocation
+                styles.weatherForecastLocation
               }
             >
-              {weatherData.label}
+              {`${weatherData.label} • Updated ${
+                forecast
+                  ? formatClockTime(
+                      new Date(
+                        forecast.fetchedAt
+                      )
+                    )
+                  : "—"
+              }`}
             </AppText>
-
-            {/* ==================================================
-                TEMPERATURE
-                ================================================== */}
-
-            <AppText
-              variant="heading"
-              style={
-                styles.weatherTemperature
-              }
-            >
-              {weatherData.value}
-            </AppText>
-
-            {/* ==================================================
-                WEATHER CONDITION
-                ================================================== */}
-
-            <View
-              style={
-                styles.weatherStatusSlot
-              }
-            >
-
-              {weatherData.badge && (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    weatherData.badgeStyle,
-                  ]}
-                >
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.statusBadgeText,
-                      weatherData.badgeTextStyle,
-                    ]}
-                  >
-                    {weatherData.badge}
-                  </AppText>
-
-                </View>
-              )}
-
-            </View>
 
           </View>
+
+          {forecast && !forecastError ? (
+            <AppText
+              variant="caption"
+              style={
+                styles.weatherForecastSummary
+              }
+            >
+              {formatBestSunSummary(
+                forecast.bestSunDay
+              )}
+            </AppText>
+          ) : null}
 
         </View>
 
@@ -2241,33 +2593,7 @@ function formatSolarTimer(
 function getWeatherIcon(
   description: string,
 ): keyof typeof Ionicons.glyphMap {
-  const text = description.toLowerCase();
-
-  if (/thunder|storm/.test(text)) {
-    return "thunderstorm-outline";
-  }
-
-  if (/snow|sleet|ice|freezing/.test(text)) {
-    return "snow-outline";
-  }
-
-  if (/rain|drizzle|shower/.test(text)) {
-    return "rainy-outline";
-  }
-
-  if (/clear|sunny/.test(text)) {
-    return "sunny-outline";
-  }
-
-  if (/cloud|overcast/.test(text)) {
-    return "cloud-outline";
-  }
-
-  if (/fog|mist|haze|smoke|dust/.test(text)) {
-    return "cloud-outline";
-  }
-
-  return "partly-sunny-outline";
+  return resolveCondition(description).icon;
 }
 
 // ============================================================
@@ -2277,54 +2603,10 @@ function getWeatherIcon(
 // set of severity buckets used to pick a badge color.
 // ============================================================
 
-type WeatherSeverity =
-  | "clear"
-  | "cloudy"
-  | "fog"
-  | "light"
-  | "moderate"
-  | "severe";
-
 function getWeatherSeverity(
   description: string,
 ): WeatherSeverity {
-  const text = description.toLowerCase();
-
-  if (
-    /thunder|heavy|violent|torrential|extreme|hail/.test(
-      text,
-    )
-  ) {
-    return "severe";
-  }
-
-  if (
-    /moderate/.test(text)
-  ) {
-    return "moderate";
-  }
-
-  if (
-    /drizzle|light|slight|patchy|shower/.test(
-      text,
-    )
-  ) {
-    return "light";
-  }
-
-  if (
-    /fog|mist|haze|smoke|dust|sand|ash/.test(
-      text,
-    )
-  ) {
-    return "fog";
-  }
-
-  if (/cloud|overcast/.test(text)) {
-    return "cloudy";
-  }
-
-  return "clear";
+  return resolveCondition(description).severity;
 }
 
 // ============================================================
@@ -2752,47 +3034,244 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  weatherMeasurementArea: {
-    flex: 1,
+  // ==========================================================
+  // 4-DAY FORECAST STRIP
+  //
+  // Pinned live Today box + horizontal upcoming-days scroll
+  // sized so three boxes are visible at once. Medium type
+  // scale stays readable down to ~320px widths; tabular
+  // numerals stop temps jittering.
+  // ==========================================================
+
+  weatherForecastRow: {
     width: "100%",
+    flexDirection: "row",
     alignItems: "stretch",
-    justifyContent: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    columnGap: 8,
   },
 
-  weatherMetricCell: {
-    flex: 1,
-    minHeight: 105,
+  weatherForecastTagRow: {
+    width: "100%",
+    minHeight: 16,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+  },
+
+  weatherForecastTag: {
+    color: Colors.light.primary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  weatherForecastTodayBox: {
+    width: 88,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor:
+      Colors.glass.white,
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderRadius: 12,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    rowGap: 3,
   },
 
-  weatherLocation: {
+  weatherForecastScroll: {
+    flex: 1,
+  },
+
+  weatherForecastScrollContent: {
+    columnGap: 8,
+    paddingRight: 2,
+    alignItems: "stretch",
+  },
+
+  weatherForecastCell: {
+    width: 88,
+    minHeight: 156,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      Colors.glass.white,
+    borderWidth: 1.5,
+    borderColor: Colors.light.secondary,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    rowGap: 3,
+  },
+
+  weatherForecastWeekday: {
     color: "#000000",
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 16,
+  },
+
+  weatherForecastDate: {
+    color: Colors.light.textSecondary,
+    fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
-    lineHeight: 18,
-    flexShrink: 1,
+    lineHeight: 16,
   },
 
-  weatherTemperature: {
+  weatherForecastTemp: {
     color: "#000000",
-    fontSize: 22,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "700",
     textAlign: "center",
-    marginTop: 2,
-    lineHeight: 26,
+    marginTop: 3,
+    lineHeight: 22,
+    fontVariant: ["tabular-nums"],
   },
 
-  weatherStatusSlot: {
-    minHeight: 25,
+  weatherForecastTempMin: {
+    color: Colors.light.textSecondary,
+    fontSize: 13,
+    fontWeight: "400",
+  },
+
+  weatherForecastPopRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    columnGap: 2,
+  },
+
+  weatherForecastPop: {
+    color: Colors.light.primary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  weatherForecastClass: {
+    color: Colors.light.textSecondary,
+    fontSize: 12,
+    textAlign: "center",
+    textTransform: "capitalize",
+  },
+
+  weatherForecastPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     marginTop: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  weatherForecastPillHigh: {
+    backgroundColor: Colors.light.primary,
+  },
+
+  weatherForecastPillModerate: {
+    backgroundColor: Colors.light.secondary,
+  },
+
+  weatherForecastPillLow: {
+    backgroundColor: Colors.light.error,
+  },
+
+  weatherForecastPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  weatherForecastPillTextHigh: {
+    color: "#FFFFFF",
+  },
+
+  weatherForecastPillTextModerate: {
+    color: "#000000",
+  },
+
+  weatherForecastPillTextLow: {
+    color: "#FFFFFF",
+  },
+
+  weatherForecastFlag: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  weatherForecastFlagHot: {
+    backgroundColor: Colors.light.warning,
+  },
+
+  weatherForecastFlagCool: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+
+  weatherForecastFlagHotText: {
+    color: "#000000",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  weatherForecastFlagCoolText: {
+    color: Colors.light.textSecondary,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  weatherForecastBest: {
+    color: Colors.light.text,
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
+  weatherForecastBestStar: {
+    color: Colors.light.secondary,
+  },
+
+  weatherForecastErrorRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+
+  weatherForecastErrorText: {
+    color: "#D32F2F",
+    flex: 1,
+  },
+
+  weatherForecastFooter: {
+    width: "100%",
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    rowGap: 2,
+  },
+
+  weatherForecastLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  weatherForecastLocation: {
+    color: Colors.light.textSecondary,
+    fontSize: 11,
+    flex: 1,
+  },
+
+  weatherForecastSummary: {
+    color: Colors.light.primary,
+    fontSize: 11,
+    fontWeight: "600",
   },
 
   // ==========================================================

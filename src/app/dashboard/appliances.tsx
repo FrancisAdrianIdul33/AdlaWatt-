@@ -13,7 +13,7 @@ import ApplianceStatusBox from "@/components/forms/ApplianceStatusBox";
 import {
   applianceCardGrid,
 } from "@/components/forms/applianceCard";
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
@@ -25,6 +25,13 @@ import {
   Radius,
 } from "@/constants/theme";
 import { supabase } from "@/lib/supabase";
+import {
+  type BatteryStateInput,
+  recommendAppliance,
+} from "@/services/recommendation";
+import {
+  useMonitoring,
+} from "@/services/monitoringService";
 
 type PowerLevel =
   | "All"
@@ -51,7 +58,81 @@ type SelectedAppliance = {
 
 type StatusFilter =
   | "Advisable"
+  | "Caution"
   | "notAdvisable";
+
+type ApplianceStatus =
+  | "advisable"
+  | "care"
+  | "notAdvisable";
+
+const STATUS_FOR_FILTER: Record<
+  StatusFilter,
+  ApplianceStatus
+> = {
+  Advisable: "advisable",
+  Caution: "care",
+  notAdvisable: "notAdvisable",
+};
+
+const TOGGLE_META: {
+  filter: StatusFilter;
+  label: string;
+  color: string;
+  accessibilityLabel: string;
+}[] = [
+  {
+    filter: "Advisable",
+    label: "Advisable",
+    color: Colors.light.primary,
+    accessibilityLabel:
+      "Show advisable appliances",
+  },
+  {
+    filter: "Caution",
+    label: "Caution",
+    color: Colors.light.warning,
+    accessibilityLabel:
+      "Show appliances to use with care",
+  },
+  {
+    filter: "notAdvisable",
+    label: "Not Advisable",
+    color: Colors.light.error,
+    accessibilityLabel:
+      "Show not advisable appliances",
+  },
+];
+
+const statusMeta = (
+  status: ApplianceStatus,
+) => {
+
+  if (
+    status === "care"
+  ) {
+
+    return {
+      label: "Use with care",
+      tone: "care" as const,
+    };
+  }
+
+  if (
+    status === "notAdvisable"
+  ) {
+
+    return {
+      label: "Not advised",
+      tone: "not" as const,
+    };
+  }
+
+  return {
+    label: "OK to use",
+    tone: "ok" as const,
+  };
+};
 
 /*
  * UI area names -> database area names
@@ -72,6 +153,10 @@ const areaMap: Record<
 export default function AppliancesScreen() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("Advisable");
+
+  const {
+    monitoring,
+  } = useMonitoring();
 
   const [
     selectedAppliances,
@@ -157,6 +242,74 @@ export default function AppliancesScreen() {
     setAreaModalVisible(false);
   };
 
+  // ==========================================================
+  // RECOMMENDATION STATUS
+  //
+  // Live battery readings drive the engine verdict. When no
+  // monitoring row exists yet, the legacy wattage heuristic
+  // keeps the prior behavior until data arrives.
+  // ==========================================================
+
+  const getApplianceStatus = (
+    appliance: SelectedAppliance,
+  ): ApplianceStatus => {
+
+    if (
+      !monitoring
+    ) {
+
+      const watts =
+        appliance.watts
+          .match(/\d+/g)
+          ?.map(Number) ?? [];
+
+      const maxWatts = Math.max(
+        ...watts,
+        0,
+      );
+
+      return maxWatts < 300
+        ? "advisable"
+        : "notAdvisable";
+    }
+
+    const battery: BatteryStateInput = {
+      soc: monitoring.battery_level,
+      voltage: monitoring.voltage,
+      remainingWh:
+        monitoring.watt_hours,
+      dod: monitoring.dod_status,
+    };
+
+    const recommendation =
+      recommendAppliance(
+        battery,
+        {
+          id: appliance.id,
+          name: appliance.name,
+          wattage: appliance.watts,
+        },
+      );
+
+    if (
+      recommendation.verdict ===
+      "notRecommended"
+    ) {
+
+      return "notAdvisable";
+    }
+
+    if (
+      recommendation.verdict ===
+      "care"
+    ) {
+
+      return "care";
+    }
+
+    return "advisable";
+  };
+
   const filteredAppliances =
     selectedAppliances.filter((appliance) => {
       const watts =
@@ -180,12 +333,13 @@ export default function AppliancesScreen() {
         appliance.area === areaMap[areaFilter];
 
       const status =
-        maxWatts >= 300
-          ? "notAdvisable"
-          : "Advisable";
+        getApplianceStatus(appliance);
 
       const matchesStatus =
-        status === statusFilter;
+        status ===
+        STATUS_FOR_FILTER[
+          statusFilter
+        ];
 
       return (
         matchesPower &&
@@ -315,58 +469,56 @@ export default function AppliancesScreen() {
 
         {/* Status Filter */}
         <View style={styles.statusToggle}>
-          <Pressable
-            onPress={() =>
-              setStatusFilter("Advisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show advisable appliances"
-            style={({ pressed }) => [
-              styles.statusButton,
-              statusFilter === "Advisable" && {
-                backgroundColor:
-                  Colors.light.primary,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.statusText,
-                statusFilter === "Advisable" &&
-                  styles.activeStatusText,
-              ]}
-            >
-              Advisable
-            </AppText>
-          </Pressable>
+          {TOGGLE_META.map(
+            ({
+              filter,
+              label,
+              color,
+              accessibilityLabel,
+            }) => {
+              const active =
+                statusFilter === filter;
 
-          <Pressable
-            onPress={() =>
-              setStatusFilter("notAdvisable")
-            }
-            accessibilityRole="button"
-            accessibilityLabel="Show not advisable appliances"
-            style={({ pressed }) => [
-              styles.statusButton,
-              statusFilter === "notAdvisable" && {
-                backgroundColor: "#EF4444",
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText
-              variant="caption"
-              style={[
-                styles.statusText,
-                statusFilter === "notAdvisable" &&
-                  styles.activeStatusText,
-              ]}
-            >
-              Not Advisable
-            </AppText>
-          </Pressable>
+              return (
+                <Pressable
+                  key={filter}
+                  onPress={() =>
+                    setStatusFilter(
+                      filter,
+                    )
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    accessibilityLabel
+                  }
+                  style={({ pressed }) => [
+                    styles.statusButton,
+                    active && {
+                      backgroundColor:
+                        color,
+                    },
+                    pressed &&
+                    styles.pressed,
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.statusText,
+                      active &&
+                      (filter === "Caution"
+                        ? styles
+                            .activeStatusTextCaution
+                        : styles
+                            .activeStatusText),
+                    ]}
+                  >
+                    {label}
+                  </AppText>
+                </Pressable>
+              );
+            },
+          )}
         </View>
 
         {/* Appliances */}
@@ -376,9 +528,13 @@ export default function AppliancesScreen() {
               title={
                 selectedAppliances.length === 0
                   ? "No Appliances"
-                  : statusFilter === "Advisable"
+                  : statusFilter ===
+                      "Advisable"
                     ? "No Advisable Appliances"
-                    : "No Not Advisable Appliances"
+                    : statusFilter ===
+                        "Caution"
+                      ? "No Appliances to Use With Care"
+                      : "No Not Advisable Appliances"
               }
               description={
                 selectedAppliances.length === 0
@@ -388,57 +544,34 @@ export default function AppliancesScreen() {
               icon={
                 selectedAppliances.length === 0
                   ? "cube-outline"
-                  : statusFilter === "Advisable"
+                  : statusFilter ===
+                      "Advisable"
                     ? "checkmark-circle-outline"
-                    : "warning-outline"
+                    : statusFilter ===
+                        "Caution"
+                      ? "warning-outline"
+                      : "alert-circle-outline"
               }
             />
           ) : (
             filteredAppliances.map((appliance) => {
-              const color =
-                appliance.area === "Living Area"
-                  ? Colors.light.primary
-                  : appliance.area === "Bedroom"
-                    ? "#9B59B6"
-                    : appliance.area ===
-                        "Kitchen & Dining Area"
-                      ? Colors.light.secondary
-                      : appliance.area ===
-                          "Work & Study Area"
-                        ? "#4A90E2"
-                        : appliance.area ===
-                            "Bathroom & Laundry Area"
-                          ? "#16A085"
-                          : appliance.area ===
-                              "Porch & Yard"
-                            ? "#E67E22"
-                            : appliance.area ===
-                                "Custom Appliances"
-                              ? Colors.light.primary
-                              : Colors.light.border;
-
-              const watts =
-                appliance.watts
-                  .match(/\d+/g)
-                  ?.map(Number) ?? [];
-
-              const maxWatts = Math.max(
-                ...watts,
-                0,
-              );
-
               const status =
-                maxWatts >= 300
-                  ? "Not advised"
-                  : "OK to use";
+                getApplianceStatus(appliance);
+
+              const statusMapped =
+                statusMeta(status);
 
               return (
                 <ApplianceStatusBox
                   key={appliance.id}
                   name={appliance.name}
                   wattage={appliance.watts}
-                  color={color}
-                  status={status}
+                  status={
+                    statusMapped.label
+                  }
+                  statusTone={
+                    statusMapped.tone
+                  }
                 />
               );
             })
@@ -659,5 +792,9 @@ const styles = StyleSheet.create({
 
   activeStatusText: {
     color: "#FFFFFF",
+  },
+
+  activeStatusTextCaution: {
+    color: Colors.light.text,
   },
 });

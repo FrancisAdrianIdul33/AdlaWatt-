@@ -3,13 +3,15 @@ import {
   Platform,
 } from "react-native";
 
-const adlawattLogo =
-  require("@/assets/images/adlawatt-logo.png");
-
 import { supabase } from "@/lib/supabase";
+
+import { CAUTION_SOC } from "@/services/recommendation";
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+
+const adlawattLogo =
+  require("@/assets/images/adlawatt-logo.png");
 
 /* ==========================================================
    TYPES
@@ -18,7 +20,8 @@ import autoTable from "jspdf-autotable";
 export type ChartFrequency =
   | "Daily"
   | "Weekly"
-  | "Monthly";
+  | "Monthly"
+  | "Yearly";
 
 export type ReportFrequency =
   | "Daily"
@@ -89,6 +92,16 @@ export interface MonitoringBucket {
   key: string;
   date: Date;
   rows: MonitoringHistoryRow[];
+}
+
+export type BatteryHealthStatus =
+  | "Safe"
+  | "Unsafe";
+
+export interface HealthCell {
+  date: Date;
+  temperature: number;
+  status: string;
 }
 
 /* ============================================================
@@ -204,6 +217,7 @@ export const FREQUENCIES: ChartFrequency[] = [
   "Daily",
   "Weekly",
   "Monthly",
+  "Yearly",
 ];
 
 export const REPORT_FREQUENCIES: ReportFrequency[] = [
@@ -301,6 +315,12 @@ export function formatDateLabel(
     );
   }
 
+  if (frequency === "Yearly") {
+    return date
+      .getFullYear()
+      .toString();
+  }
+
   return date.toLocaleDateString(
     "en-US",
     {
@@ -381,6 +401,12 @@ export function getDateKey(
     ].join("-");
   }
 
+  if (frequency === "Yearly") {
+    return date
+      .getFullYear()
+      .toString();
+  }
+
   return [
     date.getFullYear(),
     date.getMonth(),
@@ -429,6 +455,24 @@ export function getBucketDate(
     return result;
   }
 
+  if (frequency === "Yearly") {
+    result.setMonth(
+      0,
+      1,
+    );
+
+    result.setDate(1);
+
+    result.setHours(
+      0,
+      0,
+      0,
+      0,
+    );
+
+    return result;
+  }
+
   result.setDate(1);
 
   result.setHours(
@@ -458,9 +502,15 @@ export function getNextBucketDate(
     result.setDate(
       result.getDate() + 7,
     );
-  } else {
+  } else if (
+    frequency === "Monthly"
+  ) {
     result.setMonth(
       result.getMonth() + 1,
+    );
+  } else {
+    result.setFullYear(
+      result.getFullYear() + 1,
     );
   }
 
@@ -1700,31 +1750,50 @@ export function groupMonitoringHistory(
    MONITORING CHART DATA PROCESSING
    ============================================================ */
 
-export function getBatteryChartData(
+export interface BatteryRangePoint {
+  value: number;
+  min: number;
+  max: number;
+  label?: string;
+}
+
+export function getBatteryChartRangeData(
   groupedMonitoring: MonitoringBucket[],
   chartFrequency: ChartFrequency,
-): ChartPoint[] {
+): BatteryRangePoint[] {
   return groupedMonitoring.map(
-    (bucket) => ({
-      value: clamp(
-        average(
-          bucket.rows.map(
-            (row) =>
-              toNumber(
-                row.battery_level,
-              ),
-          ),
-        ),
-        0,
-        100,
-      ),
+    (bucket) => {
+      const levels =
+        bucket.rows.map(
+          (row) =>
+            toNumber(
+              row.battery_level,
+            ),
+        );
 
-      label:
-        formatDateLabel(
-          bucket.date,
-          chartFrequency,
+      return {
+        value: clamp(
+          average(levels),
+          0,
+          100,
         ),
-    }),
+        min: clamp(
+          minimum(levels),
+          0,
+          100,
+        ),
+        max: clamp(
+          maximum(levels),
+          0,
+          100,
+        ),
+        label:
+          formatDateLabel(
+            bucket.date,
+            chartFrequency,
+          ),
+      };
+    },
   );
 }
 
@@ -1863,6 +1932,126 @@ export function getSolarTemperatureData(
         ),
     }),
   );
+}
+
+/* ============================================================
+   LIVE-SYSTEM CHART DATA PROCESSING
+   ============================================================ */
+
+export function getLoadChartData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => ({
+      value: Math.max(
+        0,
+        average(
+          bucket.rows.map(
+            (row) =>
+              toNumber(
+                row.current_load,
+              ),
+          ),
+        ),
+      ),
+
+      label:
+        formatDateLabel(
+          bucket.date,
+          chartFrequency,
+        ),
+    }),
+  );
+}
+
+export function getVoltageChartData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): ChartPoint[] {
+  return groupedMonitoring.map(
+    (bucket) => ({
+      value: average(
+        bucket.rows.map(
+          (row) =>
+            toNumber(
+              row.voltage,
+            ),
+        ),
+      ),
+
+      label:
+        formatDateLabel(
+          bucket.date,
+          chartFrequency,
+        ),
+    }),
+  );
+}
+
+const TEMPERATURE_STATUS_RANK: Record<
+  string,
+  number
+> = {
+  Nominal: 0,
+  Elevated: 1,
+  High: 2,
+  Critical: 3,
+};
+
+export function getTemperatureHealthData(
+  groupedMonitoring: MonitoringBucket[],
+  chartFrequency: ChartFrequency,
+): HealthCell[] {
+  return groupedMonitoring.map(
+    (bucket) => {
+      let status =
+        "Nominal";
+
+      bucket.rows.forEach(
+        (row) => {
+          const rowStatus =
+            row.battery_temperature_status ??
+            "Nominal";
+
+          if (
+            TEMPERATURE_STATUS_RANK[
+              rowStatus
+            ] >
+            TEMPERATURE_STATUS_RANK[
+              status
+            ]
+          ) {
+            status = rowStatus;
+          }
+        },
+      );
+
+      return {
+        date: bucket.date,
+        temperature:
+          average(
+            bucket.rows.map(
+              (row) =>
+                toNumber(
+                  row.battery_temperature,
+                ),
+            ),
+          ),
+
+        status,
+      };
+    },
+  );
+}
+
+export function getDoDStatus(
+  batteryLevel: number,
+): BatteryHealthStatus {
+  return batteryLevel <
+    CAUTION_SOC
+    ? "Unsafe"
+    : "Safe";
 }
 
 /* ============================================================
@@ -2400,16 +2589,6 @@ const PDF_BODY_FILL: [
   255,
   255,
   255,
-];
-
-const PDF_ALT_FILL: [
-  number,
-  number,
-  number,
-] = [
-  248,
-  245,
-  234,
 ];
 
 const PDF_TEXT: [

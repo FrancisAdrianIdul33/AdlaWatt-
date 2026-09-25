@@ -1,12 +1,21 @@
 import AnalyticsCards from "@/components/AnalyticsCard";
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
+import AnalyticsChartCard from "@/components/AnalyticsChartCard";
+import BatteryLevelChart, {
+  BatteryLevelPoint,
+} from "@/components/charts/BatteryLevelChart";
+import {
+  DropdownModal,
+  RadioOptionRow,
+} from "@/components/ui/DropdownModal";
 import { Colors } from "@/constants/colors";
 import {
   AnalyticsRange,
   ApplianceUsageHistoryRow,
+  ChartFrequency,
   MonitoringHistoryRow,
   REPORT_FREQUENCIES,
   ReportFrequency,
@@ -16,21 +25,21 @@ import {
   downloadPdfOnWeb,
   generateAdlaWattCsv,
   generateAdlaWattPdf,
+  getBatteryChartRangeData,
   getDefaultRange,
+  groupMonitoringHistory,
   loadAnalyticsData,
   prepareReportData,
 } from "@/services/analyticsService";
-import { Ionicons } from "@expo/vector-icons";
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import {
   Alert,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   Share,
   StyleSheet,
@@ -53,11 +62,6 @@ export default function AnalyticsScreen() {
   ] = useState<ApplianceUsageHistoryRow[]>([]);
 
   const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
     reportFrequency,
     setReportFrequency,
   ] = useState<ReportFrequency>(
@@ -76,11 +80,33 @@ export default function AnalyticsScreen() {
     getDefaultRange(),
   );
 
+  const [
+    batteryFrequency,
+    setBatteryFrequency,
+  ] = useState<ChartFrequency>(
+    "Daily",
+  );
+
+  const batteryPoints =
+    useMemo<BatteryLevelPoint[]>(() => {
+      const buckets =
+        groupMonitoringHistory(
+          monitoringHistory,
+          batteryFrequency,
+        );
+
+      return getBatteryChartRangeData(
+        buckets,
+        batteryFrequency,
+      );
+    }, [
+      monitoringHistory,
+      batteryFrequency,
+    ]);
+
   const loadAnalytics =
     useCallback(
       async () => {
-        setLoading(true);
-
         const {
           monitoringHistory:
           monitoringRows,
@@ -97,13 +123,8 @@ export default function AnalyticsScreen() {
         setApplianceUsageHistory(
           applianceRows,
         );
-
-        setLoading(false);
       },
-      [
-        range.start,
-        range.end,
-      ],
+      [range],
     );
 
   useEffect(() => {
@@ -375,9 +396,25 @@ export default function AnalyticsScreen() {
         </View>
 
         {/* ======================================================
+            ANALYTICS CHARTS
+        ====================================================== */}
+        <AnalyticsChartCard
+          title="Battery Level Over Time"
+          subtitle="Average battery level per period, with the 20% safety floor marked."
+          icon="battery-half-outline"
+          frequency={batteryFrequency}
+          onFrequencyChange={
+            setBatteryFrequency
+          }
+        >
+          <BatteryLevelChart
+            points={batteryPoints}
+          />
+        </AnalyticsChartCard>
+
+        {/* ======================================================
             ANALYTICS PANEL
-            Placeholder + report export. Chart visuals are
-            temporarily disabled.
+            Report export + date-range controls.
         ====================================================== */}
         <AnalyticsCards
           reportFrequency={
@@ -396,7 +433,6 @@ export default function AnalyticsScreen() {
           generateReport={
             generateReport
           }
-          loading={loading}
         />
 
         {/* Copyright */}
@@ -406,112 +442,35 @@ export default function AnalyticsScreen() {
       {/* ========================================================
           REPORT FREQUENCY MODAL
       ======================================================== */}
-      <Modal
-        visible={
-          reportModalVisible
-        }
-        transparent
-        animationType="fade"
-        onRequestClose={() =>
-          setReportModalVisible(
-            false,
-          )
+      <DropdownModal
+        visible={reportModalVisible}
+        title="Report Frequency"
+        onClose={() =>
+          setReportModalVisible(false)
         }
       >
-        <Pressable
-          style={
-            styles.modalOverlay
-          }
-          onPress={() =>
-            setReportModalVisible(
-              false,
-            )
-          }
-        >
-          <Pressable
-            style={
-              styles.modalCard
-            }
-            onPress={() => { }}
-          >
-            <View
-              style={
-                styles.modalHeader
+        {REPORT_FREQUENCIES.map(
+          (option) => (
+            <RadioOptionRow
+              key={option}
+              label={option}
+              selected={
+                reportFrequency ===
+                option
               }
-            >
-              <AppText
-                variant="body"
-                style={
-                  styles.modalTitle
-                }
-              >
-                Report Frequency
-              </AppText>
+              onPress={() => {
+                setReportFrequency(
+                  option,
+                );
 
-              <Pressable
-                onPress={() =>
-                  setReportModalVisible(
-                    false,
-                  )
-                }
-              >
-                <Ionicons
-                  name="close-outline"
-                  size={22}
-                  color="#000000"
-                />
-              </Pressable>
-            </View>
-
-            {REPORT_FREQUENCIES.map(
-              (option) => (
-                <Pressable
-                  key={option}
-                  style={[
-                    styles.modalOption,
-                    reportFrequency ===
-                    option &&
-                    styles.selectedModalOption,
-                  ]}
-                  onPress={() => {
-                    setReportFrequency(
-                      option,
-                    );
-                    setReportModalVisible(
-                      false,
-                    );
-                  }}
-                >
-                  <Ionicons
-                    name={
-                      reportFrequency ===
-                        option
-                        ? "radio-button-on-outline"
-                        : "radio-button-off-outline"
-                    }
-                    size={18}
-                    color={
-                      Colors.light.primary
-                    }
-                  />
-
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.modalOptionText,
-                      reportFrequency ===
-                      option &&
-                      styles.selectedModalOptionText,
-                    ]}
-                  >
-                    {option}
-                  </AppText>
-                </Pressable>
-              ),
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+                setReportModalVisible(
+                  false,
+                );
+              }}
+            />
+          ),
+        )}
+      </DropdownModal>
     </ScreenContainer2>
   );
 }
@@ -532,7 +491,6 @@ const analyticsDimensions = {
   headerRadius: 16,
   headerBorderWidth: 3,
   contentBottomPadding: 24,
-  modalRadius: 18,
 };
 
 /* ============================================================
@@ -587,68 +545,5 @@ const styles =
         Colors.light.textSecondary,
       marginTop: 6,
       lineHeight: 20,
-    },
-
-    /* ========================================================
-       MODALS
-    ======================================================== */
-
-    modalOverlay: {
-      flex: 1,
-      backgroundColor:
-        "rgba(0, 0, 0, 0.40)",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 20,
-    },
-
-    modalCard: {
-      width: "100%",
-      maxWidth: 420,
-      backgroundColor:
-        "#FFFFFF",
-      borderRadius:
-        analyticsDimensions.modalRadius,
-      padding: 17,
-    },
-
-    modalHeader: {
-      width: "100%",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-      marginBottom: 8,
-    },
-
-    modalTitle: {
-      color: "#000000",
-      fontWeight: "700",
-      fontSize: 17,
-    },
-
-    modalOption: {
-      width: "100%",
-      minHeight: 48,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      paddingHorizontal: 10,
-      borderRadius: 10,
-    },
-
-    selectedModalOption: {
-      backgroundColor:
-        "rgba(0, 168, 107, 0.08)",
-    },
-
-    modalOptionText: {
-      color: "#000000",
-    },
-
-    selectedModalOptionText: {
-      fontWeight: "700",
-      color:
-        Colors.light.primary,
     },
   });

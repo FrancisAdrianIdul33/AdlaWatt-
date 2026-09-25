@@ -1,5 +1,14 @@
 import * as Location from "expo-location";
 
+import weatherJson from "@/data/weather.json";
+import {
+  formatApiError,
+  formatCoordFallback,
+  formatNetworkError,
+  formatTimeoutError,
+  roundTemperature,
+} from "@/services/weatherConfig";
+
 // ============================================================
 // OPENWEATHER WEATHER FETCHER
 //
@@ -16,13 +25,14 @@ import * as Location from "expo-location";
 
 // The API key is declared in .env / .env.local as
 // EXPO_PUBLIC_OWM_KEY and is inlined at build time.
+// Endpoint, units, and timeout come from weather.json.
 const OPEN_WEATHER_APP_ID =
   process.env.EXPO_PUBLIC_OWM_KEY;
 
 const CURRENT_WEATHER_URL =
-  "https://api.openweathermap.org/data/2.5/weather";
+  weatherJson.api.currentUrl;
 
-const UNITS = "metric";
+const UNITS = weatherJson.api.units;
 
 /*
  * Every network call is aborted after this long so the weather
@@ -31,7 +41,7 @@ const UNITS = "metric";
  * raw "AbortError: signal is aborted without reason" never
  * reaches the console.
  */
-const REQUEST_TIMEOUT_MS = 8 * 1000;
+const REQUEST_TIMEOUT_MS = weatherJson.api.timeoutMs;
 
 // ============================================================
 // TYPES
@@ -86,7 +96,7 @@ function validateApiKey(): void {
   ) {
     throw new WeatherError(
       "missing_key",
-      "Weather API key is missing. Set EXPO_PUBLIC_OWM_KEY in the .env file."
+      weatherJson.messages.errors.missing_key
     );
   }
 }
@@ -102,7 +112,7 @@ async function getCoordinates(): Promise<Coordinates> {
   if (status !== "granted") {
     throw new WeatherError(
       "permission_denied",
-      "Location permission was denied. Enable location access to get the current weather."
+      weatherJson.messages.errors.permission_denied
     );
   }
 
@@ -112,7 +122,7 @@ async function getCoordinates(): Promise<Coordinates> {
   if (!servicesEnabled) {
     throw new WeatherError(
       "location_unavailable",
-      "Location services are disabled on this device. Turn them on to get the current weather."
+      weatherJson.messages.errors.services_disabled
     );
   }
 
@@ -134,7 +144,7 @@ async function getCoordinates(): Promise<Coordinates> {
     ) {
       throw new WeatherError(
         "location_unavailable",
-        "The device returned invalid GPS coordinates."
+        weatherJson.messages.errors.invalid_coordinates
       );
     }
 
@@ -149,7 +159,7 @@ async function getCoordinates(): Promise<Coordinates> {
 
     throw new WeatherError(
       "location_unavailable",
-      "Could not determine your location. Try again with GPS enabled."
+      weatherJson.messages.errors.location_unavailable
     );
   }
 }
@@ -191,7 +201,7 @@ async function fetchCurrentWeather(
     if (!response.ok) {
       throw new WeatherError(
         "api",
-        `OpenWeather API returned HTTP ${response.status}.`
+        formatApiError(response.status)
       );
     }
 
@@ -200,7 +210,7 @@ async function fetchCurrentWeather(
     } catch {
       throw new WeatherError(
         "invalid_response",
-        "OpenWeather returned a response that is not valid JSON."
+        weatherJson.messages.errors.invalid_json
       );
     }
   } catch (error) {
@@ -208,20 +218,24 @@ async function fetchCurrentWeather(
       throw error;
     }
 
-    // The AbortController fired the 8s timeout.
+    // The AbortController fired the configured timeout.
     if (
       error instanceof Error &&
       error.name === "AbortError"
     ) {
       throw new WeatherError(
         "timeout",
-        `Weather request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds.`
+        formatTimeoutError()
       );
     }
 
     throw new WeatherError(
       "network",
-      `Could not reach OpenWeather. ${error instanceof Error ? error.message : "Network error."}`
+      formatNetworkError(
+        error instanceof Error
+          ? error.message
+          : "Network error."
+      )
     );
   } finally {
     clearTimeout(timeout);
@@ -242,12 +256,6 @@ interface OpenWeatherCurrentResponse {
   name?: unknown;
 }
 
-function roundTemperature(
-  value: number
-): number {
-  return Math.round(value * 10) / 10;
-}
-
 function parseWeatherResponse(
   data: unknown,
   coordinates: Coordinates
@@ -258,7 +266,7 @@ function parseWeatherResponse(
   ) {
     throw new WeatherError(
       "invalid_response",
-      "OpenWeather returned an unexpected response structure."
+      weatherJson.messages.errors.invalid_response
     );
   }
 
@@ -277,7 +285,7 @@ function parseWeatherResponse(
   ) {
     throw new WeatherError(
       "invalid_response",
-      "OpenWeather response is missing a valid temperature."
+      weatherJson.messages.errors.missing_temperature
     );
   }
 
@@ -287,7 +295,7 @@ function parseWeatherResponse(
   ) {
     throw new WeatherError(
       "invalid_response",
-      "OpenWeather response is missing a weather description."
+      weatherJson.messages.errors.missing_description
     );
   }
 
@@ -295,7 +303,10 @@ function parseWeatherResponse(
     typeof payload.name === "string" &&
     payload.name.trim().length > 0
       ? payload.name.trim()
-      : `${coordinates.lat.toFixed(2)}, ${coordinates.lon.toFixed(2)}`;
+      : formatCoordFallback(
+          coordinates.lat,
+          coordinates.lon
+        );
 
   return {
     temperature:
@@ -325,4 +336,18 @@ export async function getWeather(): Promise<WeatherData> {
     response,
     coordinates
   );
+}
+
+// ============================================================
+// CURRENT COORDINATES
+//
+// Shared balanced-accuracy fix for consumers that need raw
+// coordinates (e.g. the 5-day forecast) without fetching
+// current weather.
+// ============================================================
+
+export async function getCurrentCoordinates(): Promise<Coordinates> {
+  validateApiKey();
+
+  return getCoordinates();
 }

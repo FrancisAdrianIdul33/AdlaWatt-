@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/colors";
+import { useAppFonts } from "@/hooks/useAppFonts";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import {
@@ -9,7 +10,13 @@ import {
 } from "react-native";
 
 export default function SplashScreen() {
+  const fontsLoaded = useAppFonts();
+
   useEffect(() => {
+    if (!fontsLoaded) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       // TODO:
       // Replace with AuthContext later
@@ -17,7 +24,7 @@ export default function SplashScreen() {
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [fontsLoaded]);
 
   return (
     <View style={styles.container}>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import {
   Alert,
+  BackHandler,
   Modal,
   Platform,
   Pressable,
@@ -10,22 +11,38 @@ import {
   Switch,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import { router } from "expo-router";
 
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
+import {
+  DropdownModal,
+} from "@/components/ui/DropdownModal";
 
 import { Colors } from "@/constants/colors";
+import { Radius } from "@/constants/theme";
 import { Routes } from "@/constants/routes";
 
 import {
   getCurrentUserProfile,
   updateAccount,
 } from "@/services/auth";
+
+import { supabase } from "@/lib/supabase";
+
+import { useSettings } from "@/context/SettingsContext";
+import {
+  FONT_FAMILY_OPTIONS,
+  getFontFamilyName,
+  type FontFamilyOption,
+  type FontSizeOption,
+  type FontWeightOption,
+} from "@/services/typography";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -102,16 +119,16 @@ export default function SettingsScreen() {
   const [colorBlindMode, setColorBlindMode] =
     useState(false);
 
-  const [fontSize, setFontSize] = useState<
-    "Small" | "Medium" | "Big"
-  >("Medium");
+  const [fontSize, setFontSize] =
+    useState<FontSizeOption>("Medium");
 
-  const [fontWeight, setFontWeight] = useState<
-    "Thin" | "Regular" | "Bold"
-  >("Regular");
+  const [fontWeight, setFontWeight] =
+    useState<FontWeightOption>("Regular");
 
   const [fontFamily, setFontFamily] =
-    useState("System Default");
+    useState<FontFamilyOption>(
+      "System Default",
+    );
 
   const [language, setLanguage] =
     useState("English");
@@ -131,6 +148,67 @@ export default function SettingsScreen() {
 
   const [languageOpen, setLanguageOpen] =
     useState(false);
+
+  // ============================================
+  // TYPOGRAPHY DRAFT (system preferences)
+  //
+  // Draft edits apply on Save; Cancel / X discards back
+  // to the saved system values. Dark mode and color blind
+  // mode stay local-only and are intentionally excluded.
+  // ============================================
+
+  const {
+    prefs: savedTypography,
+    setPreferences: commitTypography,
+  } = useSettings();
+
+  const [isSavingPreferences, setIsSavingPreferences] =
+    useState(false);
+
+  useEffect(() => {
+    if (preferencesExpanded) {
+      setFontSize(savedTypography.fontSize);
+      setFontWeight(savedTypography.fontWeight);
+      setFontFamily(savedTypography.fontFamily);
+      setFontFamilyOpen(false);
+      setLanguageOpen(false);
+    }
+  }, [preferencesExpanded, savedTypography]);
+
+  const handleClosePreferences = () => {
+    if (isSavingPreferences) {
+      return;
+    }
+
+    setFontSize(savedTypography.fontSize);
+    setFontWeight(savedTypography.fontWeight);
+    setFontFamily(savedTypography.fontFamily);
+    setFontFamilyOpen(false);
+    setLanguageOpen(false);
+    setPreferencesExpanded(false);
+  };
+
+  const handleSavePreferences = async () => {
+    if (isSavingPreferences) {
+      return;
+    }
+
+    try {
+      setIsSavingPreferences(true);
+
+      await commitTypography({
+        fontSize,
+        fontWeight,
+        fontFamily,
+      });
+
+      setFontFamilyOpen(false);
+      setLanguageOpen(false);
+      setPreferencesExpanded(false);
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
 
   // ============================================
   // LOAD ACCOUNT PROFILE
@@ -210,6 +288,24 @@ export default function SettingsScreen() {
 
     setConfirmationVisible(false);
     setIsEditingAccount(false);
+  };
+
+  // ============================================
+  // CLOSE ACCOUNT MODAL
+  //
+  // X / backdrop / back button: discard any inputted
+  // data and restore normal view state, then hide modal.
+  // Distinct from handleCancelUpdate (footer Cancel),
+  // which exits edit mode but keeps the modal open.
+  // ============================================
+
+  const handleCloseAccountModal = () => {
+    if (confirmingAccountUpdate) {
+      return;
+    }
+
+    handleCancelUpdate();
+    setAccountExpanded(false);
   };
 
   // ============================================
@@ -483,9 +579,22 @@ export default function SettingsScreen() {
   // LOG OUT
   // ============================================
 
+  const { height: windowHeight } = useWindowDimensions();
+
   const handleLogout = () => {
-    const logout = () => {
-      router.replace(Routes.LOGIN);
+    const logout = async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.warn(
+          "Sign out failed:",
+          error instanceof Error
+            ? error.message
+            : error,
+        );
+      } finally {
+        router.replace(Routes.LOGIN);
+      }
     };
 
     if (Platform.OS === "web") {
@@ -517,6 +626,60 @@ export default function SettingsScreen() {
     );
   };
 
+  // ============================================
+  // EXIT APP
+  //
+  // iOS forbids programmatic quit, so the Exit button is
+  // hidden there (see render). Web tabs usually cannot be
+  // closed by script, so a manual-close note is shown.
+  // ============================================
+
+  const handleExit = () => {
+    const exitApp = () => {
+      if (Platform.OS === "android") {
+        BackHandler.exitApp();
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        window.close();
+
+        Alert.alert(
+          "Exit",
+          "Please close this tab manually to exit AdlaWatt.",
+        );
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Are you sure you want to exit AdlaWatt?",
+      );
+
+      if (confirmed) {
+        exitApp();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      "Exit App",
+      "AdlaWatt will close. Are you sure?",
+      [
+        {
+          text: "No",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: exitApp,
+        },
+      ],
+    );
+  };
+
   return (
     <ScreenContainer2>
       <NavBar />
@@ -543,60 +706,164 @@ export default function SettingsScreen() {
           </AppText>
         </View>
 
-        {/* ================= ACCOUNT PROFILE ================= */}
+        {/* ================= MENU BOXES ================= */}
 
-        <View style={styles.sectionContainer}>
+        <View style={styles.menuGrid}>
           <Pressable
-            onPress={() => {
-              if (
-                accountExpanded &&
-                isEditingAccount
-              ) {
-                handleCancelUpdate();
-              }
-
-              setAccountExpanded(
-                (current) => !current,
-              );
-            }}
+            onPress={() =>
+              setAccountExpanded(true)
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open Account Profile"
             style={({ pressed }) => [
-              styles.dropdownHeader,
+              styles.menuBox,
+              accountExpanded &&
+                styles.menuBoxActive,
               pressed && styles.pressed,
             ]}
           >
-            <View
-              style={styles.dropdownHeaderText}
-            >
-              <AppText
-                variant="body"
-                style={styles.dropdownTitle}
-              >
-                Account Profile
-              </AppText>
-
-              <AppText
-                variant="caption"
-                style={styles.dropdownSubtitle}
-              >
-                Manage your account information
-              </AppText>
-            </View>
-
             <Ionicons
-              name={
-                accountExpanded
-                  ? "chevron-up-outline"
-                  : "chevron-down-outline"
-              }
-              size={22}
-              color="#000000"
+              name="person"
+              size={30}
+              color={Colors.light.primary}
             />
+
+            <AppText
+              variant="body"
+              style={styles.menuBoxText}
+            >
+              Account Profile
+            </AppText>
           </Pressable>
 
-          {accountExpanded && (
-            <View
-              style={styles.expandedContent}
+          <Pressable
+            onPress={() =>
+              setPreferencesExpanded(true)
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open Preferences"
+            style={({ pressed }) => [
+              styles.menuBox,
+              preferencesExpanded &&
+                styles.menuBoxActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="settings"
+              size={30}
+              color={Colors.light.primary}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.menuBoxText}
             >
+              Preferences
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              router.push(
+                Routes.COMPONENTS,
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open Components"
+            style={({ pressed }) => [
+              styles.menuBox,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="hardware-chip"
+              size={30}
+              color={Colors.light.primary}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.menuBoxText}
+            >
+              Components
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              router.push(
+                Routes.ACTIVITY_LOGS,
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open Activity Logs"
+            style={({ pressed }) => [
+              styles.menuBox,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="list"
+              size={30}
+              color={Colors.light.primary}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.menuBoxText}
+            >
+              Activity Logs
+            </AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() =>
+              router.push(
+                Routes.ABOUT_US,
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Open About Us"
+            style={({ pressed }) => [
+              styles.menuBox,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="information-circle"
+              size={30}
+              color={Colors.light.primary}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.menuBoxText}
+            >
+              About Us
+            </AppText>
+          </Pressable>
+        </View>
+
+        {/* ================= ACCOUNT PROFILE MODAL ================= */}
+
+        <DropdownModal
+          visible={accountExpanded}
+          title="Account Profile"
+          onClose={handleCloseAccountModal}
+        >
+          <ScrollView
+            style={[
+              styles.modalScroll,
+              {
+                maxHeight:
+                  windowHeight * 0.55,
+              },
+            ]}
+            showsVerticalScrollIndicator={
+              false
+            }
+          >
               {loadingAccount ? (
                 <AppText
                   variant="caption"
@@ -849,114 +1116,83 @@ export default function SettingsScreen() {
                     </View>
                   ) : null}
 
-                  {/* Edit Actions */}
-                  <View style={styles.actionRow}>
-                    <Pressable
-                      onPress={
-                        handleCancelUpdate
-                      }
-                      disabled={
-                        confirmingAccountUpdate
-                      }
-                      style={({
-                        pressed,
-                      }) => [
-                        styles.secondaryButton,
-                        pressed &&
-                          styles.pressed,
-                      ]}
-                    >
-                      <AppText
-                        style={
-                          styles.secondaryButtonText
-                        }
-                      >
-                        Cancel
-                      </AppText>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={
-                        handleSubmitAccountUpdate
-                      }
-                      disabled={
-                        confirmingAccountUpdate
-                      }
-                      style={({
-                        pressed,
-                      }) => [
-                        styles.primaryButton,
-                        styles.actionButton,
-                        pressed &&
-                          styles.pressed,
-                      ]}
-                    >
-                      <AppText
-                        style={
-                          styles.primaryButtonText
-                        }
-                      >
-                        Submit
-                      </AppText>
-                    </Pressable>
-                  </View>
                 </>
               )}
-            </View>
-          )}
-        </View>
+          </ScrollView>
 
-        {/* ================= PREFERENCES ================= */}
-
-        <View style={styles.sectionContainer}>
-          <Pressable
-            onPress={() =>
-              setPreferencesExpanded(
-                (current) => !current,
-              )
-            }
-            style={({ pressed }) => [
-              styles.dropdownHeader,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View
-              style={
-                styles.dropdownHeaderText
-              }
-            >
-              <AppText
-                variant="body"
-                style={styles.dropdownTitle}
-              >
-                Preferences
-              </AppText>
-
-              <AppText
-                variant="caption"
-                style={
-                  styles.dropdownSubtitle
+          {isEditingAccount &&
+          !loadingAccount ? (
+            <View style={styles.modalFooter}>
+              <Pressable
+                onPress={handleCancelUpdate}
+                disabled={
+                  confirmingAccountUpdate
                 }
+                accessibilityRole="button"
+                accessibilityLabel="Cancel account changes"
+                style={({ pressed }) => [
+                  styles.modalFooterButton,
+                  styles.modalCancelButton,
+                  pressed && styles.pressed,
+                ]}
               >
-                Customize your AdlaWatt experience
-              </AppText>
+                <AppText
+                  variant="body"
+                  style={
+                    styles.modalCancelButtonText
+                  }
+                >
+                  Cancel
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                onPress={
+                  handleSubmitAccountUpdate
+                }
+                disabled={
+                  confirmingAccountUpdate
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Submit account changes"
+                style={({ pressed }) => [
+                  styles.modalFooterButton,
+                  styles.modalSubmitButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <AppText
+                  variant="body"
+                  style={
+                    styles.modalSubmitButtonText
+                  }
+                >
+                  Submit
+                </AppText>
+              </Pressable>
             </View>
+          ) : null}
+        </DropdownModal>
 
-            <Ionicons
-              name={
-                preferencesExpanded
-                  ? "chevron-up-outline"
-                  : "chevron-down-outline"
-              }
-              size={22}
-              color="#000000"
-            />
-          </Pressable>
+        {/* ================= PREFERENCES MODAL ================= */}
 
-          {preferencesExpanded && (
-            <View
-              style={styles.expandedContent}
-            >
+        <DropdownModal
+          visible={preferencesExpanded}
+          title="Preferences"
+          onClose={handleClosePreferences}
+        >
+          <ScrollView
+            style={[
+              styles.modalScroll,
+              {
+                maxHeight:
+                  windowHeight * 0.55,
+              },
+            ]}
+            showsVerticalScrollIndicator={
+              false
+            }
+          >
               {/* APPEARANCE */}
               <AppText
                 variant="caption"
@@ -1176,39 +1412,42 @@ export default function SettingsScreen() {
                       styles.selectionMenu
                     }
                   >
-                    {[
-                      "Times New Roman",
-                      "Roboto",
-                      "Inter",
-                      "System Default",
-                      "Monospace",
-                    ].map((font) => (
-                      <Pressable
-                        key={font}
-                        onPress={() => {
-                          setFontFamily(
-                            font,
-                          );
-                          setFontFamilyOpen(
-                            false,
-                          );
-                        }}
-                        style={
-                          styles.selectionItem
-                        }
-                      >
-                        <AppText
-                          style={[
-                            styles.selectionText,
-                            fontFamily ===
-                              font &&
-                              styles.selectedSelectionText,
-                          ]}
+                    {FONT_FAMILY_OPTIONS.map(
+                      (font) => (
+                        <Pressable
+                          key={font}
+                          onPress={() => {
+                            setFontFamily(
+                              font,
+                            );
+                            setFontFamilyOpen(
+                              false,
+                            );
+                          }}
+                          style={
+                            styles.selectionItem
+                          }
                         >
-                          {font}
-                        </AppText>
-                      </Pressable>
-                    ))}
+                          <AppText
+                            style={[
+                              styles.selectionText,
+                              {
+                                fontFamily:
+                                  getFontFamilyName(
+                                    font,
+                                    "Regular",
+                                  ),
+                              },
+                              fontFamily ===
+                                font &&
+                                styles.selectedSelectionText,
+                            ]}
+                          >
+                            {font}
+                          </AppText>
+                        </Pressable>
+                      ),
+                    )}
                   </View>
                 )}
               </View>
@@ -1360,178 +1599,58 @@ export default function SettingsScreen() {
                   setEmailNotifications,
                 )}
               </View>
-            </View>
-          )}
-        </View>
+          </ScrollView>
 
-        {/* ================= MORE PAGES ================= */}
-
-        <View
-          style={styles.sectionContainer}
-        >
-          <AppText
-            variant="caption"
-            style={styles.morePagesLabel}
-          >
-            MORE PAGES
-          </AppText>
-
-          <View
-            style={styles.morePagesCard}
-          >
+          <View style={styles.modalFooter}>
             <Pressable
-              onPress={() =>
-                router.push(
-                  Routes.COMPONENTS,
-                )
-              }
+              onPress={handleClosePreferences}
+              disabled={isSavingPreferences}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel Preferences"
               style={({ pressed }) => [
-                styles.morePagesRow,
-                pressed &&
-                  styles.pressed,
+                styles.modalFooterButton,
+                styles.modalCancelButton,
+                pressed && styles.pressed,
               ]}
             >
-              <Ionicons
-                name="hardware-chip-outline"
-                size={22}
-                color="#000000"
-              />
-
               <AppText
                 variant="body"
-                style={styles.morePagesRowText}
+                style={
+                  styles.modalCancelButtonText
+                }
               >
-                Components
+                Cancel
               </AppText>
-
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-              />
             </Pressable>
 
-            <View
-              style={styles.morePagesDivider}
-            />
-
             <Pressable
-              onPress={() =>
-                router.push(
-                  Routes.ACTIVITY_LOGS,
-                )
-              }
+              onPress={handleSavePreferences}
+              disabled={isSavingPreferences}
+              accessibilityRole="button"
+              accessibilityLabel="Save Preferences"
               style={({ pressed }) => [
-                styles.morePagesRow,
-                pressed &&
-                  styles.pressed,
+                styles.modalFooterButton,
+                styles.modalSubmitButton,
+                pressed && styles.pressed,
               ]}
             >
-              <Ionicons
-                name="list-outline"
-                size={22}
-                color="#000000"
-              />
-
               <AppText
                 variant="body"
-                style={styles.morePagesRowText}
+                style={
+                  styles.modalSubmitButtonText
+                }
               >
-                Activity Logs
+                {isSavingPreferences
+                  ? "Saving..."
+                  : "Save"}
               </AppText>
-
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-              />
-            </Pressable>
-
-            <View
-              style={styles.morePagesDivider}
-            />
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  Routes.ABOUT_US,
-                )
-              }
-              style={({ pressed }) => [
-                styles.morePagesRow,
-                pressed &&
-                  styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color="#000000"
-              />
-
-              <AppText
-                variant="body"
-                style={styles.morePagesRowText}
-              >
-                About Us
-              </AppText>
-
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color={Colors.light.textSecondary}
-              />
-            </Pressable>
-
-            <View
-              style={styles.morePagesDivider}
-            />
-
-            <Pressable
-              onPress={handleLogout}
-              style={({ pressed }) => [
-                styles.morePagesRow,
-                pressed &&
-                  styles.pressed,
-              ]}
-            >
-              <Ionicons
-                name="log-out-outline"
-                size={22}
-                color={Colors.light.error}
-              />
-
-              <AppText
-                variant="body"
-                style={[
-                  styles.morePagesRowText,
-                  styles.logOutText,
-                ]}
-              >
-                Log Out
-              </AppText>
-
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color={Colors.light.error}
-              />
             </Pressable>
           </View>
-        </View>
-
-        {/* ================= APP VERSION ================= */}
+        </DropdownModal>
 
         <View
           style={styles.versionSection}
         >
-          <AppText
-            variant="caption"
-            style={styles.versionLabel}
-          >
-            APP VERSION
-          </AppText>
-
           <View style={styles.versionCard}>
             <AppText
               variant="body"
@@ -1547,6 +1666,58 @@ export default function SettingsScreen() {
               v1.0.0
             </AppText>
           </View>
+        </View>
+
+        <View style={styles.authActionRow}>
+          <Pressable
+            onPress={handleLogout}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+            style={({ pressed }) => [
+              styles.authActionButton,
+              styles.logOutButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={22}
+              color={Colors.light.error}
+            />
+
+            <AppText
+              variant="body"
+              style={styles.logOutButtonText}
+            >
+              Log Out
+            </AppText>
+          </Pressable>
+
+          {Platform.OS !== "ios" && (
+            <Pressable
+              onPress={handleExit}
+              accessibilityRole="button"
+              accessibilityLabel="Exit app"
+              style={({ pressed }) => [
+                styles.authActionButton,
+                styles.exitButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                name="exit-outline"
+                size={22}
+                color={Colors.light.text}
+              />
+
+              <AppText
+                variant="body"
+                style={styles.exitButtonText}
+              >
+                Exit
+              </AppText>
+            </Pressable>
+          )}
         </View>
 
         <Copyright />
@@ -1772,45 +1943,42 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  /* ================= DROPDOWN SECTIONS ================= */
+  /* ================= MENU BOXES ================= */
 
-  sectionContainer: {
+  menuGrid: {
     width: "100%",
-    marginBottom: settingsDimensions.sectionSpacing,
-  },
-
-  dropdownHeader: {
-    width: "100%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: settingsDimensions.borderWidth,
-    borderColor: Colors.light.secondary,
-    borderRadius: settingsDimensions.borderRadius,
-    paddingHorizontal: 18,
-    paddingVertical: 15,
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
+    marginBottom:
+      settingsDimensions.sectionSpacing,
+  },
+
+  menuBox: {
+    width: "46%",
+    maxWidth: 150,
+    minHeight: 150,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderRadius: Radius.md,
+    padding: 12,
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    gap: 8,
   },
 
-  dropdownHeaderText: {
-    flex: 1,
+  menuBoxActive: {
+    backgroundColor:
+      "rgba(0, 168, 107, 0.08)",
   },
 
-  dropdownTitle: {
+  menuBoxText: {
     color: "#000000",
-    fontWeight: "700",
-  },
-
-  dropdownSubtitle: {
-    color: Colors.light.textSecondary,
-    marginTop: 4,
-  },
-
-
-
-  expandedContent: {
-    paddingTop: 14,
-    paddingBottom: 4,
+    fontWeight: "600",
+    fontSize: 16,
+    textAlign: "center",
   },
 
   /* ================= ACCOUNT ================= */
@@ -2056,61 +2224,61 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* ================= MORE PAGES ================= */
+  /* ================= MODAL SHEETS ================= */
 
-  morePagesLabel: {
-    color: Colors.light.primary,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  },
-
-  morePagesCard: {
+  modalScroll: {
     width: "100%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: settingsDimensions.borderWidth,
-    borderColor: Colors.light.secondary,
-    borderRadius: settingsDimensions.borderRadius,
-    overflow: "hidden",
   },
 
-  morePagesRow: {
-    minHeight: 54,
-    paddingHorizontal: 18,
+  modalFooter: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    gap: 10,
+    marginTop: 14,
   },
 
-  morePagesRowText: {
+  modalFooterButton: {
     flex: 1,
-    color: "#000000",
-    fontWeight: "600",
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderRadius: Radius.md,
   },
 
-  morePagesDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginLeft: 52,
+  modalCancelButton: {
+    backgroundColor: "#FFFFFF",
+    borderColor: Colors.light.error,
   },
 
-  logOutText: {
+  modalCancelButtonText: {
     color: Colors.light.error,
+    fontWeight: "700",
+  },
+
+  modalSubmitButton: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+
+  modalSubmitButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  modalCloseButton: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+
+  modalCloseButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
 
   /* ================= VERSION ================= */
 
   versionSection: {
     marginBottom: 18,
-  },
-
-  versionLabel: {
-    color: Colors.light.primary,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    paddingHorizontal: 4,
   },
 
   versionCard: {
@@ -2129,6 +2297,44 @@ const styles = StyleSheet.create({
   versionNumber: {
     color: Colors.light.textSecondary,
     marginTop: 4,
+  },
+
+  /* ================= LOG OUT + EXIT ================= */
+
+  authActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 18,
+  },
+
+  authActionButton: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 2,
+    borderRadius: Radius.md,
+    backgroundColor: "#FFFFFF",
+  },
+
+  logOutButton: {
+    borderColor: Colors.light.error,
+  },
+
+  logOutButtonText: {
+    color: Colors.light.error,
+    fontWeight: "700",
+  },
+
+  exitButton: {
+    borderColor: Colors.light.text,
+  },
+
+  exitButtonText: {
+    color: Colors.light.text,
+    fontWeight: "700",
   },
 
   /* ================= MODAL ================= */

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import ComponentStatusBox from "@/components/forms/ComponentStatusBox";
-import Copyright from "@/components/forms/Copyright";
+import Copyright from "@/components/ui/Copyright";
 
 import NavBar from "@/components/layout/Navbar";
 import ScreenContainer2 from "@/components/layout/ScreenContainer2";
