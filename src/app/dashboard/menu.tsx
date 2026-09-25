@@ -35,6 +35,15 @@ import {
 
 import { supabase } from "@/lib/supabase";
 
+import { useSettings } from "@/context/SettingsContext";
+import {
+  FONT_FAMILY_OPTIONS,
+  getFontFamilyName,
+  type FontFamilyOption,
+  type FontSizeOption,
+  type FontWeightOption,
+} from "@/services/typography";
+
 import { Ionicons } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
@@ -110,16 +119,16 @@ export default function SettingsScreen() {
   const [colorBlindMode, setColorBlindMode] =
     useState(false);
 
-  const [fontSize, setFontSize] = useState<
-    "Small" | "Medium" | "Big"
-  >("Medium");
+  const [fontSize, setFontSize] =
+    useState<FontSizeOption>("Medium");
 
-  const [fontWeight, setFontWeight] = useState<
-    "Thin" | "Regular" | "Bold"
-  >("Regular");
+  const [fontWeight, setFontWeight] =
+    useState<FontWeightOption>("Regular");
 
   const [fontFamily, setFontFamily] =
-    useState("System Default");
+    useState<FontFamilyOption>(
+      "System Default",
+    );
 
   const [language, setLanguage] =
     useState("English");
@@ -139,6 +148,67 @@ export default function SettingsScreen() {
 
   const [languageOpen, setLanguageOpen] =
     useState(false);
+
+  // ============================================
+  // TYPOGRAPHY DRAFT (system preferences)
+  //
+  // Draft edits apply on Save; Cancel / X discards back
+  // to the saved system values. Dark mode and color blind
+  // mode stay local-only and are intentionally excluded.
+  // ============================================
+
+  const {
+    prefs: savedTypography,
+    setPreferences: commitTypography,
+  } = useSettings();
+
+  const [isSavingPreferences, setIsSavingPreferences] =
+    useState(false);
+
+  useEffect(() => {
+    if (preferencesExpanded) {
+      setFontSize(savedTypography.fontSize);
+      setFontWeight(savedTypography.fontWeight);
+      setFontFamily(savedTypography.fontFamily);
+      setFontFamilyOpen(false);
+      setLanguageOpen(false);
+    }
+  }, [preferencesExpanded, savedTypography]);
+
+  const handleClosePreferences = () => {
+    if (isSavingPreferences) {
+      return;
+    }
+
+    setFontSize(savedTypography.fontSize);
+    setFontWeight(savedTypography.fontWeight);
+    setFontFamily(savedTypography.fontFamily);
+    setFontFamilyOpen(false);
+    setLanguageOpen(false);
+    setPreferencesExpanded(false);
+  };
+
+  const handleSavePreferences = async () => {
+    if (isSavingPreferences) {
+      return;
+    }
+
+    try {
+      setIsSavingPreferences(true);
+
+      await commitTypography({
+        fontSize,
+        fontWeight,
+        fontFamily,
+      });
+
+      setFontFamilyOpen(false);
+      setLanguageOpen(false);
+      setPreferencesExpanded(false);
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
 
   // ============================================
   // LOAD ACCOUNT PROFILE
@@ -1109,11 +1179,7 @@ export default function SettingsScreen() {
         <DropdownModal
           visible={preferencesExpanded}
           title="Preferences"
-          onClose={() => {
-            setPreferencesExpanded(false);
-            setFontFamilyOpen(false);
-            setLanguageOpen(false);
-          }}
+          onClose={handleClosePreferences}
         >
           <ScrollView
             style={[
@@ -1346,39 +1412,42 @@ export default function SettingsScreen() {
                       styles.selectionMenu
                     }
                   >
-                    {[
-                      "Times New Roman",
-                      "Roboto",
-                      "Inter",
-                      "System Default",
-                      "Monospace",
-                    ].map((font) => (
-                      <Pressable
-                        key={font}
-                        onPress={() => {
-                          setFontFamily(
-                            font,
-                          );
-                          setFontFamilyOpen(
-                            false,
-                          );
-                        }}
-                        style={
-                          styles.selectionItem
-                        }
-                      >
-                        <AppText
-                          style={[
-                            styles.selectionText,
-                            fontFamily ===
-                              font &&
-                              styles.selectedSelectionText,
-                          ]}
+                    {FONT_FAMILY_OPTIONS.map(
+                      (font) => (
+                        <Pressable
+                          key={font}
+                          onPress={() => {
+                            setFontFamily(
+                              font,
+                            );
+                            setFontFamilyOpen(
+                              false,
+                            );
+                          }}
+                          style={
+                            styles.selectionItem
+                          }
                         >
-                          {font}
-                        </AppText>
-                      </Pressable>
-                    ))}
+                          <AppText
+                            style={[
+                              styles.selectionText,
+                              {
+                                fontFamily:
+                                  getFontFamilyName(
+                                    font,
+                                    "Regular",
+                                  ),
+                              },
+                              fontFamily ===
+                                font &&
+                                styles.selectedSelectionText,
+                            ]}
+                          >
+                            {font}
+                          </AppText>
+                        </Pressable>
+                      ),
+                    )}
                   </View>
                 )}
               </View>
@@ -1534,26 +1603,46 @@ export default function SettingsScreen() {
 
           <View style={styles.modalFooter}>
             <Pressable
-              onPress={() => {
-                setPreferencesExpanded(false);
-                setFontFamilyOpen(false);
-                setLanguageOpen(false);
-              }}
+              onPress={handleClosePreferences}
+              disabled={isSavingPreferences}
               accessibilityRole="button"
-              accessibilityLabel="Close Preferences"
+              accessibilityLabel="Cancel Preferences"
               style={({ pressed }) => [
                 styles.modalFooterButton,
-                styles.modalCloseButton,
+                styles.modalCancelButton,
                 pressed && styles.pressed,
               ]}
             >
               <AppText
                 variant="body"
                 style={
-                  styles.modalCloseButtonText
+                  styles.modalCancelButtonText
                 }
               >
-                Close
+                Cancel
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              onPress={handleSavePreferences}
+              disabled={isSavingPreferences}
+              accessibilityRole="button"
+              accessibilityLabel="Save Preferences"
+              style={({ pressed }) => [
+                styles.modalFooterButton,
+                styles.modalSubmitButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText
+                variant="body"
+                style={
+                  styles.modalSubmitButtonText
+                }
+              >
+                {isSavingPreferences
+                  ? "Saving..."
+                  : "Save"}
               </AppText>
             </Pressable>
           </View>
