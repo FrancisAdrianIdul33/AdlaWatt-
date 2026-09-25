@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
+import AppText from "@/components/ui/AppText";
 import { supabase } from "@/lib/supabase";
 
 export default function Index() {
@@ -29,7 +30,7 @@ export default function Index() {
         justifyContent: "center",
       }}
     >
-      <Text>{title}</Text>
+      <AppText>{title}</AppText>
     </View>
   );
 }

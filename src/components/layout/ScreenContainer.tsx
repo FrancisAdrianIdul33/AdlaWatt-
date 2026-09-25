@@ -8,6 +8,7 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 interface ScreenContainerProps {
   children: ReactNode;
@@ -31,14 +32,16 @@ export default function ScreenContainer({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        {content}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <SettingsProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          {content}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </SettingsProvider>
   );
 }
 
