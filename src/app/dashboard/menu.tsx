@@ -729,7 +729,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="person"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -756,7 +756,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="settings"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -783,7 +783,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="hardware-chip"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -810,7 +810,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="list"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -837,7 +837,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="information-circle"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
