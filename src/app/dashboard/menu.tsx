@@ -37,6 +37,7 @@ import {
 import { supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
@@ -150,14 +151,23 @@ export default function SettingsScreen() {
   // TYPOGRAPHY DRAFT (system preferences)
   //
   // Draft edits apply on Save; Cancel / X discards back
-  // to the saved system values. Dark mode and color blind
-  // mode stay local-only and are intentionally excluded.
+  // to the saved system values. Dark mode applies
+  // instantly through ThemeContext (not part of the
+  // draft); color blind mode stays local-only and is
+  // intentionally excluded.
   // ============================================
 
   const {
     prefs: savedTypography,
     setPreferences: commitTypography,
   } = useSettings();
+
+  // Dark mode is instant-apply: flipping the switch
+  // writes the theme through immediately and persists it.
+  const {
+    theme: savedTheme,
+    setTheme: commitTheme,
+  } = useTheme();
 
   const {
     scaledSize: scaledInputSize,
@@ -178,10 +188,22 @@ export default function SettingsScreen() {
     if (preferencesExpanded) {
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
+      setDarkMode(savedTheme === "dark");
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
-  }, [preferencesExpanded, savedTypography]);
+  }, [
+    preferencesExpanded,
+    savedTypography,
+    savedTheme,
+  ]);
+
+  const handleDarkModeChange = (
+    value: boolean,
+  ) => {
+    setDarkMode(value);
+    void commitTheme(value ? "dark" : "light");
+  };
 
   const handleClosePreferences = () => {
     if (isSavingPreferences) {
@@ -1226,7 +1248,7 @@ export default function SettingsScreen() {
 
                 {renderToggle(
                   darkMode,
-                  setDarkMode,
+                  handleDarkModeChange,
                 )}
               </View>
 
