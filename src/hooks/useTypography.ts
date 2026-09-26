@@ -4,6 +4,8 @@ import { useSettings } from "@/context/SettingsContext";
 import {
   getFontFamilyName,
   getFontScale,
+  shouldApplyFontWeight,
+  type DesignWeight,
 } from "@/services/typography";
 
 // ============================================================
@@ -11,8 +13,9 @@ import {
 //
 // Proportional scaling for non-AppText consumers
 // (TextInput, charts, SVG labels). No layout changes:
-// only fontSize / fontFamily are derived. Design weights
-// stay with each caller. Weight preference removed.
+// only fontSize / fontFamily are derived. Inputs render at
+// 400, so bundled families resolve the Regular file and
+// carry no fontWeight style (see typography.ts).
 // ============================================================
 
 export function useTypography() {
@@ -23,7 +26,15 @@ export function useTypography() {
 
     const family = getFontFamilyName(
       prefs.fontFamily,
+      "400",
     );
+
+    const weight: DesignWeight | undefined =
+      shouldApplyFontWeight(
+        prefs.fontFamily,
+      )
+        ? "400"
+        : undefined;
 
     const scaledSize = (size: number) =>
       Math.round(size * scale);
@@ -32,6 +43,7 @@ export function useTypography() {
       scale,
       family,
       scaledSize,
+      weight,
     };
   }, [prefs]);
 }

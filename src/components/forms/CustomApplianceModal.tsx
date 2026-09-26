@@ -48,13 +48,13 @@ export default function CustomApplianceModal({
   onCancel,
   onAdd,
 }: CustomApplianceModalProps) {
-  const { scaledSize, family } =
+  const { scaledSize, family, weight } =
     useTypography();
 
   const inputFontStyle = {
     fontSize: scaledSize(14),
     fontFamily: family,
-    fontWeight: "400" as const,
+    fontWeight: weight,
   };
 
   return (

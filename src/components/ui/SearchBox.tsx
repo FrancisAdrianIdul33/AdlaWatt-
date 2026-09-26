@@ -15,7 +15,7 @@ export default function AppSearchBox({
   style,
   ...props
 }: AppSearchBoxProps) {
-  const { scaledSize, family } =
+  const { scaledSize, family, weight } =
     useTypography();
 
   return (
@@ -29,7 +29,7 @@ export default function AppSearchBox({
           {
             fontSize: scaledSize(16),
             fontFamily: family,
-            fontWeight: "400",
+            fontWeight: weight,
           },
           style,
         ]}

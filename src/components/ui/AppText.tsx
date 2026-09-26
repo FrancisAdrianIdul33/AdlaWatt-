@@ -6,6 +6,8 @@ import { useSettings } from "@/context/SettingsContext";
 import {
   getFontFamilyName,
   getFontScale,
+  shouldApplyFontWeight,
+  type DesignWeight,
 } from "@/services/typography";
 
 type Variant =
@@ -34,10 +36,6 @@ export default function AppText({
   const override = useMemo(() => {
     const scale = getFontScale(prefs.fontSize);
 
-    const family = getFontFamilyName(
-      prefs.fontFamily,
-    );
-
     const baseSize =
       styles[variant].fontSize ?? 16;
     const baseWeight =
@@ -56,6 +54,14 @@ export default function AppText({
         ? flat.fontWeight
         : baseWeight;
 
+    // Design weight selects the bundled file for Inter /
+    // Roboto; no fontWeight style may accompany those files
+    // (Android falls back to system when paired).
+    const family = getFontFamilyName(
+      prefs.fontFamily,
+      callerWeight as DesignWeight,
+    );
+
     const callerFamily =
       typeof flat.fontFamily === "string"
         ? flat.fontFamily
@@ -69,8 +75,11 @@ export default function AppText({
         allowCustomFamily && callerFamily
           ? callerFamily
           : family,
-      // Weight preference removed: design callerWeight applies.
-      fontWeight: callerWeight,
+      fontWeight: shouldApplyFontWeight(
+        prefs.fontFamily,
+      )
+        ? callerWeight
+        : undefined,
     };
   }, [
     prefs,

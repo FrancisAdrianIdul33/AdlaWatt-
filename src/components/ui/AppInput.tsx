@@ -21,7 +21,7 @@ export default function AppInput({
   style,
   ...props
 }: AppInputProps) {
-  const { scaledSize, family } =
+  const { scaledSize, family, weight } =
     useTypography();
 
   return (
@@ -41,7 +41,7 @@ export default function AppInput({
           {
             fontSize: scaledSize(16),
             fontFamily: family,
-            fontWeight: "400",
+            fontWeight: weight,
           },
           error ? styles.inputError : null,
           style,
