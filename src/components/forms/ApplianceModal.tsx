@@ -766,7 +766,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="close"
                 size={24}
-                color="#FFFFFF"
+                color={Colors.light.onPrimary}
               />
             </Pressable>
           </View>
@@ -833,7 +833,7 @@ export default function ApplianceModal({
                 <Ionicons
                   name="add-circle-outline"
                   size={20}
-                  color="#FFFFFF"
+                  color={Colors.light.onPrimary}
                 />
 
                 <AppText
@@ -1127,7 +1127,7 @@ export default function ApplianceModal({
               <Ionicons
                 name="checkmark-circle-outline"
                 size={17}
-                color="#FFFFFF"
+                color={Colors.light.onPrimary}
               />
 
               <AppText
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   closeButton: {
@@ -1253,7 +1253,7 @@ const styles = StyleSheet.create({
   },
 
   advisory: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: Radius.md,
@@ -1272,7 +1272,7 @@ const styles = StyleSheet.create({
   },
 
   advisoryTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     fontSize: 20,
   },
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
   },
 
   customButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1337,9 +1337,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.light.border,
     borderRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     paddingHorizontal: 12,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 14,
   },
 
@@ -1374,7 +1374,7 @@ const styles = StyleSheet.create({
   },
 
   selectedText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 14,
   },
 
@@ -1393,7 +1393,7 @@ const styles = StyleSheet.create({
   },
 
   resetText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1408,7 +1408,7 @@ const styles = StyleSheet.create({
   },
 
   actionText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     fontSize: 14,
   },
@@ -1434,7 +1434,7 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderWidth: 2,
     borderRadius: Radius.md,
   },

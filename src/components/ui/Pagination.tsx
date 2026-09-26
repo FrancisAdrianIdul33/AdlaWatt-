@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
   },
 
   navigationText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     fontSize: 12,
   },
 
   pageText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     textAlign: "center",
     fontSize: 12,

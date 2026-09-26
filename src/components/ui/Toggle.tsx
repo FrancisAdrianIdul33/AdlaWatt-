@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   },
 
   activeStatusText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   pressed: {

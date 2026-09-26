@@ -261,7 +261,7 @@ export default function AnalyticsCards({
               <Ionicons
                 name="download-outline"
                 size={17}
-                color="#FFFFFF"
+                color={Colors.light.onPrimary}
               />
 
               <AppText
@@ -289,7 +289,7 @@ export default function AnalyticsCards({
               <Ionicons
                 name="document-outline"
                 size={17}
-                color="#FFFFFF"
+                color={Colors.light.onPrimary}
               />
 
               <AppText
@@ -360,7 +360,7 @@ const styles =
     },
 
     reportHeaderTitle: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -409,7 +409,7 @@ const styles =
     },
 
     reportSelectText: {
-      color: "#000000",
+      color: Colors.light.text,
       fontWeight: "600",
     },
 
@@ -430,7 +430,7 @@ const styles =
     },
 
     dateFieldText: {
-      color: "#000000",
+      color: Colors.light.text,
       fontWeight: "600",
     },
 
@@ -455,7 +455,7 @@ const styles =
     },
 
     exportPrimaryText: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
       fontWeight: "700",
     },
   });

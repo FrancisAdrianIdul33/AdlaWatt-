@@ -246,7 +246,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="check"
             size={18}
-            color="#FFFFFF"
+            color={Colors.light.onPrimary}
           />
         )}
       </View>
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
 
   deleteQuestion: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
@@ -420,12 +420,12 @@ const styles = StyleSheet.create({
   },
 
   noButtonText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
   },
 
   yesButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "600",
   },
 

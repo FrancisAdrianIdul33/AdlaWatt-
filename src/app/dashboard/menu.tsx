@@ -574,7 +574,7 @@ export default function SettingsScreen() {
         false: Colors.light.border,
         true: Colors.light.primary,
       }}
-      thumbColor="#FFFFFF"
+      thumbColor={Colors.light.surface}
       ios_backgroundColor={
         Colors.light.border
       }
@@ -1043,7 +1043,7 @@ export default function SettingsScreen() {
                               : "eye-off-outline"
                           }
                           size={22}
-                          color="#000000"
+                          color={Colors.light.text}
                         />
                       </Pressable>
                     </View>
@@ -1105,7 +1105,7 @@ export default function SettingsScreen() {
                               : "eye-off-outline"
                           }
                           size={22}
-                          color="#000000"
+                          color={Colors.light.text}
                         />
                       </Pressable>
                     </View>
@@ -1347,7 +1347,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="chevron-down-outline"
                     size={22}
-                    color="#000000"
+                    color={Colors.light.text}
                   />
                 </Pressable>
               </View>
@@ -1378,7 +1378,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="chevron-down-outline"
                     size={22}
-                    color="#000000"
+                    color={Colors.light.text}
                   />
                 </Pressable>
               </View>
@@ -1724,7 +1724,7 @@ export default function SettingsScreen() {
                         : "eye-off-outline"
                     }
                     size={22}
-                    color="#000000"
+                    color={Colors.light.text}
                   />
                 </Pressable>
               </View>
@@ -1826,7 +1826,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -1852,7 +1852,7 @@ const styles = StyleSheet.create({
     width: "46%",
     maxWidth: 150,
     minHeight: 150,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: Radius.md,
@@ -1868,7 +1868,7 @@ const styles = StyleSheet.create({
   },
 
   menuBoxText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     fontSize: 16,
     textAlign: "center",
@@ -1888,7 +1888,7 @@ const styles = StyleSheet.create({
   },
 
   infoValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "500",
   },
 
@@ -1904,7 +1904,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -1948,7 +1948,7 @@ const styles = StyleSheet.create({
   },
 
   inputLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     marginBottom: 6,
   },
@@ -1960,7 +1960,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.primary,
     borderRadius: 12,
     paddingHorizontal: 14,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 15,
   },
 
@@ -1978,7 +1978,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 46,
     paddingHorizontal: 14,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 15,
   },
 
@@ -2006,7 +2006,7 @@ const styles = StyleSheet.create({
   },
 
   preferenceTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
   },
 
@@ -2023,7 +2023,7 @@ const styles = StyleSheet.create({
   },
 
   groupLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     marginBottom: 8,
   },
@@ -2051,13 +2051,13 @@ const styles = StyleSheet.create({
   },
 
   optionText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     fontSize: 14,
   },
 
   selectedOptionText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   dropdownInput: {
@@ -2073,7 +2073,7 @@ const styles = StyleSheet.create({
   },
 
   dropdownInputText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "500",
   },
 
@@ -2104,7 +2104,7 @@ const styles = StyleSheet.create({
   },
 
   modalCancelButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderColor: Colors.light.error,
   },
 
@@ -2119,7 +2119,7 @@ const styles = StyleSheet.create({
   },
 
   modalSubmitButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -2129,7 +2129,7 @@ const styles = StyleSheet.create({
   },
 
   modalCloseButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -2148,7 +2148,7 @@ const styles = StyleSheet.create({
   },
 
   versionTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -2174,7 +2174,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 2,
     borderRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
   },
 
   logOutButton: {
@@ -2217,7 +2217,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 

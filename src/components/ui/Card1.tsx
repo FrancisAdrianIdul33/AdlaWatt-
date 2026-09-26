@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 20,
     fontWeight: "600",
     marginLeft: 10,
@@ -212,13 +212,13 @@ const styles = StyleSheet.create({
   },
 
   timerLabel: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 13,
     lineHeight: 16,
   },
 
   timerValue: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 19,
     fontWeight: "600",
     lineHeight: 23,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   },
 
   metricLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     textAlign: "center",
     fontSize: 17,
     fontWeight: "600",
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
 
   metricValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 25,
     fontWeight: "700",
     textAlign: "center",
@@ -304,10 +304,10 @@ const styles = StyleSheet.create({
   },
 
   lightBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   darkBadgeText: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 });

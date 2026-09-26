@@ -44,7 +44,7 @@ export default function AppButton1({
       <Ionicons
         name={icon}
         size={16}
-        color="#FFFFFF"
+        color={Colors.light.onPrimary}
       />
     </Pressable>
   );
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 13,
     fontWeight: "700",
   },

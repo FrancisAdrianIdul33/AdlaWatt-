@@ -192,7 +192,7 @@ export default function NavBar({
               size={
                 navBarDimensions.notificationIconSize
               }
-              color="#FFFFFF"
+              color={Colors.light.onPrimary}
             />
 
             {hasUnreadNotifications && (
@@ -290,7 +290,7 @@ const navBarStyles = StyleSheet.create({
     width: navBarDimensions.deviceStatusWidth,
     height: navBarDimensions.deviceStatusHeight,
     borderRadius: navBarDimensions.deviceStatusRadius,
-    backgroundColor: "#F0EAD6",
+    backgroundColor: Colors.light.background,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -304,7 +304,7 @@ const navBarStyles = StyleSheet.create({
   },
 
   onlineDot: {
-    backgroundColor: "#00A86B",
+    backgroundColor: Colors.light.primary,
   },
 
   offlineDot: {
@@ -312,7 +312,7 @@ const navBarStyles = StyleSheet.create({
   },
 
   statusText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 2,

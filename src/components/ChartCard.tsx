@@ -178,7 +178,7 @@ const SUN_GREY = "#dcdc6d";
 
 const SUN_MODERATE = "#EDEB44";
 
-const SUN_HIGH = "#FFBF00";
+const SUN_HIGH = Colors.light.secondary;
 
 const SOLAR_ANIMATION_DURATION_MS = 2000;
 
@@ -2814,7 +2814,7 @@ const styles = StyleSheet.create({
   },
 
   batteryPercentage: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 36,
     fontWeight: "800",
     lineHeight: 30,
@@ -2850,7 +2850,7 @@ const styles = StyleSheet.create({
   },
 
   batteryStatusText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -2905,7 +2905,7 @@ const styles = StyleSheet.create({
   },
 
   batteryMetricLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     textAlign: "center",
     fontSize: 12,
     fontWeight: "600",
@@ -2914,7 +2914,7 @@ const styles = StyleSheet.create({
   },
 
   batteryMetricValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -2985,7 +2985,7 @@ const styles = StyleSheet.create({
   },
 
   groupHeaderTitle: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3027,7 +3027,7 @@ const styles = StyleSheet.create({
   },
 
   weatherHeaderTitle: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3106,7 +3106,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastWeekday: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
@@ -3122,7 +3122,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastTemp: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -3184,15 +3184,15 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastPillTextHigh: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   weatherForecastPillTextModerate: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 
   weatherForecastPillTextLow: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   weatherForecastFlag: {
@@ -3214,7 +3214,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastFlagHotText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -3279,14 +3279,14 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   monitorLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     textAlign: "center",
     fontWeight: "600",
     lineHeight: 17,
   },
 
   monitorValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 20,
     fontWeight: "700",
     textAlign: "center",
@@ -3345,11 +3345,11 @@ const styles = StyleSheet.create({
   },
 
   lightBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   darkBadgeText: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 
   // ==========================================================
@@ -3383,11 +3383,11 @@ const styles = StyleSheet.create({
   },
 
   dodSafeBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   dodUnsafeBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   // ==========================================================

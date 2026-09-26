@@ -84,7 +84,7 @@ export default function TermsModal({
               <Ionicons
                 name="close"
                 size={24}
-                color="#FFFFFF"
+                color={Colors.light.onPrimary}
               />
             </Pressable>
           </View>
@@ -261,7 +261,7 @@ Users should review the Terms periodically. Where appropriate, significant chang
               <View style={styles.timerContainer}>
                 <ActivityIndicator
                   size="small"
-                  color="#FFFFFF"
+                  color={Colors.light.onPrimary}
                 />
 
                 <AppText
@@ -363,7 +363,7 @@ header: {
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   closeButton: {
@@ -420,12 +420,12 @@ header: {
   },
 
   timerText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     textAlign: "center",
   },
 
   readyText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     textAlign: "center",
     marginBottom: Spacing.sm,
   },
@@ -443,7 +443,7 @@ header: {
   },
 
   agreeButtonText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 

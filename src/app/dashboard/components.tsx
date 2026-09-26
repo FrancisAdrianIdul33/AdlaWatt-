@@ -393,7 +393,7 @@ export default function ComponentsScreen() {
                 statusFilter === option && {
                   backgroundColor:
                     option === "Inactive"
-                      ? "#EF4444"
+                      ? Colors.light.error
                       : Colors.light.primary,
                 },
 
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
 
   title: {
 
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "700",
 
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
 
   activeStatusText: {
 
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
 
   },
 

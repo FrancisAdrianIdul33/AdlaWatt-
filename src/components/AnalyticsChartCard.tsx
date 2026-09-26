@@ -179,7 +179,7 @@ const styles =
     },
 
     headerTitle: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -231,7 +231,7 @@ const styles =
     },
 
     frequencyTextActive: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
     },
 
     chartArea: {

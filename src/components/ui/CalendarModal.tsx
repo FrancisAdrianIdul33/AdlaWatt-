@@ -431,7 +431,7 @@ const styles =
     },
 
     monthLabel: {
-      color: "#000000",
+      color: Colors.light.text,
       fontSize: 15,
       fontWeight: "700",
       flexShrink: 1,
@@ -490,14 +490,14 @@ const styles =
     },
 
     dayText: {
-      color: "#000000",
+      color: Colors.light.text,
       fontSize: 14,
       fontWeight: "600",
       textAlign: "center",
     },
 
     selectedDayText: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
       fontWeight: "700",
     },
 

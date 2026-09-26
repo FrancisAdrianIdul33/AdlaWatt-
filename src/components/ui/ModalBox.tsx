@@ -68,7 +68,7 @@ export default function ModalBox<T extends string>({
               <Ionicons
                 name="close-outline"
                 size={22}
-                color="#000000"
+                color={Colors.light.text}
               />
             </Pressable>
           </View>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     backgroundColor:
-      "#FFFFFF",
+      Colors.light.surface,
     borderRadius: 18,
     padding: 17,
   },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     fontSize: 17,
   },
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
 
   modalOptionText: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 
   selectedModalOptionText: {

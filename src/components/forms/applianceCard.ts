@@ -26,7 +26,7 @@ import { Radius } from "@/constants/theme";
 const applianceCardBox: ViewStyle = {
   width: "46%",
   maxWidth: 150,
-  backgroundColor: "#FFFFFF",
+  backgroundColor: Colors.light.surface,
   borderWidth: 2,
   borderRadius: Radius.md,
   padding: 12,
@@ -70,7 +70,7 @@ export const applianceCardStyles = StyleSheet.create({
     width: "100%",
     height: 40,
     flexShrink: 0,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 16,
     fontWeight: "600",
     lineHeight: 20,
@@ -103,7 +103,7 @@ export const applianceCardStyles = StyleSheet.create({
   },
 
   statusText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 11,
     fontWeight: "700",
     flexShrink: 1,

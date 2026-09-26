@@ -228,8 +228,8 @@ function DeveloperProfile({
               {
                 color:
                   roleColor === Colors.light.primary
-                    ? "#FFFFFF"
-                    : "#000000",
+                    ? Colors.light.onPrimary
+                    : Colors.light.text,
               },
             ]}
           >
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "700",
   },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
 
   adlawattTitle: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "700",
 
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
 
   overview: {
-    color: "#000000",
+    color: Colors.light.text,
 
     marginTop: 14,
 
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
      ------------------------------------------------------- */
 
   sectionTitle: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "700",
 
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   },
 
   developerName: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "600",
 
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   },
 
   contactText: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "500",
 

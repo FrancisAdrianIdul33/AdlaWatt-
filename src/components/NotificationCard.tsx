@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
 
   notificationTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 

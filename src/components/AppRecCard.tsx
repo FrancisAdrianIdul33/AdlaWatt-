@@ -442,11 +442,11 @@ export default function AppRecCard({
                   },
                 ]}
               >
-                <Ionicons
-                  name="add"
-                  size={21}
-                  color="#FFFFFF"
-                />
+                  <Ionicons
+                    name="add"
+                    size={21}
+                    color={Colors.light.onPrimary}
+                  />
 
                 <AppText
                   variant="caption"
@@ -577,7 +577,7 @@ export default function AppRecCard({
                       <Ionicons
                         name={meta.icon}
                         size={13}
-                        color="#FFFFFF"
+                        color={Colors.light.onPrimary}
                       />
 
                       <AppText
@@ -824,7 +824,7 @@ const styles = StyleSheet.create({
   },
 
   activeToggleText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   activeToggleTextCaution: {
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
   getStartedBox: {
     width: "100%",
     height: 275,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderWidth: 2,
     borderColor: Colors.light.border,
     borderRadius: Radius.md,
@@ -900,7 +900,7 @@ const styles = StyleSheet.create({
   },
 
   getStartedTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 16,
@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
   },
 
   addAppliancesButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 

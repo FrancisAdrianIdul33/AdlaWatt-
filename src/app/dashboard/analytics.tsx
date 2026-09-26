@@ -536,7 +536,7 @@ const styles =
     },
 
     headerTitle: {
-      color: "#000000",
+      color: Colors.light.text,
       fontWeight: "700",
     },
 

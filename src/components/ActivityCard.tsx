@@ -143,13 +143,13 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     marginBottom: 10,
   },
 
   viewAll: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
     backgroundColor: Colors.light.primary,
     paddingHorizontal: 12,

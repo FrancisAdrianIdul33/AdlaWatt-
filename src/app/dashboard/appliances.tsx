@@ -389,7 +389,7 @@ export default function AppliancesScreen() {
             <Ionicons
               name="add-outline"
               size={18}
-              color="#FFFFFF"
+              color={Colors.light.onPrimary}
             />
 
             <AppText
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
   },
 
   addButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
 
   filterText: {
     flex: 1,
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
   },
 
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     marginBottom: 10,
   },
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
   },
 
   activeStatusText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   activeStatusTextCaution: {

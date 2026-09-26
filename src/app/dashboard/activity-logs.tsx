@@ -617,7 +617,7 @@ const dashboardDimensions = {
     },
 
     title: {
-      color: "#000000",
+      color: Colors.light.text,
       fontWeight: "700",
     },
 
@@ -641,7 +641,7 @@ const dashboardDimensions = {
     },
 
     totalValue: {
-      color: "#000000",
+      color: Colors.light.text,
       fontWeight: "700",
     },
 
@@ -691,7 +691,7 @@ const dashboardDimensions = {
     filterText: {
       flex: 1,
 
-      color: "#000000",
+      color: Colors.light.text,
 
       fontWeight: "600",
     },
