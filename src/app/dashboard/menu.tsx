@@ -42,7 +42,6 @@ import {
   getFontFamilyName,
   type FontFamilyOption,
   type FontSizeOption,
-  type FontWeightOption,
 } from "@/services/typography";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -123,9 +122,6 @@ export default function SettingsScreen() {
   const [fontSize, setFontSize] =
     useState<FontSizeOption>("Medium");
 
-  const [fontWeight, setFontWeight] =
-    useState<FontWeightOption>("Regular");
-
   const [fontFamily, setFontFamily] =
     useState<FontFamilyOption>(
       "System Default",
@@ -180,7 +176,6 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (preferencesExpanded) {
       setFontSize(savedTypography.fontSize);
-      setFontWeight(savedTypography.fontWeight);
       setFontFamily(savedTypography.fontFamily);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
@@ -193,7 +188,6 @@ export default function SettingsScreen() {
     }
 
     setFontSize(savedTypography.fontSize);
-    setFontWeight(savedTypography.fontWeight);
     setFontFamily(savedTypography.fontFamily);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
@@ -210,7 +204,6 @@ export default function SettingsScreen() {
 
       await commitTypography({
         fontSize,
-        fontWeight,
         fontFamily,
       });
 
@@ -1340,55 +1333,6 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              {/* Font Weight */}
-              <View
-                style={styles.preferenceGroup}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.groupLabel}
-                >
-                  Font Weight
-                </AppText>
-
-                <View style={styles.optionRow}>
-                  {[
-                    "Thin",
-                    "Regular",
-                    "Bold",
-                  ].map((option) => (
-                    <Pressable
-                      key={option}
-                      onPress={() =>
-                        setFontWeight(
-                          option as
-                            | "Thin"
-                            | "Regular"
-                            | "Bold",
-                        )
-                      }
-                      style={[
-                        styles.optionButton,
-                        fontWeight ===
-                          option &&
-                          styles.selectedOption,
-                      ]}
-                    >
-                      <AppText
-                        style={[
-                          styles.optionText,
-                          fontWeight ===
-                            option &&
-                            styles.selectedOptionText,
-                        ]}
-                      >
-                        {option}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
               {/* Font Family */}
               <View
                 style={styles.preferenceGroup}
@@ -1459,7 +1403,6 @@ export default function SettingsScreen() {
                                 fontFamily:
                                   getFontFamilyName(
                                     font,
-                                    "Regular",
                                   ),
                               },
                               fontFamily ===
