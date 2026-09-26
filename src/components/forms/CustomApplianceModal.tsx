@@ -162,15 +162,15 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.light.border,
     borderRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     paddingHorizontal: 12,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 14,
     marginBottom: 8,
   },
 
   customError: {
-    color: "#EF4444",
+    color: Colors.light.error,
     fontSize: 12,
     fontWeight: "600",
     marginBottom: 2,
@@ -187,13 +187,13 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderWidth: 2,
     borderRadius: Radius.md,
   },
 
   cancelAction: {
-    borderColor: "#EF4444",
+    borderColor: Colors.light.error,
   },
 
   addAction: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
 
   cancelText: {
-    color: "#EF4444",
+    color: Colors.light.error,
     fontWeight: "700",
   },
 

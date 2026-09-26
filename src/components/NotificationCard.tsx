@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
 
   unreadNotification: {
     backgroundColor:
-      "rgba(245, 245, 245, 0.85)",
+      Colors.glass.unread,
   },
 
   notificationWrapper: {
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
 
   notificationTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 

@@ -163,7 +163,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="delete"
             size={22}
-            color="#EF4444"
+            color={Colors.light.error}
           />
         </Pressable>
       </View>
@@ -175,7 +175,7 @@ export default function ApplianceBox({
       <MaterialCommunityIcons
         name="alert-circle-outline"
         size={30}
-        color="#EF4444"
+        color={Colors.light.error}
       />
 
       <AppText
@@ -246,7 +246,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="check"
             size={18}
-            color="#FFFFFF"
+            color={Colors.light.onPrimary}
           />
         )}
       </View>
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
 
   deleteQuestion: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
@@ -412,20 +412,20 @@ const styles = StyleSheet.create({
   },
 
   noButton: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.light.surface,
   },
 
   yesButton: {
-    backgroundColor: "#EF4444",
+    backgroundColor: Colors.light.error,
   },
 
   noButtonText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
   },
 
   yesButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "600",
   },
 

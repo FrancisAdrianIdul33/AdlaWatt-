@@ -60,7 +60,7 @@ const WEATHER_REFRESH_INTERVAL_MS =
 
 const QUICK_NAV_SCROLL_MS = 1500;
 const QUICK_NAV_SCROLL_INSET = 12;
-const QUICK_NAV_PRESSED_BG = "#33B98A";
+const QUICK_NAV_PRESSED_BG = Colors.light.primaryPressed;
 
 // ============================================================
 // DASHBOARD SCREEN
@@ -428,7 +428,7 @@ export default function DashboardScreen() {
             <Ionicons
               name="arrow-forward"
               size={16}
-              color="#FFFFFF"
+              color={Colors.light.onPrimary}
             />
           </Pressable>
         </View>
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
   },
 
   quickNavButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     marginBottom: 10,
   },

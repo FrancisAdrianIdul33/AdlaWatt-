@@ -69,7 +69,7 @@ export function DropdownModal({
               <Ionicons
                 name="close-outline"
                 size={22}
-                color="#000000"
+                color={Colors.light.text}
               />
             </Pressable>
           </View>
@@ -197,7 +197,7 @@ export function TintedOptionRow({
 const dropdownModalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.40)",
+    backgroundColor: Colors.light.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -206,7 +206,7 @@ const dropdownModalStyles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderRadius: MODAL_RADIUS,
     padding: 17,
   },
@@ -220,7 +220,7 @@ const dropdownModalStyles = StyleSheet.create({
   },
 
   title: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
     fontSize: 17,
   },
@@ -237,11 +237,11 @@ const dropdownModalStyles = StyleSheet.create({
   },
 
   optionSelected: {
-    backgroundColor: "rgba(0, 168, 107, 0.08)",
+    backgroundColor: Colors.light.primaryWash,
   },
 
   optionText: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 
   optionTextSelected: {

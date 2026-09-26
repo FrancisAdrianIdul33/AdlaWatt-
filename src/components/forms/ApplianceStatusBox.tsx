@@ -106,7 +106,7 @@ export default function ApplianceStatusBox({
         <Ionicons
           name={iconName}
           size={13}
-          color="#FFFFFF"
+          color={Colors.light.onPrimary}
         />
 
         <AppText

@@ -84,7 +84,7 @@ export default function TermsModal({
               <Ionicons
                 name="close"
                 size={24}
-                color="#FFFFFF"
+                color={Colors.light.onPrimary}
               />
             </Pressable>
           </View>
@@ -261,7 +261,7 @@ Users should review the Terms periodically. Where appropriate, significant chang
               <View style={styles.timerContainer}>
                 <ActivityIndicator
                   size="small"
-                  color="#FFFFFF"
+                  color={Colors.light.onPrimary}
                 />
 
                 <AppText
@@ -337,7 +337,7 @@ function Section({ title, text }: SectionProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: Colors.light.overlay,
     justifyContent: "flex-end",
   },
 
@@ -363,7 +363,7 @@ header: {
   title: {
     fontSize: Typography.heading,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   closeButton: {
@@ -420,12 +420,12 @@ header: {
   },
 
   timerText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     textAlign: "center",
   },
 
   readyText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     textAlign: "center",
     marginBottom: Spacing.sm,
   },
@@ -433,17 +433,17 @@ header: {
   agreeButton: {
     minHeight: 48,
     borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
+    backgroundColor: Colors.light.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
 
   agreeButtonDisabled: {
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    backgroundColor: Colors.glass.disabled,
   },
 
   agreeButtonText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -452,6 +452,6 @@ header: {
   },
 
   agreeButtonTextDisabled: {
-    color: "rgba(255, 255, 255, 0.75)",
+    color: Colors.glass.disabledText,
   },
 });

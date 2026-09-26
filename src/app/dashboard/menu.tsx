@@ -37,6 +37,7 @@ import {
 import { supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
@@ -150,14 +151,23 @@ export default function SettingsScreen() {
   // TYPOGRAPHY DRAFT (system preferences)
   //
   // Draft edits apply on Save; Cancel / X discards back
-  // to the saved system values. Dark mode and color blind
-  // mode stay local-only and are intentionally excluded.
+  // to the saved system values. Dark mode applies
+  // instantly through ThemeContext (not part of the
+  // draft); color blind mode stays local-only and is
+  // intentionally excluded.
   // ============================================
 
   const {
     prefs: savedTypography,
     setPreferences: commitTypography,
   } = useSettings();
+
+  // Dark mode is instant-apply: flipping the switch
+  // writes the theme through immediately and persists it.
+  const {
+    theme: savedTheme,
+    setTheme: commitTheme,
+  } = useTheme();
 
   const {
     scaledSize: scaledInputSize,
@@ -178,10 +188,22 @@ export default function SettingsScreen() {
     if (preferencesExpanded) {
       setFontSize(savedTypography.fontSize);
       setFontFamily(savedTypography.fontFamily);
+      setDarkMode(savedTheme === "dark");
       setFontFamilyOpen(false);
       setLanguageOpen(false);
     }
-  }, [preferencesExpanded, savedTypography]);
+  }, [
+    preferencesExpanded,
+    savedTypography,
+    savedTheme,
+  ]);
+
+  const handleDarkModeChange = (
+    value: boolean,
+  ) => {
+    setDarkMode(value);
+    void commitTheme(value ? "dark" : "light");
+  };
 
   const handleClosePreferences = () => {
     if (isSavingPreferences) {
@@ -566,15 +588,21 @@ export default function SettingsScreen() {
     onValueChange: (
       value: boolean,
     ) => void,
+    // When true the Switch is purely visual and its row
+    // handles taps (avoids double-toggle from nested press).
+    decorative: boolean = false,
   ) => (
     <Switch
       value={value}
       onValueChange={onValueChange}
+      pointerEvents={
+        decorative ? "none" : "auto"
+      }
       trackColor={{
         false: Colors.light.border,
         true: Colors.light.primary,
       }}
-      thumbColor="#FFFFFF"
+      thumbColor={Colors.light.surface}
       ios_backgroundColor={
         Colors.light.border
       }
@@ -1043,7 +1071,7 @@ export default function SettingsScreen() {
                               : "eye-off-outline"
                           }
                           size={22}
-                          color="#000000"
+                          color={Colors.light.text}
                         />
                       </Pressable>
                     </View>
@@ -1105,7 +1133,7 @@ export default function SettingsScreen() {
                               : "eye-off-outline"
                           }
                           size={22}
-                          color="#000000"
+                          color={Colors.light.text}
                         />
                       </Pressable>
                     </View>
@@ -1200,7 +1228,22 @@ export default function SettingsScreen() {
           onClose={handleClosePreferences}
         >
           <View style={styles.modalBody}>
-              <View style={styles.preferenceRow}>
+              {/* Dark Mode: whole row toggles so the target
+                  is the full row, not just the Switch. */}
+              <Pressable
+                onPress={() =>
+                  handleDarkModeChange(!darkMode)
+                }
+                accessibilityRole="switch"
+                accessibilityState={{
+                  checked: darkMode,
+                }}
+                accessibilityLabel="Dark Mode"
+                style={({ pressed }) => [
+                  styles.preferenceRow,
+                  pressed && styles.pressed,
+                ]}
+              >
                 <View
                   style={styles.preferenceText}
                 >
@@ -1226,9 +1269,10 @@ export default function SettingsScreen() {
 
                 {renderToggle(
                   darkMode,
-                  setDarkMode,
+                  handleDarkModeChange,
+                  true,
                 )}
-              </View>
+              </Pressable>
 
               <View style={styles.preferenceRow}>
                 <View
@@ -1347,7 +1391,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="chevron-down-outline"
                     size={22}
-                    color="#000000"
+                    color={Colors.light.text}
                   />
                 </Pressable>
               </View>
@@ -1378,7 +1422,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="chevron-down-outline"
                     size={22}
-                    color="#000000"
+                    color={Colors.light.text}
                   />
                 </Pressable>
               </View>
@@ -1724,7 +1768,7 @@ export default function SettingsScreen() {
                         : "eye-off-outline"
                     }
                     size={22}
-                    color="#000000"
+                    color={Colors.light.text}
                   />
                 </Pressable>
               </View>
@@ -1826,7 +1870,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -1852,7 +1896,7 @@ const styles = StyleSheet.create({
     width: "46%",
     maxWidth: 150,
     minHeight: 150,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderWidth: 2,
     borderColor: Colors.light.primary,
     borderRadius: Radius.md,
@@ -1864,11 +1908,11 @@ const styles = StyleSheet.create({
 
   menuBoxActive: {
     backgroundColor:
-      "rgba(0, 168, 107, 0.08)",
+      Colors.light.primaryWash,
   },
 
   menuBoxText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     fontSize: 16,
     textAlign: "center",
@@ -1888,7 +1932,7 @@ const styles = StyleSheet.create({
   },
 
   infoValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "500",
   },
 
@@ -1904,7 +1948,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -1948,7 +1992,7 @@ const styles = StyleSheet.create({
   },
 
   inputLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     marginBottom: 6,
   },
@@ -1960,7 +2004,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.primary,
     borderRadius: 12,
     paddingHorizontal: 14,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 15,
   },
 
@@ -1978,7 +2022,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 46,
     paddingHorizontal: 14,
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 15,
   },
 
@@ -2006,7 +2050,7 @@ const styles = StyleSheet.create({
   },
 
   preferenceTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
   },
 
@@ -2023,7 +2067,7 @@ const styles = StyleSheet.create({
   },
 
   groupLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     marginBottom: 8,
   },
@@ -2051,13 +2095,13 @@ const styles = StyleSheet.create({
   },
 
   optionText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "600",
     fontSize: 14,
   },
 
   selectedOptionText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   dropdownInput: {
@@ -2073,7 +2117,7 @@ const styles = StyleSheet.create({
   },
 
   dropdownInputText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "500",
   },
 
@@ -2104,7 +2148,7 @@ const styles = StyleSheet.create({
   },
 
   modalCancelButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
     borderColor: Colors.light.error,
   },
 
@@ -2119,7 +2163,7 @@ const styles = StyleSheet.create({
   },
 
   modalSubmitButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -2129,7 +2173,7 @@ const styles = StyleSheet.create({
   },
 
   modalCloseButtonText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontWeight: "700",
   },
 
@@ -2148,7 +2192,7 @@ const styles = StyleSheet.create({
   },
 
   versionTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -2174,7 +2218,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 2,
     borderRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.light.surface,
   },
 
   logOutButton: {
@@ -2199,7 +2243,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: Colors.light.overlayStrong,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -2217,7 +2261,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 

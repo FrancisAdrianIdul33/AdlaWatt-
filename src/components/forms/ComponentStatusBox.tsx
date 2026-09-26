@@ -35,7 +35,7 @@ export default function ComponentStatusBox({
 
   const statusColor = isActive
     ? Colors.light.primary
-    : "#EF4444";
+    : Colors.light.error;
 
   return (
     <View

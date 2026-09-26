@@ -54,7 +54,7 @@ export default function AnalyticsChartCard({
         <Ionicons
           name={icon}
           size={26}
-          color="#FACC15"
+          color={Colors.light.iconAccent}
         />
 
         <AppText
@@ -179,7 +179,7 @@ const styles =
     },
 
     headerTitle: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
       fontSize: 16,
       fontWeight: "600",
       marginLeft: 8,
@@ -202,7 +202,7 @@ const styles =
       height: 46,
       flexDirection: "row",
       backgroundColor:
-        "rgba(0, 0, 0, 0.04)",
+        Colors.light.scrimFaint,
       borderWidth: 2,
       borderColor:
         Colors.light.border,
@@ -231,7 +231,7 @@ const styles =
     },
 
     frequencyTextActive: {
-      color: "#FFFFFF",
+      color: Colors.light.onPrimary,
     },
 
     chartArea: {

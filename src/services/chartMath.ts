@@ -10,10 +10,10 @@ export const CHART_COLORS = {
   green: Colors.light.primary,
   red: Colors.light.error,
   yellow: Colors.light.warning,
-  orange: "#F97316",
-  grid: "rgba(46, 46, 46, 0.10)",
-  axisLabel: "#8E8E93",
-  muted: "#D8D2C2",
+  orange: Colors.light.chart.orange,
+  grid: Colors.light.chart.grid,
+  axisLabel: Colors.light.chart.axisLabel,
+  muted: Colors.light.border,
 } as const;
 
 export const CHART_HEIGHT = 190;

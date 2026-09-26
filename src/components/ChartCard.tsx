@@ -178,7 +178,7 @@ const SUN_GREY = "#dcdc6d";
 
 const SUN_MODERATE = "#EDEB44";
 
-const SUN_HIGH = "#FFBF00";
+const SUN_HIGH = Colors.light.secondary;
 
 const SOLAR_ANIMATION_DURATION_MS = 2000;
 
@@ -546,7 +546,7 @@ export default function ChartCard({
 
     const batteryColor =
       isLowBattery
-        ? "#EF4444"
+        ? Colors.light.error
         : Colors.light.primary;
 
     const dashOffset =
@@ -702,7 +702,7 @@ export default function ChartCard({
             <Ionicons
               name="flash-outline"
               size={30}
-              color="#FACC15"
+              color={Colors.light.iconAccent}
             />
 
             <AppText
@@ -1234,7 +1234,7 @@ export default function ChartCard({
             <Ionicons
               name="sunny-outline"
               size={30}
-              color="#FACC15"
+              color={Colors.light.iconAccent}
             />
 
             <AppText
@@ -1635,7 +1635,7 @@ export default function ChartCard({
             <Ionicons
               name={weatherData.icon}
               size={30}
-              color="#FACC15"
+              color={Colors.light.iconAccent}
             />
 
             <AppText
@@ -1717,7 +1717,7 @@ export default function ChartCard({
             <Ionicons
               name={weatherData.icon}
               size={26}
-              color="#FACC15"
+              color={Colors.light.iconAccent}
             />
 
             <AppText
@@ -1751,7 +1751,7 @@ export default function ChartCard({
               <Ionicons
                 name="warning-outline"
                 size={20}
-                color="#D32F2F"
+                color={Colors.light.errorDark}
                 style={{ marginRight: 8 }}
               />
 
@@ -1836,7 +1836,7 @@ export default function ChartCard({
                           day.peakIcon as keyof typeof Ionicons.glyphMap
                         }
                         size={26}
-                        color="#FACC15"
+                        color={Colors.light.iconAccent}
                       />
 
                       <AppText
@@ -2814,7 +2814,7 @@ const styles = StyleSheet.create({
   },
 
   batteryPercentage: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 36,
     fontWeight: "800",
     lineHeight: 30,
@@ -2850,7 +2850,7 @@ const styles = StyleSheet.create({
   },
 
   batteryStatusText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -2905,7 +2905,7 @@ const styles = StyleSheet.create({
   },
 
   batteryMetricLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     textAlign: "center",
     fontSize: 12,
     fontWeight: "600",
@@ -2914,7 +2914,7 @@ const styles = StyleSheet.create({
   },
 
   batteryMetricValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -2985,7 +2985,7 @@ const styles = StyleSheet.create({
   },
 
   groupHeaderTitle: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3027,7 +3027,7 @@ const styles = StyleSheet.create({
   },
 
   weatherHeaderTitle: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
@@ -3106,7 +3106,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastWeekday: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
@@ -3122,7 +3122,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastTemp: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -3184,15 +3184,15 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastPillTextHigh: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   weatherForecastPillTextModerate: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 
   weatherForecastPillTextLow: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   weatherForecastFlag: {
@@ -3214,7 +3214,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastFlagHotText: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -3246,7 +3246,7 @@ const styles = StyleSheet.create({
   },
 
   weatherForecastErrorText: {
-    color: "#D32F2F",
+    color: Colors.light.errorDark,
     flex: 1,
   },
 
@@ -3279,14 +3279,14 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   monitorLabel: {
-    color: "#000000",
+    color: Colors.light.text,
     textAlign: "center",
     fontWeight: "600",
     lineHeight: 17,
   },
 
   monitorValue: {
-    color: "#000000",
+    color: Colors.light.text,
     fontSize: 20,
     fontWeight: "700",
     textAlign: "center",
@@ -3345,11 +3345,11 @@ const styles = StyleSheet.create({
   },
 
   lightBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   darkBadgeText: {
-    color: "#000000",
+    color: Colors.light.text,
   },
 
   // ==========================================================
@@ -3383,11 +3383,11 @@ const styles = StyleSheet.create({
   },
 
   dodSafeBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   dodUnsafeBadgeText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
   },
 
   // ==========================================================
@@ -3395,43 +3395,43 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   nominalTemperatureBadge: {
-    backgroundColor: "#E4EAD9",
+    backgroundColor: Colors.light.severity.nominal.bg,
     borderWidth: 1,
-    borderColor: "#14532D",
+    borderColor: Colors.light.severity.nominal.border,
   },
 
   nominalTemperatureBadgeText: {
-    color: "#14532D",
+    color: Colors.light.severity.nominal.text,
   },
 
   elevatedTemperatureBadge: {
-    backgroundColor: "#EBE8CD",
+    backgroundColor: Colors.light.severity.elevated.bg,
     borderWidth: 1,
-    borderColor: "#713F12",
+    borderColor: Colors.light.severity.elevated.border,
   },
 
   elevatedTemperatureBadgeText: {
-    color: "#713F12",
+    color: Colors.light.severity.elevated.text,
   },
 
   highTemperatureBadge: {
-    backgroundColor: "#EFE2CC",
+    backgroundColor: Colors.light.severity.high.bg,
     borderWidth: 1,
-    borderColor: "#7C2D12",
+    borderColor: Colors.light.severity.high.border,
   },
 
   highTemperatureBadgeText: {
-    color: "#7C2D12",
+    color: Colors.light.severity.high.text,
   },
 
   criticalTemperatureBadge: {
-    backgroundColor: "#EFE0DC",
+    backgroundColor: Colors.light.severity.critical.bg,
     borderWidth: 1,
-    borderColor: "#7F1D1D",
+    borderColor: Colors.light.severity.critical.border,
   },
 
   criticalTemperatureBadgeText: {
-    color: "#7F1D1D",
+    color: Colors.light.severity.critical.text,
   },
 
   // ==========================================================
@@ -3441,85 +3441,85 @@ const styles = StyleSheet.create({
   // CLEAR
 
   clearWeatherBadge: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: Colors.light.weather.clear.bg,
     borderWidth: 1,
-    borderColor: "#86EFAC",
+    borderColor: Colors.light.weather.clear.border,
   },
 
   clearWeatherBadgeText: {
-    color: "#166534",
+    color: Colors.light.weather.clear.text,
   },
 
   // PARTLY CLOUDY
 
   partlyCloudyWeatherBadge: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: Colors.light.weather.partlyCloudy.bg,
     borderWidth: 1,
-    borderColor: "#FCD34D",
+    borderColor: Colors.light.weather.partlyCloudy.border,
   },
 
   partlyCloudyWeatherBadgeText: {
-    color: "#92400E",
+    color: Colors.light.weather.partlyCloudy.text,
   },
 
   // OVERCAST
 
   overcastWeatherBadge: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: Colors.light.weather.overcast.bg,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: Colors.light.weather.overcast.border,
   },
 
   overcastWeatherBadgeText: {
-    color: "#475569",
+    color: Colors.light.weather.overcast.text,
   },
 
   // FOG
 
   fogWeatherBadge: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: Colors.light.weather.fog.bg,
     borderWidth: 1,
-    borderColor: "#94A3B8",
+    borderColor: Colors.light.weather.fog.border,
   },
 
   fogWeatherBadgeText: {
-    color: "#475569",
+    color: Colors.light.weather.fog.text,
   },
 
   // PAGASA-STYLE YELLOW
 
   yellowWeatherBadge: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: Colors.light.weather.yellow.bg,
     borderWidth: 1,
-    borderColor: "#FACC15",
+    borderColor: Colors.light.weather.yellow.border,
   },
 
   yellowWeatherBadgeText: {
-    color: "#854D0E",
+    color: Colors.light.weather.yellow.text,
   },
 
   // PAGASA-STYLE ORANGE
 
   orangeWeatherBadge: {
-    backgroundColor: "#FFEDD5",
+    backgroundColor: Colors.light.weather.orange.bg,
     borderWidth: 1,
-    borderColor: "#F97316",
+    borderColor: Colors.light.weather.orange.border,
   },
 
   orangeWeatherBadgeText: {
-    color: "#9A3412",
+    color: Colors.light.weather.orange.text,
   },
 
   // PAGASA-STYLE RED
 
   redWeatherBadge: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: Colors.light.weather.red.bg,
     borderWidth: 1,
-    borderColor: "#EF4444",
+    borderColor: Colors.light.weather.red.border,
   },
 
   redWeatherBadgeText: {
-    color: "#991B1B",
+    color: Colors.light.weather.red.text,
   },
 
   // ==========================================================

@@ -19,15 +19,15 @@ import { Routes } from "@/constants/routes";
 // ICON COLORS
 // ============================================================
 
-// Active tab icon - matches the ChartCard.tsx icon hex (#FACC15).
-const ACTIVE_ICON = "#FACC15";
+// Active tab icon - matches the ChartCard.tsx icon accent.
+const ACTIVE_ICON = Colors.light.iconAccent;
 
 // Inactive tab icons balance against the green body.
-const IDLE_ICON = "rgba(255, 255, 255, 0.6)";
+const IDLE_ICON = Colors.light.onPrimaryMuted;
 
 // Every label sits at ~90% white so the text stays readable on
 // top of the primary green while keeping the icon the focus.
-const LABEL_COLOR = "rgba(255, 255, 255, 0.9)";
+const LABEL_COLOR = Colors.light.onPrimarySoft;
 
 // ============================================================
 // TABS (left -> right)

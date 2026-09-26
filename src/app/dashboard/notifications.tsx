@@ -493,7 +493,7 @@ export default function NotificationsScreen() {
             <Ionicons
               name="checkmark-done-outline"
               size={17}
-              color="#FFFFFF"
+              color={Colors.light.onPrimary}
             />
 
             <AppText
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
   },
 
   totalNumber: {
-    color: "#000000",
+    color: Colors.light.text,
     fontWeight: "700",
   },
 
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
   },
 
   dropdownButtonText: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "600",
 
@@ -801,14 +801,14 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 12,
 
-    backgroundColor: "#00A86B",
+    backgroundColor: Colors.light.primary,
 
     borderRadius:
       notificationDimensions.buttonRadius,
   },
 
   markReadText: {
-    color: "#FFFFFF",
+    color: Colors.light.onPrimary,
 
     fontWeight: "700",
   },
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#000000",
+    color: Colors.light.text,
 
     fontWeight: "700",
 
