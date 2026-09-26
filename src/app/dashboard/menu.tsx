@@ -1271,7 +1271,7 @@ export default function SettingsScreen() {
 
               {/* Font Size */}
               <View
-                style={styles.preferenceGroupCard}
+                style={styles.preferenceBlock}
               >
                 <AppText
                   variant="caption"
@@ -1325,7 +1325,7 @@ export default function SettingsScreen() {
 
               {/* Font Family */}
               <View
-                style={styles.preferenceGroupCard}
+                style={styles.preferenceBlock}
               >
                 <AppText
                   variant="caption"
@@ -1363,7 +1363,7 @@ export default function SettingsScreen() {
               </View>
 
               <View
-                style={styles.preferenceGroupCard}
+                style={styles.preferenceBlock}
               >
                 <Pressable
                   onPress={() => {
@@ -2001,15 +2001,6 @@ const styles = StyleSheet.create({
 
   /* ================= PREFERENCES ================= */
 
-  sectionLabel: {
-    color: Colors.light.text,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginTop: 8,
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  },
-
   preferenceRow: {
     width: "100%",
     flexDirection: "row",
@@ -2017,20 +2008,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 6,
     marginBottom: 12,
-  },
-
-  preferenceCard: {
-    width: "100%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: settingsDimensions.innerRadius,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
   },
 
   preferenceText: {
@@ -2049,15 +2026,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  preferenceGroupCard: {
+  preferenceBlock: {
     width: "100%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: settingsDimensions.innerRadius,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    marginBottom: 10,
+    paddingVertical: 6,
+    marginBottom: 12,
   },
 
   groupLabel: {
