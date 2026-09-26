@@ -588,10 +588,16 @@ export default function SettingsScreen() {
     onValueChange: (
       value: boolean,
     ) => void,
+    // When true the Switch is purely visual and its row
+    // handles taps (avoids double-toggle from nested press).
+    decorative: boolean = false,
   ) => (
     <Switch
       value={value}
       onValueChange={onValueChange}
+      pointerEvents={
+        decorative ? "none" : "auto"
+      }
       trackColor={{
         false: Colors.light.border,
         true: Colors.light.primary,
@@ -1222,7 +1228,22 @@ export default function SettingsScreen() {
           onClose={handleClosePreferences}
         >
           <View style={styles.modalBody}>
-              <View style={styles.preferenceRow}>
+              {/* Dark Mode: whole row toggles so the target
+                  is the full row, not just the Switch. */}
+              <Pressable
+                onPress={() =>
+                  handleDarkModeChange(!darkMode)
+                }
+                accessibilityRole="switch"
+                accessibilityState={{
+                  checked: darkMode,
+                }}
+                accessibilityLabel="Dark Mode"
+                style={({ pressed }) => [
+                  styles.preferenceRow,
+                  pressed && styles.pressed,
+                ]}
+              >
                 <View
                   style={styles.preferenceText}
                 >
@@ -1249,8 +1270,9 @@ export default function SettingsScreen() {
                 {renderToggle(
                   darkMode,
                   handleDarkModeChange,
+                  true,
                 )}
-              </View>
+              </Pressable>
 
               <View style={styles.preferenceRow}>
                 <View
