@@ -148,13 +148,11 @@ export default function SettingsScreen() {
     useState(false);
 
   // ============================================
-  // TYPOGRAPHY DRAFT (system preferences)
+  // PREFERENCES DRAFT (system preferences)
   //
-  // Draft edits apply on Save; Cancel / X discards back
-  // to the saved system values. Dark mode applies
-  // instantly through ThemeContext (not part of the
-  // draft); color blind mode stays local-only and is
-  // intentionally excluded.
+  // Typography + theme edits apply on Save; Cancel / X
+  // discards back to the saved values. Color blind mode
+  // stays local-only and is intentionally excluded.
   // ============================================
 
   const {
@@ -162,8 +160,8 @@ export default function SettingsScreen() {
     setPreferences: commitTypography,
   } = useSettings();
 
-  // Dark mode is instant-apply: flipping the switch
-  // writes the theme through immediately and persists it.
+  // Dark mode is staged like typography: flipping only
+  // updates local state, Save commits the theme.
   const {
     theme: savedTheme,
     setTheme: commitTheme,
@@ -198,11 +196,12 @@ export default function SettingsScreen() {
     savedTheme,
   ]);
 
+  // Staged only: Save commits the theme together with
+  // typography. Flipping previews nothing by itself.
   const handleDarkModeChange = (
     value: boolean,
   ) => {
     setDarkMode(value);
-    void commitTheme(value ? "dark" : "light");
   };
 
   const handleClosePreferences = () => {
@@ -212,6 +211,7 @@ export default function SettingsScreen() {
 
     setFontSize(savedTypography.fontSize);
     setFontFamily(savedTypography.fontFamily);
+    setDarkMode(savedTheme === "dark");
     setFontFamilyOpen(false);
     setLanguageOpen(false);
     setPreferencesExpanded(false);
@@ -229,6 +229,12 @@ export default function SettingsScreen() {
         fontSize,
         fontFamily,
       });
+
+      // Theme last: the flip re-renders screens, so it
+      // lands as the modal closes instead of mid-save.
+      await commitTheme(
+        darkMode ? "dark" : "light",
+      );
 
       setFontFamilyOpen(false);
       setLanguageOpen(false);
