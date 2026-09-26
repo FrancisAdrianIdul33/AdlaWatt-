@@ -40,7 +40,7 @@ export default function ComponentStatusBox({
   return (
     <View
       style={[
-        applianceCardStyles.box,
+        applianceCardStyles.boxSlim,
         {
           borderColor: statusColor,
         },
@@ -70,26 +70,6 @@ export default function ComponentStatusBox({
       >
         {name}
       </AppText>
-
-      {/* Component Status */}
-      <View
-        style={[
-          applianceCardStyles.status,
-          {
-            backgroundColor: statusColor,
-            // Pin the badge flush to the same bottom padding
-            // as ApplianceStatusBox regardless of name length.
-            marginTop: "auto",
-          },
-        ]}
-      >
-        <AppText
-          variant="caption"
-          style={applianceCardStyles.statusText}
-        >
-          {status}
-        </AppText>
-      </View>
     </View>
   );
 }
