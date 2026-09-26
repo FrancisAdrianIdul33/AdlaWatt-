@@ -22,6 +22,7 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
 import {
   DropdownModal,
+  RadioOptionRow,
 } from "@/components/ui/DropdownModal";
 
 import { Colors } from "@/constants/colors";
@@ -39,7 +40,6 @@ import { useSettings } from "@/context/SettingsContext";
 import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
-  getFontFamilyName,
   type FontFamilyOption,
   type FontSizeOption,
 } from "@/services/typography";
@@ -1351,12 +1351,13 @@ export default function SettingsScreen() {
                 </AppText>
 
                 <Pressable
-                  onPress={() =>
-                    setFontFamilyOpen(
-                      (current) =>
-                        !current,
-                    )
-                  }
+                  onPress={() => {
+                    setFontFamilyOpen(true);
+                    setLanguageOpen(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose font family"
+                  accessibilityHint={`Current: ${fontFamily}`}
                   style={
                     styles.dropdownInput
                   }
@@ -1370,59 +1371,11 @@ export default function SettingsScreen() {
                   </AppText>
 
                   <Ionicons
-                    name={
-                      fontFamilyOpen
-                        ? "chevron-up-outline"
-                        : "chevron-down-outline"
-                    }
+                    name="chevron-down-outline"
                     size={22}
                     color="#000000"
                   />
                 </Pressable>
-
-                {fontFamilyOpen && (
-                  <View
-                    style={
-                      styles.selectionMenu
-                    }
-                  >
-                    {FONT_FAMILY_OPTIONS.map(
-                      (font) => (
-                        <Pressable
-                          key={font}
-                          onPress={() => {
-                            setFontFamily(
-                              font,
-                            );
-                            setFontFamilyOpen(
-                              false,
-                            );
-                          }}
-                          style={
-                            styles.selectionItem
-                          }
-                        >
-                          <AppText
-                            style={[
-                              styles.selectionText,
-                              {
-                                fontFamily:
-                                  getFontFamilyName(
-                                    font,
-                                  ),
-                              },
-                              fontFamily ===
-                                font &&
-                                styles.selectedSelectionText,
-                            ]}
-                          >
-                            {font}
-                          </AppText>
-                        </Pressable>
-                      ),
-                    )}
-                  </View>
-                )}
               </View>
 
               {/* LANGUAGE */}
@@ -1437,12 +1390,13 @@ export default function SettingsScreen() {
                 style={styles.preferenceGroupCard}
               >
                 <Pressable
-                  onPress={() =>
-                    setLanguageOpen(
-                      (current) =>
-                        !current,
-                    )
-                  }
+                  onPress={() => {
+                    setLanguageOpen(true);
+                    setFontFamilyOpen(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose language"
+                  accessibilityHint={`Current: ${language}`}
                   style={
                     styles.dropdownInput
                   }
@@ -1456,55 +1410,11 @@ export default function SettingsScreen() {
                   </AppText>
 
                   <Ionicons
-                    name={
-                      languageOpen
-                        ? "chevron-up-outline"
-                        : "chevron-down-outline"
-                    }
+                    name="chevron-down-outline"
                     size={22}
                     color="#000000"
                   />
                 </Pressable>
-
-                {languageOpen && (
-                  <View
-                    style={
-                      styles.selectionMenu
-                    }
-                  >
-                    {[
-                      "English",
-                      "Cebuano (Bisaya)",
-                      "Tagalog",
-                    ].map((item) => (
-                      <Pressable
-                        key={item}
-                        onPress={() => {
-                          setLanguage(
-                            item,
-                          );
-                          setLanguageOpen(
-                            false,
-                          );
-                        }}
-                        style={
-                          styles.selectionItem
-                        }
-                      >
-                        <AppText
-                          style={[
-                            styles.selectionText,
-                            language ===
-                              item &&
-                              styles.selectedSelectionText,
-                          ]}
-                        >
-                          {item}
-                        </AppText>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
               </View>
 
               {/* ALERTS & VIBRATION */}
@@ -1619,6 +1529,56 @@ export default function SettingsScreen() {
               </AppText>
             </Pressable>
           </View>
+        </DropdownModal>
+
+        {/* ================= FONT FAMILY PICKER ================= */}
+
+        <DropdownModal
+          visible={fontFamilyOpen}
+          title="Font Family"
+          onClose={() =>
+            setFontFamilyOpen(false)
+          }
+        >
+          {FONT_FAMILY_OPTIONS.map(
+            (font) => (
+              <RadioOptionRow
+                key={font}
+                label={font}
+                selected={fontFamily === font}
+                onPress={() => {
+                  setFontFamily(font);
+                  setFontFamilyOpen(false);
+                }}
+              />
+            ),
+          )}
+        </DropdownModal>
+
+        {/* ================= LANGUAGE PICKER ================= */}
+
+        <DropdownModal
+          visible={languageOpen}
+          title="Language"
+          onClose={() =>
+            setLanguageOpen(false)
+          }
+        >
+          {[
+            "English",
+            "Cebuano (Bisaya)",
+            "Tagalog",
+          ].map((item) => (
+            <RadioOptionRow
+              key={item}
+              label={item}
+              selected={language === item}
+              onPress={() => {
+                setLanguage(item);
+                setLanguageOpen(false);
+              }}
+            />
+          ))}
         </DropdownModal>
 
         <View
@@ -2176,33 +2136,6 @@ const styles = StyleSheet.create({
   dropdownInputText: {
     color: "#000000",
     fontWeight: "500",
-  },
-
-  selectionMenu: {
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.secondary,
-    borderRadius: 12,
-    marginTop: 5,
-    overflow: "hidden",
-  },
-
-  selectionItem: {
-    minHeight: 44,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-
-  selectionText: {
-    color: "#000000",
-    fontWeight: "500",
-  },
-
-  selectedSelectionText: {
-    color: Colors.light.primary,
-    fontWeight: "700",
   },
 
   /* ================= MODAL SHEETS ================= */
