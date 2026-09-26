@@ -16,6 +16,7 @@ import { Colors } from "@/constants/colors";
 import {
   Radius,
 } from "@/constants/theme";
+import { useTypography } from "@/hooks/useTypography";
 
 // ============================================================
 // CUSTOM APPLIANCE MODAL (ADD-ONLY)
@@ -47,6 +48,15 @@ export default function CustomApplianceModal({
   onCancel,
   onAdd,
 }: CustomApplianceModalProps) {
+  const { scaledSize, family, weight } =
+    useTypography();
+
+  const inputFontStyle = {
+    fontSize: scaledSize(14),
+    fontFamily: family,
+    fontWeight: weight,
+  };
+
   return (
     <DropdownModal
       visible={visible}
@@ -68,7 +78,8 @@ export default function CustomApplianceModal({
         placeholderTextColor={
           Colors.light.textSecondary
         }
-        style={styles.input}
+        allowFontScaling={false}
+        style={[styles.input, inputFontStyle]}
         accessibilityLabel="Add custom appliance name"
       />
 
@@ -79,7 +90,8 @@ export default function CustomApplianceModal({
         placeholderTextColor={
           Colors.light.textSecondary
         }
-        style={styles.input}
+        allowFontScaling={false}
+        style={[styles.input, inputFontStyle]}
         keyboardType="numeric"
         accessibilityLabel="Add custom appliance wattage"
       />

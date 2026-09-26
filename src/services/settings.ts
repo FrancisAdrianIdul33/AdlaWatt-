@@ -3,7 +3,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
   FontFamilyOption,
   FontSizeOption,
-  FontWeightOption,
 } from "@/services/typography";
 
 // ============================================================
@@ -17,14 +16,12 @@ import type {
 
 export interface TypographyPreferences {
   fontSize: FontSizeOption;
-  fontWeight: FontWeightOption;
   fontFamily: FontFamilyOption;
 }
 
 export const DEFAULT_TYPOGRAPHY: TypographyPreferences =
   {
     fontSize: "Medium",
-    fontWeight: "Regular",
     fontFamily: "System Default",
   };
 
@@ -44,12 +41,6 @@ function sanitize(
       ? candidate.fontSize
       : "Medium";
 
-  const fontWeight: FontWeightOption =
-    candidate.fontWeight === "Thin" ||
-    candidate.fontWeight === "Bold"
-      ? candidate.fontWeight
-      : "Regular";
-
   const fontFamily: FontFamilyOption =
     candidate.fontFamily === "Times New Roman" ||
     candidate.fontFamily === "Roboto" ||
@@ -58,9 +49,10 @@ function sanitize(
       ? candidate.fontFamily
       : "System Default";
 
+  // Old saves may still carry fontWeight: ignored (no migration).
+
   return {
     fontSize,
-    fontWeight,
     fontFamily,
   };
 }

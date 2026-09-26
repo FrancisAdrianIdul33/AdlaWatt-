@@ -13,6 +13,7 @@ import {
   CHART_HEIGHT,
   clampPercent,
 } from "@/services/chartMath";
+import { useTypography } from "@/hooks/useTypography";
 
 /* ============================================================
    CONSTANTS
@@ -46,6 +47,10 @@ export default function BatteryLevelChart({
   points: BatteryLevelPoint[];
   pointWidth?: number;
 }) {
+  // Family-only: axis sizes stay 10 by design, only the
+  // typeface follows Preferences.
+  const { family } = useTypography();
+
   const isEmpty = points.length < 2;
 
   const data = useMemo(
@@ -114,11 +119,13 @@ export default function BatteryLevelChart({
         }
         yAxisTextStyle={{
           fontSize: 10,
+          fontFamily: family,
           color:
             CHART_COLORS.axisLabel,
         }}
         xAxisLabelTextStyle={{
           fontSize: 10,
+          fontFamily: family,
           color:
             CHART_COLORS.axisLabel,
         }}

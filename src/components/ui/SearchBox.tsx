@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/colors";
+import { useTypography } from "@/hooks/useTypography";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
@@ -14,12 +15,24 @@ export default function AppSearchBox({
   style,
   ...props
 }: AppSearchBoxProps) {
+  const { scaledSize, family, weight } =
+    useTypography();
+
   return (
     <View style={styles.container}>
       <TextInput
         {...props}
+        allowFontScaling={false}
         placeholderTextColor={Colors.light.textSecondary}
-        style={[styles.input, style]}
+        style={[
+          styles.input,
+          {
+            fontSize: scaledSize(16),
+            fontFamily: family,
+            fontWeight: weight,
+          },
+          style,
+        ]}
       />
 
       <Ionicons

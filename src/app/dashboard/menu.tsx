@@ -22,6 +22,7 @@ import ScreenContainer2 from "@/components/layout/ScreenContainer2";
 import AppText from "@/components/ui/AppText";
 import {
   DropdownModal,
+  RadioOptionRow,
 } from "@/components/ui/DropdownModal";
 
 import { Colors } from "@/constants/colors";
@@ -36,12 +37,11 @@ import {
 import { supabase } from "@/lib/supabase";
 
 import { useSettings } from "@/context/SettingsContext";
+import { useTypography } from "@/hooks/useTypography";
 import {
   FONT_FAMILY_OPTIONS,
-  getFontFamilyName,
   type FontFamilyOption,
   type FontSizeOption,
-  type FontWeightOption,
 } from "@/services/typography";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -122,9 +122,6 @@ export default function SettingsScreen() {
   const [fontSize, setFontSize] =
     useState<FontSizeOption>("Medium");
 
-  const [fontWeight, setFontWeight] =
-    useState<FontWeightOption>("Regular");
-
   const [fontFamily, setFontFamily] =
     useState<FontFamilyOption>(
       "System Default",
@@ -162,13 +159,24 @@ export default function SettingsScreen() {
     setPreferences: commitTypography,
   } = useSettings();
 
+  const {
+    scaledSize: scaledInputSize,
+    family: inputFontFamily,
+    weight: inputFontWeight,
+  } = useTypography();
+
+  const inputFontStyle = {
+    fontSize: scaledInputSize(15),
+    fontFamily: inputFontFamily,
+    fontWeight: inputFontWeight,
+  };
+
   const [isSavingPreferences, setIsSavingPreferences] =
     useState(false);
 
   useEffect(() => {
     if (preferencesExpanded) {
       setFontSize(savedTypography.fontSize);
-      setFontWeight(savedTypography.fontWeight);
       setFontFamily(savedTypography.fontFamily);
       setFontFamilyOpen(false);
       setLanguageOpen(false);
@@ -181,7 +189,6 @@ export default function SettingsScreen() {
     }
 
     setFontSize(savedTypography.fontSize);
-    setFontWeight(savedTypography.fontWeight);
     setFontFamily(savedTypography.fontFamily);
     setFontFamilyOpen(false);
     setLanguageOpen(false);
@@ -198,7 +205,6 @@ export default function SettingsScreen() {
 
       await commitTypography({
         fontSize,
-        fontWeight,
         fontFamily,
       });
 
@@ -724,7 +730,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="person"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -751,7 +757,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="settings"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -778,7 +784,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="hardware-chip"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -805,7 +811,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="list"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -832,7 +838,7 @@ export default function SettingsScreen() {
           >
             <Ionicons
               name="information-circle"
-              size={30}
+              size={60}
               color={Colors.light.primary}
             />
 
@@ -941,7 +947,11 @@ export default function SettingsScreen() {
                         setEditUsername(text);
                         setWarning("");
                       }}
-                      style={styles.input}
+                      allowFontScaling={false}
+                      style={[
+                        styles.input,
+                        inputFontStyle,
+                      ]}
                       placeholder="Enter username"
                       placeholderTextColor={
                         Colors.light.textSecondary
@@ -966,7 +976,11 @@ export default function SettingsScreen() {
                         setEditEmail(text);
                         setWarning("");
                       }}
-                      style={styles.input}
+                      allowFontScaling={false}
+                      style={[
+                        styles.input,
+                        inputFontStyle,
+                      ]}
                       placeholder="Enter email"
                       placeholderTextColor={
                         Colors.light.textSecondary
@@ -997,9 +1011,11 @@ export default function SettingsScreen() {
                           setNewPassword(text);
                           setWarning("");
                         }}
-                        style={
-                          styles.passwordInput
-                        }
+                        allowFontScaling={false}
+                        style={[
+                          styles.passwordInput,
+                          inputFontStyle,
+                        ]}
                         placeholder="Leave blank to keep current"
                         placeholderTextColor={
                           Colors.light.textSecondary
@@ -1057,9 +1073,11 @@ export default function SettingsScreen() {
                           );
                           setWarning("");
                         }}
-                        style={
-                          styles.passwordInput
-                        }
+                        allowFontScaling={false}
+                        style={[
+                          styles.passwordInput,
+                          inputFontStyle,
+                        ]}
                         placeholder="Confirm new password"
                         placeholderTextColor={
                           Colors.light.textSecondary
@@ -1181,27 +1199,8 @@ export default function SettingsScreen() {
           title="Preferences"
           onClose={handleClosePreferences}
         >
-          <ScrollView
-            style={[
-              styles.modalScroll,
-              {
-                maxHeight:
-                  windowHeight * 0.55,
-              },
-            ]}
-            showsVerticalScrollIndicator={
-              false
-            }
-          >
-              {/* APPEARANCE */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                APPEARANCE
-              </AppText>
-
-              <View style={styles.preferenceCard}>
+          <View style={styles.modalBody}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1231,7 +1230,7 @@ export default function SettingsScreen() {
                 )}
               </View>
 
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1260,17 +1259,9 @@ export default function SettingsScreen() {
                 )}
               </View>
 
-              {/* TYPOGRAPHY */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                TYPOGRAPHY
-              </AppText>
-
               {/* Font Size */}
               <View
-                style={styles.preferenceGroup}
+                style={styles.preferenceBlock}
               >
                 <AppText
                   variant="caption"
@@ -1295,6 +1286,12 @@ export default function SettingsScreen() {
                             | "Big",
                         )
                       }
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        selected:
+                          fontSize === option,
+                      }}
+                      accessibilityLabel={`Font size ${option}`}
                       style={[
                         styles.optionButton,
                         fontSize === option &&
@@ -1316,58 +1313,9 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              {/* Font Weight */}
-              <View
-                style={styles.preferenceGroup}
-              >
-                <AppText
-                  variant="caption"
-                  style={styles.groupLabel}
-                >
-                  Font Weight
-                </AppText>
-
-                <View style={styles.optionRow}>
-                  {[
-                    "Thin",
-                    "Regular",
-                    "Bold",
-                  ].map((option) => (
-                    <Pressable
-                      key={option}
-                      onPress={() =>
-                        setFontWeight(
-                          option as
-                            | "Thin"
-                            | "Regular"
-                            | "Bold",
-                        )
-                      }
-                      style={[
-                        styles.optionButton,
-                        fontWeight ===
-                          option &&
-                          styles.selectedOption,
-                      ]}
-                    >
-                      <AppText
-                        style={[
-                          styles.optionText,
-                          fontWeight ===
-                            option &&
-                            styles.selectedOptionText,
-                        ]}
-                      >
-                        {option}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
               {/* Font Family */}
               <View
-                style={styles.preferenceGroup}
+                style={styles.preferenceBlock}
               >
                 <AppText
                   variant="caption"
@@ -1377,12 +1325,13 @@ export default function SettingsScreen() {
                 </AppText>
 
                 <Pressable
-                  onPress={() =>
-                    setFontFamilyOpen(
-                      (current) =>
-                        !current,
-                    )
-                  }
+                  onPress={() => {
+                    setFontFamilyOpen(true);
+                    setLanguageOpen(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose font family"
+                  accessibilityHint={`Current: ${fontFamily}`}
                   style={
                     styles.dropdownInput
                   }
@@ -1396,80 +1345,24 @@ export default function SettingsScreen() {
                   </AppText>
 
                   <Ionicons
-                    name={
-                      fontFamilyOpen
-                        ? "chevron-up-outline"
-                        : "chevron-down-outline"
-                    }
+                    name="chevron-down-outline"
                     size={22}
                     color="#000000"
                   />
                 </Pressable>
-
-                {fontFamilyOpen && (
-                  <View
-                    style={
-                      styles.selectionMenu
-                    }
-                  >
-                    {FONT_FAMILY_OPTIONS.map(
-                      (font) => (
-                        <Pressable
-                          key={font}
-                          onPress={() => {
-                            setFontFamily(
-                              font,
-                            );
-                            setFontFamilyOpen(
-                              false,
-                            );
-                          }}
-                          style={
-                            styles.selectionItem
-                          }
-                        >
-                          <AppText
-                            style={[
-                              styles.selectionText,
-                              {
-                                fontFamily:
-                                  getFontFamilyName(
-                                    font,
-                                    "Regular",
-                                  ),
-                              },
-                              fontFamily ===
-                                font &&
-                                styles.selectedSelectionText,
-                            ]}
-                          >
-                            {font}
-                          </AppText>
-                        </Pressable>
-                      ),
-                    )}
-                  </View>
-                )}
               </View>
 
-              {/* LANGUAGE */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                LANGUAGE
-              </AppText>
-
               <View
-                style={styles.preferenceGroup}
+                style={styles.preferenceBlock}
               >
                 <Pressable
-                  onPress={() =>
-                    setLanguageOpen(
-                      (current) =>
-                        !current,
-                    )
-                  }
+                  onPress={() => {
+                    setLanguageOpen(true);
+                    setFontFamilyOpen(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose language"
+                  accessibilityHint={`Current: ${language}`}
                   style={
                     styles.dropdownInput
                   }
@@ -1483,66 +1376,14 @@ export default function SettingsScreen() {
                   </AppText>
 
                   <Ionicons
-                    name={
-                      languageOpen
-                        ? "chevron-up-outline"
-                        : "chevron-down-outline"
-                    }
+                    name="chevron-down-outline"
                     size={22}
                     color="#000000"
                   />
                 </Pressable>
-
-                {languageOpen && (
-                  <View
-                    style={
-                      styles.selectionMenu
-                    }
-                  >
-                    {[
-                      "English",
-                      "Cebuano (Bisaya)",
-                      "Tagalog",
-                    ].map((item) => (
-                      <Pressable
-                        key={item}
-                        onPress={() => {
-                          setLanguage(
-                            item,
-                          );
-                          setLanguageOpen(
-                            false,
-                          );
-                        }}
-                        style={
-                          styles.selectionItem
-                        }
-                      >
-                        <AppText
-                          style={[
-                            styles.selectionText,
-                            language ===
-                              item &&
-                              styles.selectedSelectionText,
-                          ]}
-                        >
-                          {item}
-                        </AppText>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
               </View>
 
-              {/* ALERTS & VIBRATION */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                ALERTS & VIBRATION
-              </AppText>
-
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1571,7 +1412,7 @@ export default function SettingsScreen() {
                 )}
               </View>
 
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1599,7 +1440,7 @@ export default function SettingsScreen() {
                   setEmailNotifications,
                 )}
               </View>
-          </ScrollView>
+          </View>
 
           <View style={styles.modalFooter}>
             <Pressable
@@ -1646,6 +1487,56 @@ export default function SettingsScreen() {
               </AppText>
             </Pressable>
           </View>
+        </DropdownModal>
+
+        {/* ================= FONT FAMILY PICKER ================= */}
+
+        <DropdownModal
+          visible={fontFamilyOpen}
+          title="Font Family"
+          onClose={() =>
+            setFontFamilyOpen(false)
+          }
+        >
+          {FONT_FAMILY_OPTIONS.map(
+            (font) => (
+              <RadioOptionRow
+                key={font}
+                label={font}
+                selected={fontFamily === font}
+                onPress={() => {
+                  setFontFamily(font);
+                  setFontFamilyOpen(false);
+                }}
+              />
+            ),
+          )}
+        </DropdownModal>
+
+        {/* ================= LANGUAGE PICKER ================= */}
+
+        <DropdownModal
+          visible={languageOpen}
+          title="Language"
+          onClose={() =>
+            setLanguageOpen(false)
+          }
+        >
+          {[
+            "English",
+            "Cebuano (Bisaya)",
+            "Tagalog",
+          ].map((item) => (
+            <RadioOptionRow
+              key={item}
+              label={item}
+              selected={language === item}
+              onPress={() => {
+                setLanguage(item);
+                setLanguageOpen(false);
+              }}
+            />
+          ))}
         </DropdownModal>
 
         <View
@@ -1795,9 +1686,11 @@ export default function SettingsScreen() {
                     setCurrentPassword(text);
                     setConfirmationWarning("");
                   }}
-                  style={
-                    styles.passwordInput
-                  }
+                  allowFontScaling={false}
+                  style={[
+                    styles.passwordInput,
+                    inputFontStyle,
+                  ]}
                   placeholder="Enter current password"
                   placeholderTextColor={
                     Colors.light.textSecondary
@@ -2098,27 +1991,13 @@ const styles = StyleSheet.create({
 
   /* ================= PREFERENCES ================= */
 
-  sectionLabel: {
-    color: Colors.light.text,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginTop: 8,
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  },
-
-  preferenceCard: {
+  preferenceRow: {
     width: "100%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.primary,
-    borderRadius: settingsDimensions.innerRadius,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    paddingVertical: 6,
+    marginBottom: 12,
   },
 
   preferenceText: {
@@ -2137,29 +2016,30 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  preferenceGroup: {
-    marginBottom: 15,
+  preferenceBlock: {
+    width: "100%",
+    paddingVertical: 6,
+    marginBottom: 12,
   },
 
   groupLabel: {
     color: "#000000",
     fontWeight: "600",
-    marginBottom: 7,
-    paddingHorizontal: 4,
+    marginBottom: 8,
   },
 
   optionRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
 
   optionButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.secondary,
-    borderRadius: 11,
+    borderColor: Colors.light.border,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
@@ -2173,7 +2053,7 @@ const styles = StyleSheet.create({
   optionText: {
     color: "#000000",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 14,
   },
 
   selectedOptionText: {
@@ -2184,7 +2064,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.secondary,
+    borderColor: Colors.light.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     flexDirection: "row",
@@ -2197,36 +2077,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  selectionMenu: {
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderColor: Colors.light.secondary,
-    borderRadius: 12,
-    marginTop: 5,
-    overflow: "hidden",
-  },
-
-  selectionItem: {
-    minHeight: 44,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-
-  selectionText: {
-    color: "#000000",
-    fontWeight: "500",
-  },
-
-  selectedSelectionText: {
-    color: Colors.light.primary,
-    fontWeight: "700",
-  },
-
   /* ================= MODAL SHEETS ================= */
 
   modalScroll: {
+    width: "100%",
+  },
+
+  // Preferences body sizes to its content (no scrolling).
+  modalBody: {
     width: "100%",
   },
 

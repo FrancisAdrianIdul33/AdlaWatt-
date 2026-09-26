@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { StyleSheet, Text, TextProps } from "react-native";
 
 import { Colors } from "@/constants/colors";
@@ -6,7 +6,8 @@ import { useSettings } from "@/context/SettingsContext";
 import {
   getFontFamilyName,
   getFontScale,
-  getFontWeightStyle,
+  shouldApplyFontWeight,
+  type DesignWeight,
 } from "@/services/typography";
 
 type Variant =
@@ -19,42 +20,83 @@ type Variant =
 interface AppTextProps extends TextProps {
   children: ReactNode;
   variant?: Variant;
+  allowCustomFamily?: boolean;
 }
 
 export default function AppText({
   children,
   variant = "body",
   style,
+  allowCustomFamily = false,
+  allowFontScaling = false,
   ...props
 }: AppTextProps) {
   const { prefs } = useSettings();
 
-  const scale = getFontScale(prefs.fontSize);
+  const override = useMemo(() => {
+    const scale = getFontScale(prefs.fontSize);
 
-  const family = getFontFamilyName(
-    prefs.fontFamily,
-    prefs.fontWeight,
-  );
+    const baseSize =
+      styles[variant].fontSize ?? 16;
+    const baseWeight =
+      styles[variant].fontWeight ?? "400";
 
-  const baseSize = styles[variant].fontSize ?? 16;
-  const baseWeight = styles[variant].fontWeight ?? "400";
+    const flat =
+      StyleSheet.flatten(style) ?? {};
+
+    const callerSize =
+      typeof flat.fontSize === "number"
+        ? flat.fontSize
+        : baseSize;
+
+    const callerWeight =
+      typeof flat.fontWeight === "string"
+        ? flat.fontWeight
+        : baseWeight;
+
+    // Design weight selects the bundled file for Inter /
+    // Roboto; no fontWeight style may accompany those files
+    // (Android falls back to system when paired).
+    const family = getFontFamilyName(
+      prefs.fontFamily,
+      callerWeight as DesignWeight,
+    );
+
+    const callerFamily =
+      typeof flat.fontFamily === "string"
+        ? flat.fontFamily
+        : undefined;
+
+    return {
+      fontSize: Math.round(
+        callerSize * scale,
+      ),
+      fontFamily:
+        allowCustomFamily && callerFamily
+          ? callerFamily
+          : family,
+      fontWeight: shouldApplyFontWeight(
+        prefs.fontFamily,
+      )
+        ? callerWeight
+        : undefined,
+    };
+  }, [
+    prefs,
+    variant,
+    style,
+    allowCustomFamily,
+  ]);
 
   return (
     <Text
+      allowFontScaling={allowFontScaling}
       {...props}
       style={[
         styles.base,
         styles[variant],
-        {
-          fontSize: Math.round(baseSize * scale),
-          fontFamily: family,
-          fontWeight: getFontWeightStyle(
-            prefs.fontFamily,
-            prefs.fontWeight,
-            baseWeight as "400" | "600" | "700",
-          ),
-        },
         style,
+        override,
       ]}
     >
       {children}

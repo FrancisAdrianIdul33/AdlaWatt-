@@ -11,6 +11,9 @@ import {
 } from "react-native";
 
 import ComponentStatusBox from "@/components/forms/ComponentStatusBox";
+import {
+  applianceCardGrid,
+} from "@/components/forms/applianceCard";
 import Copyright from "@/components/ui/Copyright";
 
 import NavBar from "@/components/layout/Navbar";
@@ -414,7 +417,9 @@ export default function ComponentsScreen() {
 
         {/* COMPONENT GRID */}
 
-        <View style={styles.componentGrid}>
+        <View
+          style={[applianceCardGrid, { marginTop: 20 }]}
+        >
           {(() => {
             const filteredComponents =
               [...components]
@@ -583,20 +588,6 @@ const styles = StyleSheet.create({
       Colors.light.textSecondary,
 
     marginTop: 6,
-
-  },
-
-  componentGrid: {
-
-    flexDirection: "row",
-
-    flexWrap: "wrap",
-
-    justifyContent: "space-between",
-
-    gap: 10,
-
-    marginTop: 20,
 
   },
 

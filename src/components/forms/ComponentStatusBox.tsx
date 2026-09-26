@@ -2,13 +2,14 @@ import React from "react";
 import {
   Image,
   ImageSourcePropType,
-  StyleSheet,
   View,
 } from "react-native";
 
+import {
+  applianceCardStyles,
+} from "@/components/forms/applianceCard";
 import AppText from "@/components/ui/AppText";
 import { Colors } from "@/constants/colors";
-import { Radius } from "@/constants/theme";
 
 type ComponentStatus =
   | "Active"
@@ -39,7 +40,7 @@ export default function ComponentStatusBox({
   return (
     <View
       style={[
-        styles.container,
+        applianceCardStyles.boxSlim,
         {
           borderColor: statusColor,
         },
@@ -48,7 +49,7 @@ export default function ComponentStatusBox({
       {/* Component Image */}
       <View
         style={[
-          styles.imageContainer,
+          applianceCardStyles.imageContainer,
           {
             borderColor: statusColor,
           },
@@ -56,7 +57,7 @@ export default function ComponentStatusBox({
       >
         <Image
           source={imageSource}
-          style={styles.image}
+          style={applianceCardStyles.image}
           resizeMode="cover"
         />
       </View>
@@ -64,74 +65,11 @@ export default function ComponentStatusBox({
       {/* Component Name */}
       <AppText
         variant="caption"
-        style={styles.name}
+        style={applianceCardStyles.name}
         numberOfLines={2}
       >
         {name}
       </AppText>
-
-      {/* Component Status */}
-      <AppText
-        variant="caption"
-        style={[
-          styles.status,
-          {
-            color: statusColor,
-          },
-        ]}
-      >
-        {status}
-      </AppText>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    width: "48%",
-    backgroundColor: Colors.glass.white,
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    padding: 14,
-    paddingTop: 14,
-    alignItems: "center",
-    position: "relative",
-  },
-
-  imageContainer: {
-    width: "100%",
-    aspectRatio: 1,
-
-    backgroundColor: "#dfdfdf",
-
-    borderWidth: 2,
-    borderRadius: Radius.md,
-
-    overflow: "hidden",
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-
-  name: {
-    width: "100%",
-    color: "#000000",
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 22,
-    textAlign: "center",
-    marginTop: 12,
-  },
-
-  status: {
-    width: "100%",
-    fontSize: 16,
-    fontWeight: "700",
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 3,
-    marginBottom: 2,
-  },
-});

@@ -14,6 +14,9 @@ interface ScreenContainerProps {
   scrollable?: boolean;
 }
 
+// Auth-only container. Intentionally no SettingsProvider:
+// auth screens always use DEFAULT_TYPOGRAPHY.
+
 export default function ScreenContainer({
   children,
   scrollable = true,

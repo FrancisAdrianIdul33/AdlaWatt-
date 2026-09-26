@@ -11,14 +11,17 @@ import { Radius } from "@/constants/theme";
  * - AppRecCard (dashboard recommendation carousel)
  * - ApplianceStatusBox (appliances screen)
  * - ApplianceBox (ApplianceModal selection)
+ * - ComponentStatusBox (components screen)
  *
- * Keeping the sizing in one module stops the three boxes from drifting
+ * Keeping the sizing in one module stops the four boxes from drifting
  * apart over time.
  */
 /*
  * Shared card shell. `box` reserves room for the status badge used by
  * AppRecCard and ApplianceStatusBox; `boxCompact` is the tighter version
- * used inside ApplianceModal where only the image, name and wattage show.
+ * used inside ApplianceModal where only the image, name and wattage show;
+ * `boxSlim` fits just the image and name for ComponentStatusBox
+ * (110 image + 8 + 40 name + 24 padding = 182, no slack).
  */
 const applianceCardBox: ViewStyle = {
   width: "46%",
@@ -41,6 +44,11 @@ export const applianceCardStyles = StyleSheet.create({
   boxCompact: {
     ...applianceCardBox,
     height: 202,
+  },
+
+  boxSlim: {
+    ...applianceCardBox,
+    height: 182,
   },
 
   imageContainer: {

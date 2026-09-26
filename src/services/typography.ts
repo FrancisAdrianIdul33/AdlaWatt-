@@ -13,11 +13,6 @@ export type FontSizeOption =
   | "Medium"
   | "Big";
 
-export type FontWeightOption =
-  | "Thin"
-  | "Regular"
-  | "Bold";
-
 export type FontFamilyOption =
   | "Times New Roman"
   | "Roboto"
@@ -27,18 +22,15 @@ export type FontFamilyOption =
 
 export const FONT_FAMILY_OPTIONS: FontFamilyOption[] =
   [
+    "System Default",
     "Times New Roman",
     "Roboto",
     "Inter",
-    "System Default",
     "Monospace",
   ];
 
 export const FONT_SIZE_OPTIONS: FontSizeOption[] =
   ["Small", "Medium", "Big"];
-
-export const FONT_WEIGHT_OPTIONS: FontWeightOption[] =
-  ["Thin", "Regular", "Bold"];
 
 // ============================================================
 // SIZE SCALE
@@ -62,43 +54,58 @@ export function getFontScale(
 // ============================================================
 // FAMILY RESOLUTION
 //
-// Inter / Roboto resolve to bundled expo-font files that
-// already encode the weight (Light / Regular / Bold).
+// Design weights select the bundled file: Inter / Roboto
+// ship Light / Regular / Bold files, so a 700 design uses
+// the real Bold file instead of synthesizing. Never pair a
+// bundled file with a fontWeight style (Android drops the
+// custom font and falls back to system in that case).
 // Times New Roman cannot be bundled (proprietary license)
 // so it resolves to the platform serif stack.
 // System Default resolves to undefined (platform default).
 // ============================================================
 
+export type DesignWeight =
+  | "300"
+  | "400"
+  | "600"
+  | "700"
+  | "normal"
+  | "bold";
+
+function bundledFile(
+  base: "Inter" | "Roboto",
+  designWeight: DesignWeight,
+): string {
+  const bold =
+    designWeight === "700" ||
+    designWeight === "600" ||
+    designWeight === "bold";
+
+  if (bold) {
+    return `${base}_700Bold`;
+  }
+
+  if (designWeight === "300") {
+    return `${base}_300Light`;
+  }
+
+  return `${base}_400Regular`;
+}
+
 export function getFontFamilyName(
   family: FontFamilyOption,
-  weight: FontWeightOption,
+  designWeight: DesignWeight = "400",
 ): string | undefined {
   if (family === "System Default") {
     return undefined;
   }
 
   if (family === "Inter") {
-    if (weight === "Thin") {
-      return "Inter_300Light";
-    }
-
-    if (weight === "Bold") {
-      return "Inter_700Bold";
-    }
-
-    return "Inter_400Regular";
+    return bundledFile("Inter", designWeight);
   }
 
   if (family === "Roboto") {
-    if (weight === "Thin") {
-      return "Roboto_300Light";
-    }
-
-    if (weight === "Bold") {
-      return "Roboto_700Bold";
-    }
-
-    return "Roboto_400Regular";
+    return bundledFile("Roboto", designWeight);
   }
 
   if (family === "Times New Roman") {
@@ -123,43 +130,18 @@ export function getFontFamilyName(
 }
 
 // ============================================================
-// WEIGHT STYLE
+// WEIGHT STYLE GATE
 //
-// Bundled Inter / Roboto files already carry the weight,
-// so keep the base weight to avoid faux-bold synthesis.
-// System stacks need an explicit weight mapping.
+// Bundled Inter / Roboto files already encode the design
+// weight, so no fontWeight style may accompany them.
+// System stacks need the design weight to render bold/light.
 // ============================================================
 
-export function getFontWeightStyle(
+export function shouldApplyFontWeight(
   family: FontFamilyOption,
-  weight: FontWeightOption,
-  baseWeight:
-    | "300"
-    | "400"
-    | "600"
-    | "700"
-    | "normal"
-    | "bold" = "400",
-): "300" | "400" | "600" | "700" | "normal" | "bold" {
-  if (
-    family === "Inter" ||
-    family === "Roboto"
-  ) {
-    return baseWeight;
-  }
-
-  if (weight === "Thin") {
-    return "300";
-  }
-
-  if (weight === "Bold") {
-    return "700";
-  }
-
-  return baseWeight as
-    | "300"
-    | "400"
-    | "600"
-    | "normal"
-    | "bold";
+): boolean {
+  return (
+    family !== "Inter" &&
+    family !== "Roboto"
+  );
 }
