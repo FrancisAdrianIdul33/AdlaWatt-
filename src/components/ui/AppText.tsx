@@ -6,7 +6,6 @@ import { useSettings } from "@/context/SettingsContext";
 import {
   getFontFamilyName,
   getFontScale,
-  getFontWeightStyle,
 } from "@/services/typography";
 
 type Variant =
@@ -37,7 +36,6 @@ export default function AppText({
 
     const family = getFontFamilyName(
       prefs.fontFamily,
-      prefs.fontWeight,
     );
 
     const baseSize =
@@ -71,17 +69,8 @@ export default function AppText({
         allowCustomFamily && callerFamily
           ? callerFamily
           : family,
-      fontWeight: getFontWeightStyle(
-        prefs.fontFamily,
-        prefs.fontWeight,
-        callerWeight as
-          | "300"
-          | "400"
-          | "600"
-          | "700"
-          | "normal"
-          | "bold",
-      ),
+      // Weight preference removed: design callerWeight applies.
+      fontWeight: callerWeight,
     };
   }, [
     prefs,

@@ -166,13 +166,12 @@ export default function SettingsScreen() {
   const {
     scaledSize: scaledInputSize,
     family: inputFontFamily,
-    weightFor: inputFontWeightFor,
   } = useTypography();
 
   const inputFontStyle = {
     fontSize: scaledInputSize(15),
     fontFamily: inputFontFamily,
-    fontWeight: inputFontWeightFor("400"),
+    fontWeight: "400" as const,
   };
 
   const [isSavingPreferences, setIsSavingPreferences] =

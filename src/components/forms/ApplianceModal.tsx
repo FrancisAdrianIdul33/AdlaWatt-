@@ -127,13 +127,13 @@ export default function ApplianceModal({
   const scrollRef = useRef<ScrollView>(null);
   const customFormY = useRef(0);
 
-  const { scaledSize, family, weightFor } =
+  const { scaledSize, family } =
     useTypography();
 
   const inputFontStyle = {
     fontSize: scaledSize(14),
     fontFamily: family,
-    fontWeight: weightFor("400"),
+    fontWeight: "400" as const,
   };
 
   // ============================================================
