@@ -1198,18 +1198,7 @@ export default function SettingsScreen() {
           title="Preferences"
           onClose={handleClosePreferences}
         >
-          <ScrollView
-            style={[
-              styles.modalScroll,
-              {
-                maxHeight:
-                  windowHeight * 0.55,
-              },
-            ]}
-            showsVerticalScrollIndicator={
-              false
-            }
-          >
+          <View style={styles.modalBody}>
               <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
@@ -1450,7 +1439,7 @@ export default function SettingsScreen() {
                   setEmailNotifications,
                 )}
               </View>
-          </ScrollView>
+          </View>
 
           <View style={styles.modalFooter}>
             <Pressable
@@ -2090,6 +2079,11 @@ const styles = StyleSheet.create({
   /* ================= MODAL SHEETS ================= */
 
   modalScroll: {
+    width: "100%",
+  },
+
+  // Preferences body sizes to its content (no scrolling).
+  modalBody: {
     width: "100%",
   },
 
