@@ -11,8 +11,9 @@ import { Radius } from "@/constants/theme";
  * - AppRecCard (dashboard recommendation carousel)
  * - ApplianceStatusBox (appliances screen)
  * - ApplianceBox (ApplianceModal selection)
+ * - ComponentStatusBox (components screen)
  *
- * Keeping the sizing in one module stops the three boxes from drifting
+ * Keeping the sizing in one module stops the four boxes from drifting
  * apart over time.
  */
 /*
