@@ -1210,15 +1210,7 @@ export default function SettingsScreen() {
               false
             }
           >
-              {/* APPEARANCE */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                APPEARANCE
-              </AppText>
-
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1248,7 +1240,7 @@ export default function SettingsScreen() {
                 )}
               </View>
 
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1276,14 +1268,6 @@ export default function SettingsScreen() {
                   setColorBlindMode,
                 )}
               </View>
-
-              {/* TYPOGRAPHY */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                TYPOGRAPHY
-              </AppText>
 
               {/* Font Size */}
               <View
@@ -1378,14 +1362,6 @@ export default function SettingsScreen() {
                 </Pressable>
               </View>
 
-              {/* LANGUAGE */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                LANGUAGE
-              </AppText>
-
               <View
                 style={styles.preferenceGroupCard}
               >
@@ -1417,15 +1393,7 @@ export default function SettingsScreen() {
                 </Pressable>
               </View>
 
-              {/* ALERTS & VIBRATION */}
-              <AppText
-                variant="caption"
-                style={styles.sectionLabel}
-              >
-                ALERTS & VIBRATION
-              </AppText>
-
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -1454,7 +1422,7 @@ export default function SettingsScreen() {
                 )}
               </View>
 
-              <View style={styles.preferenceCard}>
+              <View style={styles.preferenceRow}>
                 <View
                   style={styles.preferenceText}
                 >
@@ -2040,6 +2008,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
     paddingHorizontal: 4,
+  },
+
+  preferenceRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    marginBottom: 12,
   },
 
   preferenceCard: {
