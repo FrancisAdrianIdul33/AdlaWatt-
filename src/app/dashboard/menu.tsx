@@ -1287,7 +1287,7 @@ export default function SettingsScreen() {
 
               {/* Font Size */}
               <View
-                style={styles.preferenceGroup}
+                style={styles.preferenceGroupCard}
               >
                 <AppText
                   variant="caption"
@@ -1312,6 +1312,12 @@ export default function SettingsScreen() {
                             | "Big",
                         )
                       }
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        selected:
+                          fontSize === option,
+                      }}
+                      accessibilityLabel={`Font size ${option}`}
                       style={[
                         styles.optionButton,
                         fontSize === option &&
@@ -1335,7 +1341,7 @@ export default function SettingsScreen() {
 
               {/* Font Family */}
               <View
-                style={styles.preferenceGroup}
+                style={styles.preferenceGroupCard}
               >
                 <AppText
                   variant="caption"
@@ -1428,7 +1434,7 @@ export default function SettingsScreen() {
               </AppText>
 
               <View
-                style={styles.preferenceGroup}
+                style={styles.preferenceGroupCard}
               >
                 <Pressable
                   onPress={() =>
@@ -2106,29 +2112,35 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  preferenceGroup: {
-    marginBottom: 15,
+  preferenceGroupCard: {
+    width: "100%",
+    backgroundColor: Colors.glass.white,
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+    borderRadius: settingsDimensions.innerRadius,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
+    marginBottom: 10,
   },
 
   groupLabel: {
     color: "#000000",
     fontWeight: "600",
-    marginBottom: 7,
-    paddingHorizontal: 4,
+    marginBottom: 8,
   },
 
   optionRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
 
   optionButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.secondary,
-    borderRadius: 11,
+    borderColor: Colors.light.border,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
@@ -2142,7 +2154,7 @@ const styles = StyleSheet.create({
   optionText: {
     color: "#000000",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 14,
   },
 
   selectedOptionText: {
@@ -2153,7 +2165,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     backgroundColor: Colors.glass.white,
     borderWidth: 2,
-    borderColor: Colors.light.secondary,
+    borderColor: Colors.light.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     flexDirection: "row",
