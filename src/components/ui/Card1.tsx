@@ -46,7 +46,7 @@ export default function Card1({
           <Ionicons
             name="sunny-outline"
             size={36}
-            color="#FACC15"
+            color={Colors.light.iconAccent}
           />
           <AppText
             variant="heading"

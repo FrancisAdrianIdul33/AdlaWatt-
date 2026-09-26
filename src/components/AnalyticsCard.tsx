@@ -145,7 +145,7 @@ export default function AnalyticsCards({
           <Ionicons
             name="document-text-outline"
             size={30}
-            color="#FACC15"
+            color={Colors.light.iconAccent}
           />
 
           <AppText
@@ -417,7 +417,7 @@ const styles =
       width: "100%",
       minHeight: 42,
       backgroundColor:
-        "rgba(0, 168, 107, 0.06)",
+        Colors.light.washFaint,
       borderWidth: 1,
       borderColor:
         Colors.light.border,

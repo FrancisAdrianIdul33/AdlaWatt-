@@ -1864,7 +1864,7 @@ const styles = StyleSheet.create({
 
   menuBoxActive: {
     backgroundColor:
-      "rgba(0, 168, 107, 0.08)",
+      Colors.light.primaryWash,
   },
 
   menuBoxText: {
@@ -2199,7 +2199,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: Colors.light.overlayStrong,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,

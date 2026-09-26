@@ -55,7 +55,7 @@ export const applianceCardStyles = StyleSheet.create({
     width: 110,
     height: 110,
     flexShrink: 0,
-    backgroundColor: "#dfdfdf",
+    backgroundColor: Colors.light.placeholder,
     borderWidth: 2,
     borderRadius: Radius.md,
     overflow: "hidden",

@@ -54,7 +54,7 @@ export default function AnalyticsChartCard({
         <Ionicons
           name={icon}
           size={26}
-          color="#FACC15"
+          color={Colors.light.iconAccent}
         />
 
         <AppText
@@ -202,7 +202,7 @@ const styles =
       height: 46,
       flexDirection: "row",
       backgroundColor:
-        "rgba(0, 0, 0, 0.04)",
+        Colors.light.scrimFaint,
       borderWidth: 2,
       borderColor:
         Colors.light.border,

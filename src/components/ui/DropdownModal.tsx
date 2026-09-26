@@ -197,7 +197,7 @@ export function TintedOptionRow({
 const dropdownModalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.40)",
+    backgroundColor: Colors.light.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -237,7 +237,7 @@ const dropdownModalStyles = StyleSheet.create({
   },
 
   optionSelected: {
-    backgroundColor: "rgba(0, 168, 107, 0.08)",
+    backgroundColor: Colors.light.primaryWash,
   },
 
   optionText: {

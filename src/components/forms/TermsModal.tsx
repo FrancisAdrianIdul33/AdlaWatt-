@@ -337,7 +337,7 @@ function Section({ title, text }: SectionProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: Colors.light.overlay,
     justifyContent: "flex-end",
   },
 
@@ -433,13 +433,13 @@ header: {
   agreeButton: {
     minHeight: 48,
     borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
+    backgroundColor: Colors.light.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
 
   agreeButtonDisabled: {
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    backgroundColor: Colors.glass.disabled,
   },
 
   agreeButtonText: {
@@ -452,6 +452,6 @@ header: {
   },
 
   agreeButtonTextDisabled: {
-    color: "rgba(255, 255, 255, 0.75)",
+    color: Colors.glass.disabledText,
   },
 });

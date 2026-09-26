@@ -60,7 +60,7 @@ const WEATHER_REFRESH_INTERVAL_MS =
 
 const QUICK_NAV_SCROLL_MS = 1500;
 const QUICK_NAV_SCROLL_INSET = 12;
-const QUICK_NAV_PRESSED_BG = "#33B98A";
+const QUICK_NAV_PRESSED_BG = Colors.light.primaryPressed;
 
 // ============================================================
 // DASHBOARD SCREEN

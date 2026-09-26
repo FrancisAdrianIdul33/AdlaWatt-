@@ -163,7 +163,7 @@ export default function ApplianceBox({
           <MaterialCommunityIcons
             name="delete"
             size={22}
-            color="#EF4444"
+            color={Colors.light.error}
           />
         </Pressable>
       </View>
@@ -175,7 +175,7 @@ export default function ApplianceBox({
       <MaterialCommunityIcons
         name="alert-circle-outline"
         size={30}
-        color="#EF4444"
+        color={Colors.light.error}
       />
 
       <AppText
@@ -412,11 +412,11 @@ const styles = StyleSheet.create({
   },
 
   noButton: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.light.surface,
   },
 
   yesButton: {
-    backgroundColor: "#EF4444",
+    backgroundColor: Colors.light.error,
   },
 
   noButtonText: {

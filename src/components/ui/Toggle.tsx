@@ -53,7 +53,7 @@ export default function Toggle({
                 option === "Advisable"
                   ? Colors.light.primary
                   : option === "notAdvisable"
-                    ? "#EF4444"
+                    ? Colors.light.error
                     : Colors.light.primary,
             },
             pressed && styles.pressed,

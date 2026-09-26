@@ -68,12 +68,12 @@ const databaseToUiArea: Record<string, string> = {
  * UI area colors
  */
 const areaColors: Record<string, string> = {
-  "Living Area": Colors.light.primary,
-  "Bedroom": "#9B59B6",
-  "Kitchen Area": Colors.light.secondary,
-  "Work/Study Area": "#4A90E2",
-  "Bathroom Area": "#16A085",
-  "Porch": "#E67E22",
+  "Living Area": Colors.light.areas.living,
+  "Bedroom": Colors.light.areas.bedroom,
+  "Kitchen Area": Colors.light.areas.kitchen,
+  "Work/Study Area": Colors.light.areas.study,
+  "Bathroom Area": Colors.light.areas.bathroom,
+  "Porch": Colors.light.areas.porch,
   "Custom Appliances": Colors.light.primary,
 };
 
@@ -1205,7 +1205,7 @@ export default function ApplianceModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: Colors.light.overlay,
     justifyContent: "flex-end",
   },
 
@@ -1293,7 +1293,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#1b1b1b",
+    color: Colors.light.text,
     fontWeight: "700",
     fontSize: 20,
   },
@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
+    backgroundColor: Colors.light.primarySoft,
   },
 
   resetText: {
@@ -1404,7 +1404,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.md,
-    backgroundColor: "#99DCC4",
+    backgroundColor: Colors.light.primarySoft,
   },
 
   actionText: {
@@ -1440,7 +1440,7 @@ const styles = StyleSheet.create({
   },
 
   cancelAction: {
-    borderColor: "#EF4444",
+    borderColor: Colors.light.error,
   },
 
   addAction: {
@@ -1448,7 +1448,7 @@ const styles = StyleSheet.create({
   },
 
   cancelText: {
-    color: "#EF4444",
+    color: Colors.light.error,
     fontWeight: "700",
   },
 
@@ -1465,7 +1465,7 @@ const styles = StyleSheet.create({
   },
 
   customError: {
-    color: "#EF4444",
+    color: Colors.light.error,
     fontSize: 12,
     fontWeight: "600",
   },

@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor:
-      "rgba(0, 0, 0, 0.40)",
+      Colors.light.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
 
   selectedModalOption: {
     backgroundColor:
-      "rgba(0, 168, 107, 0.08)",
+      Colors.light.primaryWash,
   },
 
   modalOptionText: {

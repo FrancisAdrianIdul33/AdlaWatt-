@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
 
   customError: {
-    color: "#EF4444",
+    color: Colors.light.error,
     fontSize: 12,
     fontWeight: "600",
     marginBottom: 2,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
 
   cancelAction: {
-    borderColor: "#EF4444",
+    borderColor: Colors.light.error,
   },
 
   addAction: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
 
   cancelText: {
-    color: "#EF4444",
+    color: Colors.light.error,
     fontWeight: "700",
   },
 
