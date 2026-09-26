@@ -1,5 +1,6 @@
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Platform } from "react-native";
 
 import { SettingsProvider } from "@/context/SettingsContext";
 import {
@@ -23,9 +24,12 @@ function ThemedDashboard() {
 
   return (
     <SettingsProvider>
-      <StatusBar
-        style={theme === "dark" ? "light" : "dark"}
-      />
+      {/* Native-only: expo-status-bar is a no-op on web. */}
+      {Platform.OS !== "web" && (
+        <StatusBar
+          style={theme === "dark" ? "light" : "dark"}
+        />
+      )}
       <Slot />
     </SettingsProvider>
   );

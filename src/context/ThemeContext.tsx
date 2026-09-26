@@ -62,22 +62,26 @@ export function ThemeProvider({
   useEffect(() => {
     let active = true;
 
-    AsyncStorage.getItem(THEME_STORAGE_KEY)
-      .then((raw) => {
-        if (active) {
-          setThemeState(
-            sanitize(
-              raw ? JSON.parse(raw) : null,
-            ),
-          );
-          setIsLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setIsLoaded(true);
-        }
-      });
+    try {
+      AsyncStorage.getItem(THEME_STORAGE_KEY)
+        .then((raw) => {
+          if (active) {
+            setThemeState(
+              sanitize(
+                raw ? JSON.parse(raw) : null,
+              ),
+            );
+            setIsLoaded(true);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setIsLoaded(true);
+          }
+        });
+    } catch {
+      setIsLoaded(true);
+    }
 
     return () => {
       active = false;
@@ -86,12 +90,19 @@ export function ThemeProvider({
 
   const setTheme = useCallback(
     async (next: ThemeOption) => {
+      // State first so the UI (including web) flips even if
+      // storage is unavailable (blocked localStorage, etc.).
       setThemeState(next);
 
-      await AsyncStorage.setItem(
-        THEME_STORAGE_KEY,
-        JSON.stringify(next),
-      );
+      try {
+        await AsyncStorage.setItem(
+          THEME_STORAGE_KEY,
+          JSON.stringify(next),
+        );
+      } catch {
+        // Best-effort persistence: theme still applies
+        // for this session.
+      }
     },
     [],
   );
