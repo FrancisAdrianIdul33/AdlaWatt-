@@ -13,11 +13,6 @@ export type FontSizeOption =
   | "Medium"
   | "Big";
 
-export type FontWeightOption =
-  | "Thin"
-  | "Regular"
-  | "Bold";
-
 export type FontFamilyOption =
   | "Times New Roman"
   | "Roboto"
@@ -36,9 +31,6 @@ export const FONT_FAMILY_OPTIONS: FontFamilyOption[] =
 
 export const FONT_SIZE_OPTIONS: FontSizeOption[] =
   ["Small", "Medium", "Big"];
-
-export const FONT_WEIGHT_OPTIONS: FontWeightOption[] =
-  ["Thin", "Regular", "Bold"];
 
 // ============================================================
 // SIZE SCALE
@@ -62,8 +54,9 @@ export function getFontScale(
 // ============================================================
 // FAMILY RESOLUTION
 //
-// Inter / Roboto resolve to bundled expo-font files that
-// already encode the weight (Light / Regular / Bold).
+// Weight preference removed: Inter / Roboto always resolve
+// to the Regular bundled file. Design weights in styles
+// (e.g. 600/700 titles) still apply via fontWeight.
 // Times New Roman cannot be bundled (proprietary license)
 // so it resolves to the platform serif stack.
 // System Default resolves to undefined (platform default).
@@ -71,33 +64,16 @@ export function getFontScale(
 
 export function getFontFamilyName(
   family: FontFamilyOption,
-  weight: FontWeightOption,
 ): string | undefined {
   if (family === "System Default") {
     return undefined;
   }
 
   if (family === "Inter") {
-    if (weight === "Thin") {
-      return "Inter_300Light";
-    }
-
-    if (weight === "Bold") {
-      return "Inter_700Bold";
-    }
-
     return "Inter_400Regular";
   }
 
   if (family === "Roboto") {
-    if (weight === "Thin") {
-      return "Roboto_300Light";
-    }
-
-    if (weight === "Bold") {
-      return "Roboto_700Bold";
-    }
-
     return "Roboto_400Regular";
   }
 
@@ -120,46 +96,4 @@ export function getFontFamilyName(
   }
 
   return undefined;
-}
-
-// ============================================================
-// WEIGHT STYLE
-//
-// Bundled Inter / Roboto files already carry the weight,
-// so keep the base weight to avoid faux-bold synthesis.
-// System stacks need an explicit weight mapping.
-// ============================================================
-
-export function getFontWeightStyle(
-  family: FontFamilyOption,
-  weight: FontWeightOption,
-  baseWeight:
-    | "300"
-    | "400"
-    | "600"
-    | "700"
-    | "normal"
-    | "bold" = "400",
-): "300" | "400" | "600" | "700" | "normal" | "bold" {
-  if (
-    family === "Inter" ||
-    family === "Roboto"
-  ) {
-    return baseWeight;
-  }
-
-  if (weight === "Thin") {
-    return "300";
-  }
-
-  if (weight === "Bold") {
-    return "700";
-  }
-
-  return baseWeight as
-    | "300"
-    | "400"
-    | "600"
-    | "normal"
-    | "bold";
 }
