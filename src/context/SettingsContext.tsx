@@ -17,9 +17,12 @@ import {
 // ============================================================
 // SETTINGS CONTEXT (typography v1)
 //
-// Local-only. Provides saved typography to the whole dashboard
-// via ScreenContainer2. Falls back to defaults when no
-// provider is mounted (e.g. auth screens).
+// Local-only. Single shared instance for the dashboard via
+// app/dashboard/_layout. Auth screens are intentionally
+// excluded and fall back to defaults (no provider mounted).
+// Save-to-apply, no preview: Menu commits drafts via
+// setPreferences; other dashboard screens update via the
+// shared instance. PDF export stays on helvetica.
 // ============================================================
 
 interface SettingsContextValue {
