@@ -1,18 +1,93 @@
 // src/constants/colors.ts
 
 // ============================================================
-// ADLAWATT PALETTE — single default (light) theme.
+// ADLAWATT PALETTE — light (default) + dark themes.
 //
 // 60-30-10 rule:
-//   60 — cream background + white surfaces (dominant)
-//   30 — green primary (brand, actions, active states)
-//   10 — yellow secondary + icon accent (sparingly)
+//   Light: cream background / green primary / yellow secondary.
+//   Dark:  soft-black background / grey surfaces / white type.
 //
 // Every literal below is referenced by at least one
 // component. Register new colors here instead of hardcoding
-// them in components. `dark` mode was removed: the app ships
-// one theme.
+// them in components.
+//
+// Frozen records (areas, severity, weather) are classification
+// color-coding: they render identically in both themes and are
+// shared by reference, not duplicated.
 // ============================================================
+
+// ——— classification data colors (frozen, both themes) ———
+const areaColors = {
+  living: "#00A86B",
+  bedroom: "#9B59B6",
+  kitchen: "#FFBF00",
+  study: "#4A90E2",
+  bathroom: "#16A085",
+  porch: "#E67E22",
+} as const;
+
+// ——— temperature severity badges (frozen scale) ———
+const severityColors = {
+  nominal: {
+    bg: "#E4EAD9",
+    border: "#14532D",
+    text: "#14532D",
+  },
+  elevated: {
+    bg: "#EBE8CD",
+    border: "#713F12",
+    text: "#713F12",
+  },
+  high: {
+    bg: "#EFE2CC",
+    border: "#7C2D12",
+    text: "#7C2D12",
+  },
+  critical: {
+    bg: "#EFE0DC",
+    border: "#7F1D1D",
+    text: "#7F1D1D",
+  },
+} as const;
+
+// ——— weather badges (frozen PAGASA-style scale) ———
+const weatherColors = {
+  clear: {
+    bg: "#DCFCE7",
+    border: "#86EFAC",
+    text: "#166534",
+  },
+  partlyCloudy: {
+    bg: "#FEF3C7",
+    border: "#FCD34D",
+    text: "#92400E",
+  },
+  overcast: {
+    bg: "#F1F5F9",
+    border: "#CBD5E1",
+    text: "#475569",
+  },
+  fog: {
+    bg: "#E2E8F0",
+    border: "#94A3B8",
+    text: "#475569",
+  },
+  yellow: {
+    bg: "#FEF3C7",
+    border: "#FACC15",
+    text: "#854D0E",
+  },
+  orange: {
+    bg: "#FFEDD5",
+    border: "#F97316",
+    text: "#9A3412",
+  },
+  red: {
+    bg: "#FEE2E2",
+    border: "#EF4444",
+    text: "#991B1B",
+  },
+} as const;
 
 export const Colors = {
   light: {
@@ -54,84 +129,68 @@ export const Colors = {
     placeholder: "#dfdfdf",
     color1: "#edeb44",
 
-    // ——— area data colors (intentional, not theme) ———
-    areas: {
-      living: "#00A86B",
-      bedroom: "#9B59B6",
-      kitchen: "#FFBF00",
-      study: "#4A90E2",
-      bathroom: "#16A085",
-      porch: "#E67E22",
-    },
+    // ——— data colors (frozen, shared with dark) ———
+    areas: areaColors,
+    severity: severityColors,
+    weather: weatherColors,
 
-    // ——— chart data colors (intentional, not theme) ———
+    // ——— chart data colors (series frozen, neutrals theme) ———
     chart: {
       orange: "#F97316",
       grid: "rgba(46, 46, 46, 0.10)",
       axisLabel: "#8E8E93",
     },
+  },
 
-    // ——— temperature severity badges (intentional scale) ———
-    severity: {
-      nominal: {
-        bg: "#E4EAD9",
-        border: "#14532D",
-        text: "#14532D",
-      },
-      elevated: {
-        bg: "#EBE8CD",
-        border: "#713F12",
-        text: "#713F12",
-      },
-      high: {
-        bg: "#EFE2CC",
-        border: "#7C2D12",
-        text: "#7C2D12",
-      },
-      critical: {
-        bg: "#EFE0DC",
-        border: "#7F1D1D",
-        text: "#7F1D1D",
-      },
-    },
+  dark: {
+    // ——— 60 · dominant surfaces (soft black) ———
+    background: "#121212",
+    surface: "#1E1E1E",
 
-    // ——— weather badges (intentional PAGASA-style scale) ———
-    weather: {
-      clear: {
-        bg: "#DCFCE7",
-        border: "#86EFAC",
-        text: "#166534",
-      },
-      partlyCloudy: {
-        bg: "#FEF3C7",
-        border: "#FCD34D",
-        text: "#92400E",
-      },
-      overcast: {
-        bg: "#F1F5F9",
-        border: "#CBD5E1",
-        text: "#475569",
-      },
-      fog: {
-        bg: "#E2E8F0",
-        border: "#94A3B8",
-        text: "#475569",
-      },
-      yellow: {
-        bg: "#FEF3C7",
-        border: "#FACC15",
-        text: "#854D0E",
-      },
-      orange: {
-        bg: "#FFEDD5",
-        border: "#F97316",
-        text: "#9A3412",
-      },
-      red: {
-        bg: "#FEE2E2",
-        border: "#EF4444",
-        text: "#991B1B",
-      },
+    // ——— 30 · primary brand (carries over) ———
+    primary: "#00A86B",
+    onPrimary: "#FFFFFF",
+    onPrimaryMuted: "rgba(255, 255, 255, 0.6)",
+    onPrimarySoft: "rgba(255, 255, 255, 0.9)",
+    primarySoft: "#99DCC4",
+    primaryPressed: "#33B98A",
+
+    // ——— 10 · accents (carries over) ———
+    secondary: "#FFBF00",
+    iconAccent: "#FACC15",
+
+    // ——— type + hairlines (grey ramp) ———
+    text: "#FFFFFF",
+    textSecondary: "#A1A1AA",
+    border: "#3A3A3A",
+
+    // ——— status (brightened where black kills depth) ———
+    error: "#EF4444",
+    errorDark: "#FF8A80",
+    errorDeep: "#FF6B60",
+    warning: "#F59E0B",
+
+    // ——— washes + overlays (re-weighted for black) ———
+    primaryWash: "rgba(0, 168, 107, 0.16)",
+    washFaint: "rgba(0, 168, 107, 0.10)",
+    scrimFaint: "rgba(255, 255, 255, 0.06)",
+    overlay: "rgba(0, 0, 0, 0.60)",
+    overlayStrong: "rgba(0, 0, 0, 0.75)",
+
+    // ——— neutrals ———
+    placeholder: "#333333",
+    color1: "#edeb44",
+
+    // ——— data colors (frozen, shared with light) ———
+    areas: areaColors,
+    severity: severityColors,
+    weather: weatherColors,
+
+    // ——— chart neutrals themed, series frozen ———
+    chart: {
+      orange: "#F97316",
+      grid: "rgba(255, 255, 255, 0.15)",
+      axisLabel: "#A1A1AA",
     },
   },
 
@@ -142,4 +201,14 @@ export const Colors = {
     disabledText: "rgba(255, 255, 255, 0.75)",
     unread: "rgba(245, 245, 245, 0.85)",
   },
+
+  glassDark: {
+    white: "rgba(255, 255, 255, 0.08)",
+    whiteStrong: "rgba(255, 255, 255, 0.16)",
+    disabled: "rgba(255, 255, 255, 0.12)",
+    disabledText: "rgba(255, 255, 255, 0.40)",
+    unread: "rgba(38, 38, 38, 0.90)",
+  },
 } as const;
+
+export type ThemeOption = "light" | "dark";
