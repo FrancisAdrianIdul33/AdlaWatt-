@@ -54,27 +54,58 @@ export function getFontScale(
 // ============================================================
 // FAMILY RESOLUTION
 //
-// Weight preference removed: Inter / Roboto always resolve
-// to the Regular bundled file. Design weights in styles
-// (e.g. 600/700 titles) still apply via fontWeight.
+// Design weights select the bundled file: Inter / Roboto
+// ship Light / Regular / Bold files, so a 700 design uses
+// the real Bold file instead of synthesizing. Never pair a
+// bundled file with a fontWeight style (Android drops the
+// custom font and falls back to system in that case).
 // Times New Roman cannot be bundled (proprietary license)
 // so it resolves to the platform serif stack.
 // System Default resolves to undefined (platform default).
 // ============================================================
 
+export type DesignWeight =
+  | "300"
+  | "400"
+  | "600"
+  | "700"
+  | "normal"
+  | "bold";
+
+function bundledFile(
+  base: "Inter" | "Roboto",
+  designWeight: DesignWeight,
+): string {
+  const bold =
+    designWeight === "700" ||
+    designWeight === "600" ||
+    designWeight === "bold";
+
+  if (bold) {
+    return `${base}_700Bold`;
+  }
+
+  if (designWeight === "300") {
+    return `${base}_300Light`;
+  }
+
+  return `${base}_400Regular`;
+}
+
 export function getFontFamilyName(
   family: FontFamilyOption,
+  designWeight: DesignWeight = "400",
 ): string | undefined {
   if (family === "System Default") {
     return undefined;
   }
 
   if (family === "Inter") {
-    return "Inter_400Regular";
+    return bundledFile("Inter", designWeight);
   }
 
   if (family === "Roboto") {
-    return "Roboto_400Regular";
+    return bundledFile("Roboto", designWeight);
   }
 
   if (family === "Times New Roman") {
@@ -96,4 +127,21 @@ export function getFontFamilyName(
   }
 
   return undefined;
+}
+
+// ============================================================
+// WEIGHT STYLE GATE
+//
+// Bundled Inter / Roboto files already encode the design
+// weight, so no fontWeight style may accompany them.
+// System stacks need the design weight to render bold/light.
+// ============================================================
+
+export function shouldApplyFontWeight(
+  family: FontFamilyOption,
+): boolean {
+  return (
+    family !== "Inter" &&
+    family !== "Roboto"
+  );
 }
