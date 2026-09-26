@@ -8,12 +8,14 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
-import { SettingsProvider } from "@/context/SettingsContext";
 
 interface ScreenContainerProps {
   children: ReactNode;
   scrollable?: boolean;
 }
+
+// Auth-only container. Intentionally no SettingsProvider:
+// auth screens always use DEFAULT_TYPOGRAPHY.
 
 export default function ScreenContainer({
   children,
@@ -32,16 +34,14 @@ export default function ScreenContainer({
   );
 
   return (
-    <SettingsProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          {content}
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </SettingsProvider>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {content}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
